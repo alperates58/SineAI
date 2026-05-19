@@ -181,7 +181,8 @@ const TV_GENRES = {
   action: 10759, adventure: 10759, animation: 16, comedy: 35, crime: 80,
   documentary: 99, drama: 18, family: 10751, kids: 10762, mystery: 9648,
   news: 10763, reality: 10764, "science fiction": 10765, "sci-fi": 10765,
-  fantasy: 10765, soap: 10766, talk: 10767, war: 10768, politics: 10768, western: 37
+  fantasy: 10765, soap: 10766, talk: 10767, war: 10768, politics: 10768, western: 37,
+  thriller: 9648, horror: 9648, romance: 18 // Fallbacks for TV where these genres don't officially exist
 };
 
 const TMDB_GENRE_NAMES = {
@@ -206,7 +207,9 @@ const KEYWORD_ALIASES = {
   "aile": "family", "çocuk": "children", "romantik": "romance", "komik": "comedy", "eğlenceli": "fun",
   "dövüş": "martial arts", "dövüş sanatları": "martial arts", "samuray": "samurai", "ninja": "ninja",
   "biyografi": "biography", "gerçek hikaye": "based on a true story", "tarihi": "history", "orta çağ": "middle ages",
-  "anime": "anime", "spor": "sports", "futbol": "football", "basketbol": "basketball", "yarış": "racing"
+  "anime": "anime", "spor": "sports", "futbol": "football", "basketbol": "basketball", "yarış": "racing",
+  "gerilim": "thriller", "korku": "horror", "gizem": "mystery", "aksiyon": "action",
+  "aşk": "romance", "duygusal": "emotional", "dram": "drama", "suç": "crime"
 };
 
 function normalizeTitle(title) {
@@ -621,9 +624,14 @@ async function fetchTMDB(normalized) {
         const promises = [];
         if (strictIds.length > 0) promises.push(fetchDiscover(strictIds, 'strict'));
         if (relaxedIds.length > 0) promises.push(fetchDiscover(relaxedIds, 'relaxed'));
-        promises.push(fetchDiscover([], 'fallback')); // Fallback without keywords
 
         await Promise.all(promises);
+
+        // Fallback Strategy: Sadece hedef odaklı aramalardan yeterli sonuç çıkmazsa tetikle!
+        const strictAndRelaxedYield = rawResults.filter(r => r.type === type && (r.strategy === 'strict' || r.strategy === 'relaxed'));
+        if (strictAndRelaxedYield.length < 5) {
+            await fetchDiscover([], 'fallback');
+        }
      }
   }
 
@@ -669,8 +677,9 @@ async function fetchTMDB(normalized) {
                + (Math.log10(item.popularity + 1) * 2);
      if (item.poster) score += 5;
      if (!item.release_date) score -= 10;
-     if (item.strategy === 'strict') score += 10;
-     if (item.strategy === 'relaxed') score += 5;
+     if (item.strategy === 'strict') score += 20; // Artırıldı
+     if (item.strategy === 'relaxed') score += 10; // Artırıldı
+     if (item.strategy === 'fallback') score -= 20; // Cezalandırıldı
      item.base_score = score;
   }
   
@@ -684,8 +693,8 @@ async function fetchTMDB(normalized) {
       const verifyPromises = top20.map(async (item) => {
          const itemKws = await getItemKeywords(item.id, item.type);
          const hasMustHave = kwMustHaveIds.some(id => itemKws.includes(id));
-         if (hasMustHave) item.base_score += 20; // Massive bonus
-         else item.base_score -= 15; // Massive penalty if requested strictly
+         if (hasMustHave) item.base_score += 25; // Massive bonus
+         else item.base_score -= 30; // Massive penalty if requested strictly
          return item;
       });
       await Promise.all(verifyPromises);
