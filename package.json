@@ -1,0 +1,18 @@
+{
+  "name": "sineai",
+  "version": "0.1.0",
+  "description": "SineAI - AI powered movie and TV show recommender",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "dependencies": {
+    "fastify": "^4.26.2",
+    "@fastify/static": "^7.0.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

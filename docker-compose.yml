@@ -1,0 +1,15 @@
+services:
+  sineai:
+    container_name: sineai_app
+    build: .
+    restart: unless-stopped
+    expose:
+      - "3000"
+    env_file:
+      - .env
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true

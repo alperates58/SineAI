@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SineAI - Ne İzlesem?</title>
+    <meta name="description" content="Ne izlemek istediğini yaz, SineAI sana uygun film ve dizi önerileri getirsin.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="container">
+            <h1>SineAI 🎬</h1>
+            <p>Ne izlemek istediğini yaz, SineAI sana uygun film ve dizi önerileri getirsin.</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="search-section">
+            <form id="recommendForm">
+                <div class="input-group">
+                    <textarea id="query" name="query" rows="3" placeholder="Örn: Karanlık atmosferli, zeka işi, 2020 sonrası bir dizi öner..." required></textarea>
+                </div>
+                <button type="submit" id="submitBtn">Öneri getir ✨</button>
+            </form>
+            <div id="errorBox" class="error-box hidden"></div>
+        </section>
+
+        <section class="results-section">
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>AI analiz ediyor ve TMDB'de aranıyor...</p>
+            </div>
+            
+            <div id="resultsGrid" class="results-grid">
+                <!-- Sonuçlar buraya dinamik eklenecek -->
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <div class="container">
+            <p>Bu ürün TMDB API kullanır ancak TMDB tarafından onaylanmamış veya sertifikalandırılmamıştır.</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
