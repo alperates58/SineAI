@@ -21,7 +21,10 @@
                 <div class="input-group">
                     <textarea id="query" name="query" rows="3" placeholder="Örn: Karanlık atmosferli, zeka işi, 2020 sonrası bir dizi öner..." required></textarea>
                 </div>
-                <button type="submit" id="submitBtn">Öneri getir ✨</button>
+                <div class="action-buttons">
+                    <button type="button" id="voiceBtn" class="voice-btn" tabindex="0">🎤 Sesle Ara</button>
+                    <button type="submit" id="submitBtn" tabindex="0">Öneri getir ✨</button>
+                </div>
             </form>
             <div id="errorBox" class="error-box hidden"></div>
         </section>
@@ -43,6 +46,16 @@
             <p>Bu ürün TMDB API kullanır ancak TMDB tarafından onaylanmamış veya sertifikalandırılmamıştır.</p>
         </div>
     </footer>
+
+    <!-- TV Modal -->
+    <div id="detailModal" class="modal hidden" role="dialog" aria-modal="true" tabindex="-1">
+        <div class="modal-content">
+            <button id="closeModalBtn" class="close-btn" aria-label="Kapat" tabindex="0">✕ Kapat</button>
+            <div class="modal-body" id="modalBody">
+                <!-- Content will be injected here -->
+            </div>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>

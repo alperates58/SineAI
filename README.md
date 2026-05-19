@@ -30,6 +30,15 @@ Proje, sırları korumak adına `.env` dosyası kullanmaktadır. **Lütfen API a
 - `PORT`: Uygulamanın dinleyeceği port (Varsayılan: `3000`)
 - `TMDB_API_KEY`: TMDB platformundan alınan V3 API anahtarı.
 
+## Gelişmiş Özellikler (v2)
+
+- **Platform Rozetleri (Watch Providers)**: TMDB `/watch/providers` API'si kullanılarak, önerilen film ve dizilerin Türkiye (TR) bölgesinde hangi platformlarda (Netflix, Prime Video, BluTV vb.) izlenebileceği kartların üzerinde badge olarak gösterilir.
+- **Fragman Desteği**: TMDB `/videos` API'si üzerinden YouTube fragmanları çekilir ve sonuç kartlarında/modallarda "Fragmanı Aç" butonu olarak yer alır.
+- **Kişi Arama & Gelişmiş Filtreler**: Kullanıcı "Christopher Nolan filmleri" gibi sorgular yaptığında, ilgili kişi `search/person` ile bulunup filtrelemeye dahil edilir. AI, puan, yıl ve süre limitlerini anlayarak TMDB API filtrelerine çevirir.
+- **Android TV Uyumu**: Arayüz, akıllı televizyonlarda (Android TV) kumanda ile gezinmeye uygun hale getirilmiştir. Kartlar, butonlar ve detay modalları `tabindex="0"` ve `:focus-visible` ile donatılarak yön tuşları ile kontrol edilebilir bir deneyim sunar.
+- **Sesli Arama (Voice Search)**: Web Speech API kullanılarak arama kutusuna konuşarak metin yazdırılabilir.
+  > **Gizlilik/Güvenlik**: Web sürümünde sesli arama, tarayıcının Web Speech API desteğine bağlıdır. İleride mobil/Android TV sürümüne geçildiğinde Native Speech Recognizer ile değiştirilebilir.
+
 ## Docker Build / Test
 
 ```bash

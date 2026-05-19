@@ -5,9 +5,11 @@
     --text-muted: #a0a0a0;
     --primary-color: #bb86fc;
     --primary-hover: #9c4dcc;
+    --secondary-color: #03dac6;
     --error-color: #cf6679;
     --border-radius: 8px;
     --transition: all 0.3s ease;
+    --focus-outline: 4px solid var(--secondary-color);
 }
 
 * {
@@ -28,9 +30,16 @@ body {
 
 .container {
     width: 100%;
-    max-width: 900px;
+    max-width: 1200px; /* Genişletildi (TV uyumu) */
     margin: 0 auto;
     padding: 0 20px;
+}
+
+/* TV Focus Outline */
+*:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: 2px;
+    border-radius: 4px;
 }
 
 .app-header {
@@ -55,6 +64,9 @@ main {
 
 .search-section {
     margin-bottom: 40px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .input-group {
@@ -68,7 +80,7 @@ textarea {
     border-radius: var(--border-radius);
     background-color: var(--card-bg);
     color: var(--text-color);
-    font-size: 1rem;
+    font-size: 1.2rem; /* Daha büyük font */
     resize: vertical;
     font-family: inherit;
     transition: var(--transition);
@@ -80,27 +92,48 @@ textarea:focus {
     box-shadow: 0 0 0 2px rgba(187, 134, 252, 0.2);
 }
 
+.action-buttons {
+    display: flex;
+    gap: 15px;
+}
+
 button {
-    width: 100%;
+    flex: 1;
     padding: 15px;
     background-color: var(--primary-color);
     color: #000;
     border: none;
     border-radius: var(--border-radius);
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: bold;
     cursor: pointer;
     transition: var(--transition);
 }
 
-button:hover {
+.voice-btn {
+    background-color: #333;
+    color: #fff;
+    flex: 0.5;
+}
+
+.voice-btn:hover {
+    background-color: #444;
+}
+
+.voice-btn.listening {
+    background-color: var(--error-color);
+    color: #fff;
+    animation: pulse 1.5s infinite;
+}
+
+button:hover:not(.voice-btn) {
     background-color: var(--primary-hover);
 }
 
 button:disabled {
-    background-color: #555;
+    background-color: #555 !important;
     cursor: not-allowed;
-    color: #888;
+    color: #888 !important;
 }
 
 .error-box {
@@ -137,11 +170,17 @@ button:disabled {
     to { transform: rotate(360deg); }
 }
 
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
 /* Results Grid */
 .results-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); /* Daha geniş kartlar */
+    gap: 25px;
     padding-bottom: 40px;
 }
 
@@ -152,11 +191,14 @@ button:disabled {
     transition: var(--transition);
     display: flex;
     flex-direction: column;
+    cursor: pointer;
+    position: relative;
 }
 
-.movie-card:hover {
+.movie-card:hover, .movie-card:focus-visible {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+    border-color: var(--primary-color);
 }
 
 .poster-container {
@@ -178,7 +220,7 @@ button:disabled {
     justify-content: center;
     height: 100%;
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: 1rem;
     text-align: center;
     padding: 20px;
 }
@@ -191,39 +233,167 @@ button:disabled {
 }
 
 .card-title {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     margin-bottom: 5px;
     color: #fff;
 }
 
 .card-meta {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: var(--primary-color);
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     display: flex;
     justify-content: space-between;
+}
+
+.card-reason {
+    font-size: 0.85rem;
+    color: var(--secondary-color);
+    margin-bottom: 10px;
+    font-style: italic;
 }
 
 .card-desc {
     font-size: 0.9rem;
     color: var(--text-muted);
     display: -webkit-box;
-    -webkit-line-clamp: 4;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.provider-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: auto;
+}
+
+.badge {
+    background-color: #333;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.badge img {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    width: 100%;
+    max-width: 600px;
+    border-radius: var(--border-radius);
+    padding: 20px;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    width: auto;
+    padding: 5px 10px;
+}
+
+.close-btn:hover, .close-btn:focus-visible {
+    color: #fff;
+    background-color: rgba(255,255,255,0.1);
+}
+
+.modal-body h2 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+    padding-right: 80px;
+}
+
+.modal-body .meta {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-bottom: 15px;
+}
+
+.modal-body .overview {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.modal-body .providers {
+    margin-bottom: 20px;
+}
+
+.modal-body .providers h3 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+
+.trailer-btn {
+    background-color: #e50914; /* YouTube red */
+    color: #fff;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    margin-top: 10px;
+}
+
+.trailer-btn:hover {
+    background-color: #b20710;
 }
 
 .app-footer {
     text-align: center;
     padding: 20px 0;
     color: var(--text-muted);
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     border-top: 1px solid #333;
     margin-top: auto;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     .results-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+    .action-buttons {
+        flex-direction: column;
+    }
+    .voice-btn {
+        flex: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .results-grid {
+        grid-template-columns: 1fr;
     }
 }
