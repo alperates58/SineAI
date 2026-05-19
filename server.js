@@ -71,13 +71,13 @@ function setCache(key, data) {
 const SYSTEM_PROMPT = `Sen bir film ve dizi öneri asistanısın. Kullanıcının girdisini analiz et ve bir SEARCH PLAN (arama planı) oluşturarak sadece aşağıdaki JSON formatında çıktı ver.
 Kurallar:
 - "X benzeri", "X gibi" derse intent "similar_to_title" ve reference_title "X" olsun.
-- "X oynadığı", "X yönettiği" derse intent "person_search". Aksi halde intent "discover" olsun.
+- "X oynadığı", "X yönettiği" gibi aramalarda aktör/yönetmen alanlarını mutlaka doldur. Niyet ne olursa olsun bu alanlar doluysa sistem onu dikkate alacaktır (Örn: "Donnie Yen dövüş filmleri" => actors:["Donnie Yen"], must_have:["martial arts"], intent:"discover").
 - "az bilinen", "gizli cevher", "bağımsız" derse quality_profile: "hidden_gems".
 - "yeni çıkan" derse quality_profile: "new".
 - "klasik" derse quality_profile: "classic".
 - "aile", "çocuk" derse quality_profile: "family".
 - Varsayılan quality_profile: "mainstream".
-- Anlamsal konuları (uzay, yapay zeka, zaman yolculuğu, karanlık vb.) İNGİLİZCE olarak semantic_topics, must_have ve nice_to_have dizilerine dağıt. En kritik temaları must_have içine koy.
+- Anlamsal konuları (uzay, yapay zeka, zaman yolculuğu, karanlık, dövüş vb.) İNGİLİZCE olarak semantic_topics, must_have ve nice_to_have dizilerine dağıt. En kritik temaları must_have içine koy.
 - Tarihler için: "90'lar" => year_min: 1990, year_max: 1999. "2020 sonrası" => year_min: 2020.
 {
   "intent": "discover" | "similar_to_title" | "person_search",
@@ -203,7 +203,10 @@ const KEYWORD_ALIASES = {
   "siberpunk": "cyberpunk", "vampir": "vampire", "zombi": "zombie", "büyü": "magic", "cadı": "witch",
   "doğaüstü": "supernatural", "kafa yakan": "mind bending", "psikolojik": "psychological thriller",
   "hapishane": "prison", "soygun": "heist", "casus": "spy", "politik": "politics",
-  "aile": "family", "çocuk": "children", "romantik": "romance", "komik": "comedy", "eğlenceli": "fun"
+  "aile": "family", "çocuk": "children", "romantik": "romance", "komik": "comedy", "eğlenceli": "fun",
+  "dövüş": "martial arts", "dövüş sanatları": "martial arts", "samuray": "samurai", "ninja": "ninja",
+  "biyografi": "biography", "gerçek hikaye": "based on a true story", "tarihi": "history", "orta çağ": "middle ages",
+  "anime": "anime", "spor": "sports", "futbol": "football", "basketbol": "basketball", "yarış": "racing"
 };
 
 function normalizeTitle(title) {
@@ -527,18 +530,16 @@ async function fetchTMDB(normalized) {
     if (!providerId) warnings.push(`'${normalized.watch_provider}' platformu bulunamadı.`);
   }
 
-  // Person Logic
+  // Person Logic (Always check if actors/directors are present)
   let personId = null;
-  if (normalized.intent === 'person_search') {
-    const personName = (normalized.actors && normalized.actors[0]) || (normalized.directors && normalized.directors[0]);
-    if (personName) {
-      const person = await searchPersonTMDB(personName);
-      if (person) {
-        personId = person.id;
-        people.push({ id: person.id, name: person.name, role: normalized.actors?.length > 0 ? 'actor' : 'director' });
-      } else {
-        warnings.push(`'${personName}' isminde kişi bulunamadı.`);
-      }
+  const personName = (normalized.actors && normalized.actors[0]) || (normalized.directors && normalized.directors[0]);
+  if (personName) {
+    const person = await searchPersonTMDB(personName);
+    if (person) {
+      personId = person.id;
+      people.push({ id: person.id, name: person.name, role: normalized.actors?.length > 0 ? 'actor' : 'director' });
+    } else {
+      warnings.push(`'${personName}' isminde kişi bulunamadı.`);
     }
   }
 
