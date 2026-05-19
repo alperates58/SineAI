@@ -170,6 +170,21 @@ async function normalizeQuery(query) {
   }
 }
 
+// Genre Maps
+const MOVIE_GENRES = {
+  action: 28, adventure: 12, animation: 16, comedy: 35, crime: 80,
+  documentary: 99, drama: 18, family: 10751, fantasy: 14, history: 36,
+  horror: 27, music: 10402, mystery: 9648, romance: 10749,
+  "science fiction": 878, "sci-fi": 878, thriller: 53, war: 10752, western: 37
+};
+
+const TV_GENRES = {
+  action: 10759, adventure: 10759, animation: 16, comedy: 35, crime: 80,
+  documentary: 99, drama: 18, family: 10751, kids: 10762, mystery: 9648,
+  news: 10763, reality: 10764, "science fiction": 10765, "sci-fi": 10765,
+  fantasy: 10765, soap: 10766, talk: 10767, war: 10768, politics: 10768, western: 37
+};
+
 // TMDB Integration
 async function fetchTMDB(normalized) {
   if (!TMDB_API_KEY) {
@@ -193,6 +208,19 @@ async function fetchTMDB(normalized) {
     if (normalized.year_min) {
       if (type === 'movie') url.searchParams.append('primary_release_date.gte', `${normalized.year_min}-01-01`);
       else url.searchParams.append('first_air_date.gte', `${normalized.year_min}-01-01`);
+    }
+
+    // Genre filtresi
+    if (normalized.genres && Array.isArray(normalized.genres) && normalized.genres.length > 0) {
+      const map = type === 'movie' ? MOVIE_GENRES : TV_GENRES;
+      const genreIds = normalized.genres
+        .map(g => g.toLowerCase())
+        .map(g => map[g])
+        .filter(id => id !== undefined);
+      
+      if (genreIds.length > 0) {
+        url.searchParams.append('with_genres', genreIds.join(','));
+      }
     }
     
     try {

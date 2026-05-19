@@ -7,6 +7,8 @@ SineAI, doğal dille yazdığınız isteklere uygun film ve dizi önerileri suna
 - Node.js 20+
 - Docker ve Docker Compose (Opsiyonel, Coolify ile deploy için)
 
+> **Not:** AI tarafından üretilen genre (tür) string'leri, backend üzerinde otomatik olarak TMDB genre ID'lerine (örn: action -> 28) çevrilerek arama filtrelerine dahil edilir.
+
 ## Lokal Çalıştırma
 
 1. Projeyi indirin.
