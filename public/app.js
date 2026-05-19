@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
         titleEl.style.marginBottom = '15px';
         
         if (normalized.intent === 'similar_to_title' && reference) {
-            titleEl.textContent = `"${reference.title}" benzeri öneriler`;
+            titleEl.textContent = `${reference.title} benzeri öneriler`;
         } else if (normalized.intent === 'person_search' && normalized.actors && normalized.actors.length > 0) {
             titleEl.textContent = `"${normalized.actors[0]}" yer aldığı yapımlar`;
         } else if (normalized.intent === 'person_search' && normalized.directors && normalized.directors.length > 0) {

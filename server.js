@@ -74,6 +74,7 @@ const SYSTEM_PROMPT = `Sen bir film ve dizi öneri asistanısın. Kullanıcını
 Kullanıcı "X benzeri", "X gibi", "X tarzı" derse intent "similar_to_title" olsun ve X değerini "reference_title" olarak çıkar.
 Kullanıcı "X oynadığı", "X filmleri", "X dizileri", "X yönettiği" gibi bir kişi araması yapıyorsa intent "person_search" olsun.
 Aksi halde intent "discover" olsun.
+Tarih ifadeleri için: "en az 2021 yapımı" veya "2021 sonrası" => year_min: 2021. "2020 öncesi" => year_max: 2020. "90'lar" => year_min: 1990, year_max: 1999.
 {
   "intent": "similar_to_title" | "discover" | "person_search",
   "reference_title": "",
@@ -451,9 +452,9 @@ async function enrichResults(results, normalized, reference) {
       if (intersection.length > 0) {
         const genreNames = intersection.slice(0, 2).map(id => TMDB_GENRE_NAMES[id]).filter(Boolean);
         if (genreNames.length > 0) {
-          item.reason = `"${reference.title}" ile ortak ${genreNames.join('/')} teması`;
+          item.reason = `"${reference.title}" ile ortak ${genreNames.join('/')} teması taşıyor`;
         } else {
-          item.reason = `"${reference.title}" ile ortak atmosfere sahip`;
+          item.reason = `"${reference.title}" ile benzer bir atmosfere sahip`;
         }
       } else {
         item.reason = `"${reference.title}" ile benzer tarzda bir yapım`;
@@ -634,10 +635,45 @@ async function fetchTMDB(normalized) {
     } catch (err) {}
   }
 
-  let finalResults = results.sort((a, b) => b.popularity - a.popularity);
-  const enriched = await enrichResults(finalResults, normalized, null);
+  // Combine and Sort
+  let finalResults = Array.from(new Map(results.map(item => [item.id, item])).values());
+  
+  // 1. Pre-enrichment Local Filtering (Year, Type, Vote)
+  finalResults = finalResults.filter(item => {
+    if (normalized.type && normalized.type !== 'any' && item.type !== normalized.type) return false;
+    const year = item.release_date ? parseInt(item.release_date.substring(0, 4)) : null;
+    if (year) {
+      if (normalized.year_min && year < normalized.year_min) return false;
+      if (normalized.year_max && year > normalized.year_max) return false;
+    }
+    if (normalized.min_vote_average && item.vote_average < normalized.min_vote_average) return false;
+    if (normalized.min_vote_count && item.vote_count < normalized.min_vote_count) return false;
+    return true;
+  });
 
-  return { reference: null, people, warnings, results: enriched };
+  // Sort initially to enrich the best ones first
+  finalResults.sort((a, b) => {
+    const scoreA = (a.vote_average * 2) + Math.log10((a.popularity || 0) + 1) + Math.log10((a.vote_count || 0) + 1) + (a.poster ? 5 : -100);
+    const scoreB = (b.vote_average * 2) + Math.log10((b.popularity || 0) + 1) + Math.log10((b.vote_count || 0) + 1) + (b.poster ? 5 : -100);
+    return scoreB - scoreA;
+  });
+
+  // 2. Enrich top 20 to allow post-enrichment filtering (provider, trailer)
+  const toEnrich = finalResults.slice(0, 20);
+  let enriched = await enrichResults(toEnrich, normalized, reference);
+
+  // 3. Post-enrichment Filtering
+  enriched = enriched.filter(item => {
+    if (normalized.trailer_required && !item.trailer_url) return false;
+    if (normalized.watch_provider) {
+       const nameNorm = normalized.watch_provider.toLowerCase().replace(/\s+/g, '');
+       const hasProvider = item.providers && item.providers.some(p => p.provider_name.toLowerCase().replace(/\s+/g, '').includes(nameNorm));
+       if (!hasProvider) return false;
+    }
+    return true;
+  });
+
+  return { reference, people, warnings, results: enriched.slice(0, 10) };
 }
 
 // Routes
