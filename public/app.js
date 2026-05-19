@@ -196,19 +196,60 @@ document.addEventListener('DOMContentLoaded', () => {
     function showModal(item, year, typeStr, rating, badgesHTML) {
         let trailerHTML = '';
         if (item.trailer_url) {
-            trailerHTML = `<a href="${item.trailer_url}" target="_blank" rel="noopener noreferrer" class="trailer-btn" style="padding:10px 20px; border-radius:8px;" tabindex="0">📺 Fragmanı Aç (YouTube)</a>`;
+            trailerHTML = `<a href="${item.trailer_url}" target="_blank" rel="noopener noreferrer" class="trailer-btn" tabindex="0">📺 Fragmanı Aç (YouTube)</a>`;
+        }
+
+        const posterUrl = item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : null;
+        let posterHTML = posterUrl ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="lazy">` : `<div class="no-poster">Afiş Bulunamadı</div>`;
+
+        let genresHTML = '';
+        if (item.genres && item.genres.length > 0) {
+            genresHTML = `<div class="genre-pills">
+                ${item.genres.map(g => `<span class="genre-pill">${g}</span>`).join('')}
+            </div>`;
+        }
+
+        let runtimeStr = item.runtime ? `${item.runtime} dk` : (item.type === 'tv' ? 'Bölüm süresi bilgisi yok' : 'Süre bilgisi yok');
+        
+        let originalTitleHTML = '';
+        if (item.original_title && item.original_title !== item.title) {
+            originalTitleHTML = `<div class="original-title">${item.original_title}</div>`;
+        }
+
+        let directorHTML = '';
+        if (item.director) {
+            const roleStr = item.type === 'movie' ? 'Yönetmen' : 'Yaratıcı';
+            directorHTML = `<div class="modal-director"><strong>${roleStr}:</strong> ${item.director}</div>`;
         }
 
         modalBody.innerHTML = `
-            <h2>${item.title}</h2>
-            <div class="meta">${year} • ${typeStr} • ⭐ ${rating}</div>
-            ${item.reason ? `<div class="card-reason" style="margin-bottom:15px; font-size:1rem;">${item.reason}</div>` : ''}
-            <div class="overview">${item.overview || 'Bu yapım için detaylı bir açıklama bulunmuyor.'}</div>
-            <div class="providers" style="margin-bottom: 20px;">
-                <h3>İzlenebilecek Platformlar (TR)</h3>
-                <div style="margin-top:10px;">${badgesHTML}</div>
+            <div class="modal-layout">
+                <div class="modal-poster">
+                    ${posterHTML}
+                </div>
+                <div class="modal-info">
+                    <h2>${item.title}</h2>
+                    ${originalTitleHTML}
+                    <div class="meta">
+                        <span>${year}</span>
+                        <span>•</span>
+                        <span>${typeStr}</span>
+                        <span>•</span>
+                        <span>⭐ ${rating}</span>
+                        <span>•</span>
+                        <span>${runtimeStr}</span>
+                    </div>
+                    ${genresHTML}
+                    ${directorHTML}
+                    ${item.reason ? `<div class="card-reason" style="margin-bottom:15px; font-size:1rem;">${item.reason}</div>` : ''}
+                    <div class="overview">${item.overview || 'Bu yapım için detaylı bir açıklama bulunmuyor.'}</div>
+                    <div class="providers">
+                        <h3>İzlenebilecek Platformlar (TR)</h3>
+                        <div style="margin-top:10px;">${badgesHTML}</div>
+                    </div>
+                    ${trailerHTML}
+                </div>
             </div>
-            ${trailerHTML}
         `;
 
         detailModal.classList.remove('hidden');

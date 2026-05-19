@@ -438,7 +438,7 @@ async function fetchSimilarTMDB(reference, normalized) {
   return finalResults.slice(0, 10);
 }
 
-// Enrichment Helper (Reason, Provider, Trailer)
+// Enrichment Helper (Reason, Provider, Trailer, Details)
 async function enrichResults(results, normalized, reference) {
   const topResults = results.slice(0, 10);
   
@@ -469,14 +469,42 @@ async function enrichResults(results, normalized, reference) {
       item.reason = `İsteğinize uygun başarılı bir öneri`;
     }
 
-    // Providers
     item.providers = [];
+    item.trailer_url = null;
+    item.original_title = item.title;
+    item.genres = [];
+    item.runtime = null;
+    item.director = null;
+    
     try {
-      const pUrl = new URL(`${TMDB_BASE_URL}/${item.type}/${item.id}/watch/providers?api_key=${TMDB_API_KEY}`);
-      const pRes = await fetch(pUrl.toString());
-      if (pRes.ok) {
-        const pData = await pRes.json();
-        const trData = pData.results && pData.results['TR'];
+      const url = new URL(`${TMDB_BASE_URL}/${item.type}/${item.id}?api_key=${TMDB_API_KEY}&language=tr-TR&append_to_response=watch/providers,videos,credits`);
+      const res = await fetch(url.toString());
+      
+      if (res.ok) {
+        const d = await res.json();
+        
+        item.original_title = item.type === 'movie' ? d.original_title : d.original_name;
+        item.genres = (d.genres || []).map(g => g.name);
+        
+        if (item.type === 'movie') {
+           item.runtime = d.runtime;
+           const director = (d.credits?.crew || []).find(c => c.job === 'Director');
+           if (director) item.director = director.name;
+        } else {
+           item.runtime = d.episode_run_time && d.episode_run_time.length > 0 ? d.episode_run_time[0] : null;
+           const creator = (d.created_by && d.created_by.length > 0) ? d.created_by[0].name : null;
+           if (creator) item.director = creator;
+           else {
+               const director = (d.credits?.crew || []).find(c => c.job === 'Director' || c.department === 'Directing');
+               if (director) item.director = director.name;
+           }
+        }
+        
+        if (d.overview && d.overview.length > (item.overview || '').length) {
+           item.overview = d.overview;
+        }
+
+        const trData = d['watch/providers']?.results?.['TR'];
         if (trData) {
           const tempProviders = [];
           if (trData.flatrate) trData.flatrate.forEach(p => tempProviders.push({...p, type: 'flatrate'}));
@@ -491,29 +519,32 @@ async function enrichResults(results, normalized, reference) {
             }
           }
         }
+
+        const trVideos = d.videos?.results || [];
+        let selectedTrailer = trVideos.find(v => v.type === 'Trailer' && v.site === 'YouTube' && v.official) 
+                           || trVideos.find(v => v.type === 'Trailer' && v.site === 'YouTube')
+                           || trVideos.find(v => v.site === 'YouTube');
+        
+        if (selectedTrailer) {
+          item.trailer_url = `https://www.youtube.com/watch?v=${selectedTrailer.key}`;
+        }
       }
     } catch (err) {}
     
-    // Trailer
-    item.trailer_url = null;
-    try {
-      let vUrl = new URL(`${TMDB_BASE_URL}/${item.type}/${item.id}/videos?api_key=${TMDB_API_KEY}&language=tr-TR`);
-      let vRes = await fetch(vUrl.toString());
-      let vData = vRes.ok ? await vRes.json() : { results: [] };
-      
-      if (!vData.results || vData.results.length === 0) {
-        vUrl.searchParams.set('language', 'en-US');
-        vRes = await fetch(vUrl.toString());
-        vData = vRes.ok ? await vRes.json() : { results: [] };
-      }
-
-      if (vData.results && vData.results.length > 0) {
-        const trailers = vData.results.filter(v => v.type === 'Trailer' && v.site === 'YouTube');
-        let selectedTrailer = trailers.find(v => v.official) || trailers[0];
-        if (!selectedTrailer) selectedTrailer = vData.results.find(v => v.site === 'YouTube');
-        if (selectedTrailer) item.trailer_url = `https://www.youtube.com/watch?v=${selectedTrailer.key}`;
-      }
-    } catch (err) {}
+    if (!item.trailer_url) {
+      try {
+        const vUrl = new URL(`${TMDB_BASE_URL}/${item.type}/${item.id}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
+        const vRes = await fetch(vUrl.toString());
+        if (vRes.ok) {
+           const vData = await vRes.json();
+           const enVideos = vData.results || [];
+           let selectedTrailer = enVideos.find(v => v.type === 'Trailer' && v.site === 'YouTube' && v.official) 
+                              || enVideos.find(v => v.type === 'Trailer' && v.site === 'YouTube')
+                              || enVideos.find(v => v.site === 'YouTube');
+           if (selectedTrailer) item.trailer_url = `https://www.youtube.com/watch?v=${selectedTrailer.key}`;
+        }
+      } catch (err) {}
+    }
     
     return item;
   });
