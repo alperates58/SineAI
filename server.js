@@ -206,6 +206,22 @@ const TMDB_GENRE_NAMES = {
   10765: "Bilim Kurgu", 10766: "Pembe Dizi", 10767: "Talk Show", 10768: "Politika"
 };
 
+const KEYWORD_ALIASES = {
+  "zaman yolculuğu": "time travel", "zamanda yolculuk": "time travel",
+  "paralel evren": "parallel universe", "çoklu evren": "multiverse",
+  "yapay zeka": "artificial intelligence", "yapay zekâ": "artificial intelligence",
+  "uzay": "space", "uzay yolculuğu": "space travel", "uzay gemisi": "spaceship",
+  "robot": "robot", "seri katil": "serial killer", "mafya": "mafia",
+  "uyuşturucu": "drug", "dedektif": "detective", "kıyamet": "apocalypse",
+  "kıyamet sonrası": "post-apocalyptic", "hayatta kalma": "survival",
+  "zombi": "zombie", "vampir": "vampire", "büyü": "magic", "cadı": "witch",
+  "ejderha": "dragon", "uzaylı": "alien", "distopya": "dystopia", "distopik": "dystopian",
+  "siberpunk": "cyberpunk", "steampunk": "steampunk", "süper kahraman": "superhero",
+  "psikolojik": "psychological", "okul": "high school", "lise": "high school",
+  "hapishane": "prison", "soygun": "heist", "suikastçı": "assassin",
+  "korsan": "pirate", "mitoloji": "mythology", "hayalet": "ghost", "cinayet": "murder"
+};
+
 function normalizeTitle(title) {
   if (!title) return '';
   return title.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").replace(/\s{2,}/g, " ");
@@ -266,6 +282,46 @@ async function searchPersonTMDB(name) {
     }
   } catch (err) {}
   return null;
+}
+
+// TMDB Keyword Lookup
+let keywordCache = new Map();
+async function getKeywordIds(keywords) {
+  const ids = [];
+  const resolvedNames = [];
+  if (!keywords || !Array.isArray(keywords)) return { ids, resolvedNames };
+
+  for (let kw of keywords) {
+    const original = kw.toLowerCase().trim();
+    const query = KEYWORD_ALIASES[original] || original;
+
+    if (keywordCache.has(query)) {
+      ids.push(keywordCache.get(query));
+      resolvedNames.push(original);
+      continue;
+    }
+
+    try {
+      const url = new URL(`${TMDB_BASE_URL}/search/keyword`);
+      url.searchParams.append('api_key', TMDB_API_KEY);
+      url.searchParams.append('query', query);
+      url.searchParams.append('page', 1);
+
+      const res = await fetch(url.toString());
+      if (res.ok) {
+        const data = await res.json();
+        let best = data.results.find(k => k.name.toLowerCase() === query);
+        if (!best && data.results.length > 0) best = data.results[0];
+        
+        if (best) {
+          keywordCache.set(query, best.id);
+          ids.push(best.id);
+          resolvedNames.push(original);
+        }
+      }
+    } catch (e) {}
+  }
+  return { ids, resolvedNames };
 }
 
 // TMDB Search Helper (Advanced Scoring for Reference Selection)
@@ -463,6 +519,9 @@ async function enrichResults(results, normalized, reference) {
       item.reason = `"${normalized.actors[0]}" yer alıyor`;
     } else if (normalized.intent === 'person_search' && normalized.directors && normalized.directors.length > 0) {
       item.reason = `"${normalized.directors[0]}" yönetti`;
+    } else if (normalized.resolved_keywords && normalized.resolved_keywords.length > 0) {
+      const kwString = normalized.resolved_keywords[0];
+      item.reason = `"${kwString.charAt(0).toUpperCase() + kwString.slice(1)}" temasına uygun yapım`;
     } else if (normalized.watch_provider) {
       item.reason = `${normalized.watch_provider} platformunda izlenebilir`;
     } else {
@@ -605,6 +664,13 @@ async function fetchTMDB(normalized) {
     }
   }
 
+  // Keywords
+  const { ids: keywordIds, resolvedNames: keywordNames } = await getKeywordIds(normalized.keywords);
+  if (normalized.keywords && normalized.keywords.length > 0 && keywordIds.length === 0) {
+    warnings.push(`Anahtar kelimeler TMDB'de bulunamadı: ${normalized.keywords.join(', ')}`);
+  }
+  normalized.resolved_keywords = keywordNames; // Pass to enrichResults for reasons
+
   for (const type of types) {
     const url = new URL(`${TMDB_BASE_URL}/discover/${type}`);
     url.searchParams.append('api_key', TMDB_API_KEY);
@@ -643,6 +709,10 @@ async function fetchTMDB(normalized) {
       const map = type === 'movie' ? MOVIE_GENRES : TV_GENRES;
       const genreIds = normalized.genres.map(g => g.toLowerCase()).map(g => map[g]).filter(id => id !== undefined);
       if (genreIds.length > 0) url.searchParams.append('with_genres', genreIds.join(','));
+    }
+
+    if (keywordIds.length > 0) {
+      url.searchParams.append('with_keywords', keywordIds.join(','));
     }
     
     try {
