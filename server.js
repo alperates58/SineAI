@@ -347,39 +347,61 @@ async function searchTMDB(title, type) {
   let bestScore = -1;
   const queryNorm = normalizeTitle(title);
 
+  // Hem yerel dil hem en-US aranır; aynı film farklı dilde daha yüksek skor alabilir (örn. "Exit 8" tr-TR'de "Çıkış 8")
+  // Her film için diller arasındaki MAX skor tutulur
   for (const t of typesToSearch) {
-    try {
-      const url = new URL(`${TMDB_BASE_URL}/search/${t}?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}&query=${encodeURIComponent(title)}`);
-      const res = await fetch(url.toString());
-      if (res.ok) {
-        const data = await res.json();
-        for (const match of (data.results || [])) {
-          let score = 0;
-          const matchTitle = t === 'movie' ? match.title : match.name;
-          const matchOriginalTitle = t === 'movie' ? match.original_title : match.original_name;
-          
-          const tNorm = normalizeTitle(matchTitle);
-          const otNorm = normalizeTitle(matchOriginalTitle);
+    const candidateMap = new Map(); // id -> {score, matchData}
 
-          if (tNorm.includes('making of') || tNorm.includes('behind the scenes') || tNorm.includes('interview') || tNorm.includes('special')) continue;
+    const langs = [TMDB_LANGUAGE, 'en-US'];
+    for (const lang of langs) {
+      try {
+        const url = new URL(`${TMDB_BASE_URL}/search/${t}?api_key=${TMDB_API_KEY}&language=${lang}&query=${encodeURIComponent(title)}`);
+        const res = await fetch(url.toString());
+        if (res.ok) {
+          const data = await res.json();
+          for (const match of (data.results || [])) {
+            let score = 0;
+            const matchTitle = t === 'movie' ? match.title : match.name;
+            const matchOriginalTitle = t === 'movie' ? match.original_title : match.original_name;
 
-          if (tNorm === queryNorm) score += 50000;
-          else if (otNorm === queryNorm) score += 40000;
-          else if (tNorm.startsWith(queryNorm)) score += 5000;
-          else if (tNorm.includes(queryNorm)) score += 1000;
-          
-          score += (match.popularity || 0) * 0.1;
-          score += (match.vote_count || 0) * 5; 
+            const tNorm = normalizeTitle(matchTitle);
+            const otNorm = normalizeTitle(matchOriginalTitle);
 
-          if (match.genre_ids && match.genre_ids.includes(99)) score -= 10000;
+            if (tNorm.includes('making of') || tNorm.includes('behind the scenes') || tNorm.includes('interview') || tNorm.includes('special')) continue;
 
-          if (score > bestScore) {
-            bestScore = score;
-            bestMatch = { id: match.id, type: t, title: matchTitle, genre_ids: match.genre_ids || [] };
+            if (tNorm === queryNorm) score += 50000;
+            else if (otNorm === queryNorm) score += 40000;
+            // startsWith yalnızca tam kelime sınırında geçerli: "exit 8 something" ✓, "exit 8a" ✗
+            else if (tNorm.startsWith(queryNorm) && (tNorm.length === queryNorm.length || tNorm[queryNorm.length] === ' ')) score += 5000;
+            else if (otNorm.startsWith(queryNorm) && (otNorm.length === queryNorm.length || otNorm[queryNorm.length] === ' ')) score += 4000;
+            else if (tNorm.includes(queryNorm)) score += 1000;
+            else if (otNorm.includes(queryNorm)) score += 800;
+
+            score += (match.popularity || 0) * 0.1;
+            score += (match.vote_count || 0) * 5;
+
+            if (match.genre_ids && match.genre_ids.includes(99)) score -= 10000;
+
+            const existing = candidateMap.get(match.id);
+            // Aynı film için en yüksek skoru ve o skora karşılık gelen başlığı sakla
+            if (!existing || score > existing.score) {
+              candidateMap.set(match.id, {
+                score,
+                data: { id: match.id, type: t, title: matchTitle, genre_ids: match.genre_ids || [], vote_count: match.vote_count || 0, popularity: match.popularity || 0 }
+              });
+            }
           }
         }
+      } catch (err) {}
+    }
+
+    // Bu tür için en iyi adayı global bestMatch ile karşılaştır
+    for (const { score, data } of candidateMap.values()) {
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = data;
       }
-    } catch (err) {}
+    }
   }
 
   if (bestMatch) {
@@ -546,10 +568,14 @@ async function fetchTMDB(normalized) {
   // Similar to Title Logic
   if (normalized.intent === 'similar_to_title' && normalized.reference_title) {
     reference = await searchTMDB(normalized.reference_title, normalized.type || 'any');
-    if (reference) {
+    if (reference && reference.vote_count >= 150) {
       rawResults = await fetchSimilarTMDB(reference, normalized);
     } else {
-      warnings.push(`'${normalized.reference_title}' referans eseri bulunamadı, genel arama yapılıyor.`);
+      // Referans bulunamadı veya çok az oylanmış (bilinmeyen/hatalı başlık)
+      // AI'ın çıkardığı genre/must_have ile discover moduna geç
+      const refLabel = reference ? `"${reference.title}" (${reference.vote_count} oy)` : `"${normalized.reference_title}"`;
+      warnings.push(`${refLabel} için yeterli eşleşme bulunamadı, tema bazlı arama yapılıyor.`);
+      reference = null;
       normalized.intent = 'discover';
     }
   }
@@ -574,8 +600,27 @@ async function fetchTMDB(normalized) {
     }
   }
 
-  // DISCOVER LOGIC (Multi-Strategy)
-  if (normalized.intent !== 'similar_to_title' || (normalized.intent === 'similar_to_title' && rawResults.length < 10)) {
+  // PERSON CREDITS: Filmografiyi doğrudan person/{id}/credits'ten çek
+  // discover with_cast/with_crew filtresi TV için güvenilmez; bu yaklaşım kesin sonuç verir
+  if (personId) {
+    const role = normalized.directors?.length > 0 ? 'director' : 'actor';
+    for (const type of types) {
+      const endpoint = type === 'movie' ? 'movie_credits' : 'tv_credits';
+      try {
+        const res = await fetch(`${TMDB_BASE_URL}/person/${personId}/${endpoint}?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}`);
+        if (res.ok) {
+          const data = await res.json();
+          const credits = role === 'director'
+            ? (data.crew || []).filter(c => c.job === 'Director')
+            : (data.cast || []);
+          rawResults.push(...credits.map(c => ({ ...c, type, strategy: 'strict' })));
+        }
+      } catch (err) {}
+    }
+  }
+
+  // DISCOVER LOGIC (Multi-Strategy) — sadece person olmayan sorgular için
+  if (!personId && (normalized.intent !== 'similar_to_title' || (normalized.intent === 'similar_to_title' && rawResults.length < 10))) {
      const kwMustHave = await getKeywordIds(normalized.must_have);
      const kwSemantic = await getKeywordIds(normalized.semantic_topics);
      const kwNice = await getKeywordIds(normalized.nice_to_have);
@@ -586,14 +631,14 @@ async function fetchTMDB(normalized) {
 
      const strictIds = Array.from(new Set([...kwMustHave.ids]));
      const relaxedIds = Array.from(new Set([...kwMustHave.ids, ...kwSemantic.ids, ...kwLegacy.ids]));
-     
+
      for (const type of types) {
         const fetchDiscover = async (keywordIds, strategy) => {
            const url = new URL(`${TMDB_BASE_URL}/discover/${type}`);
            url.searchParams.append('api_key', TMDB_API_KEY);
            url.searchParams.append('language', TMDB_LANGUAGE);
            url.searchParams.append('region', TMDB_REGION);
-           
+
            if (normalized.sort_by === 'release_date') url.searchParams.append('sort_by', 'primary_release_date.desc');
            else if (normalized.sort_by === 'vote_average') url.searchParams.append('sort_by', 'vote_average.desc');
            else url.searchParams.append('sort_by', 'popularity.desc');
@@ -605,11 +650,6 @@ async function fetchTMDB(normalized) {
            if (normalized.year_max) {
              if (type === 'movie') url.searchParams.append('primary_release_date.lte', `${normalized.year_max}-12-31`);
              else url.searchParams.append('first_air_date.lte', `${normalized.year_max}-12-31`);
-           }
-
-           if (personId) {
-             if (normalized.actors?.length > 0) url.searchParams.append('with_cast', personId);
-             if (normalized.directors?.length > 0) url.searchParams.append('with_crew', personId);
            }
 
            if (providerId) {
@@ -624,7 +664,8 @@ async function fetchTMDB(normalized) {
            }
 
            if (keywordIds.length > 0) {
-             url.searchParams.append('with_keywords', keywordIds.join(','));
+             // OR mantığı (|): AND (,) çok kısıtlayıcı, keyword doğrulama top-20'yi zaten filtreler
+             url.searchParams.append('with_keywords', keywordIds.join('|'));
            }
 
            // Quality Profile Defaults
