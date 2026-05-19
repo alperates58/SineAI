@@ -186,20 +186,32 @@ const MOVIE_GENRES = {
   action: 28, adventure: 12, animation: 16, comedy: 35, crime: 80,
   documentary: 99, drama: 18, family: 10751, fantasy: 14, history: 36,
   horror: 27, music: 10402, mystery: 9648, romance: 10749,
-  "science fiction": 878, "sci-fi": 878, thriller: 53, war: 10752, western: 37
+  "science fiction": 878, "sci-fi": 878, thriller: 53, war: 10752, western: 37,
+  "bilim kurgu": 878, "suç": 80, "gizem": 9648, "korku": 27, "dram": 18,
+  "komedi": 35, "aksiyon": 28, "macera": 12, "romantik": 10749, "fantastik": 14, "gerilim": 53
 };
 
 const TV_GENRES = {
   action: 10759, adventure: 10759, animation: 16, comedy: 35, crime: 80,
   documentary: 99, drama: 18, family: 10751, kids: 10762, mystery: 9648,
   news: 10763, reality: 10764, "science fiction": 10765, "sci-fi": 10765,
-  fantasy: 10765, soap: 10766, talk: 10767, war: 10768, politics: 10768, western: 37
+  fantasy: 10765, soap: 10766, talk: 10767, war: 10768, politics: 10768, western: 37,
+  "bilim kurgu": 10765, "suç": 80, "gizem": 9648, "dram": 18,
+  "komedi": 35, "aksiyon": 10759, "macera": 10759, "fantastik": 10765
 };
+
+function normalizeTitle(title) {
+  if (!title) return '';
+  return title.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").replace(/\s{2,}/g, " ");
+}
 
 // TMDB Search Helper
 async function searchTMDB(title, type) {
   const typesToSearch = type === 'any' ? ['movie', 'tv'] : [type];
   let bestMatch = null;
+  let bestScore = -1;
+
+  const queryNorm = normalizeTitle(title);
 
   for (const t of typesToSearch) {
     const url = new URL(`${TMDB_BASE_URL}/search/${t}`);
@@ -211,13 +223,28 @@ async function searchTMDB(title, type) {
       const res = await fetch(url.toString());
       if (res.ok) {
         const data = await res.json();
-        if (data.results && data.results.length > 0) {
-          const match = data.results[0];
-          if (!bestMatch || match.popularity > bestMatch.popularity) {
+        for (const match of (data.results || [])) {
+          let score = 0;
+          const matchTitle = t === 'movie' ? match.title : match.name;
+          const matchOriginalTitle = t === 'movie' ? match.original_title : match.original_name;
+          
+          const tNorm = normalizeTitle(matchTitle);
+          const otNorm = normalizeTitle(matchOriginalTitle);
+
+          if (tNorm === queryNorm) score += 1000;
+          else if (otNorm === queryNorm) score += 950;
+          else if (tNorm.startsWith(queryNorm)) score += 300;
+          else if (tNorm.includes(queryNorm)) score += 100;
+          
+          score += (match.popularity || 0) * 0.001;
+          score += (match.vote_average || 0) * 0.01;
+
+          if (score > bestScore) {
+            bestScore = score;
             bestMatch = {
               id: match.id,
               type: t,
-              title: t === 'movie' ? match.title : match.name
+              title: matchTitle
             };
           }
         }
@@ -250,8 +277,9 @@ async function fetchSimilarTMDB(reference) {
           overview: item.overview,
           poster: item.poster_path,
           release_date: reference.type === 'movie' ? item.release_date : item.first_air_date,
-          vote_average: item.vote_average,
-          popularity: item.popularity
+          vote_average: item.vote_average || 0,
+          vote_count: item.vote_count || 0,
+          popularity: item.popularity || 0
         }));
         results.push(...mapped);
       }
@@ -270,9 +298,9 @@ async function fetchSimilarTMDB(reference) {
   let finalResults = Array.from(uniqueMap.values());
   
   finalResults.sort((a, b) => {
-    if (a.poster && !b.poster) return -1;
-    if (!a.poster && b.poster) return 1;
-    return b.popularity - a.popularity;
+    const scoreA = a.vote_average + Math.log10((a.popularity || 0) + 1) + Math.log10((a.vote_count || 0) + 1) + (a.poster ? 5 : 0);
+    const scoreB = b.vote_average + Math.log10((b.popularity || 0) + 1) + Math.log10((b.vote_count || 0) + 1) + (b.poster ? 5 : 0);
+    return scoreB - scoreA;
   });
 
   return finalResults.slice(0, 10);
