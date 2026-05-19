@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error || 'Sunucu ile iletişim kurulamadı.');
             }
 
-            renderResults(data.results);
+            renderResults(data.results, data.reference);
             
         } catch (error) {
             console.error('API Error:', error);
@@ -49,13 +49,23 @@ document.addEventListener('DOMContentLoaded', () => {
         errorBox.classList.remove('hidden');
     }
 
-    function renderResults(results) {
+    function renderResults(results, reference) {
         if (!results || results.length === 0) {
             resultsGrid.innerHTML = '<div class="no-results" style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">Aradığınız kriterlere uygun sonuç bulunamadı. Lütfen daha farklı ifadeler kullanmayı deneyin.</div>';
             return;
         }
 
         const fragment = document.createDocumentFragment();
+
+        if (reference) {
+            const titleEl = document.createElement('h2');
+            titleEl.style.gridColumn = '1 / -1';
+            titleEl.style.color = 'var(--primary-color)';
+            titleEl.style.marginBottom = '10px';
+            titleEl.style.marginTop = '10px';
+            titleEl.textContent = `${reference.title} benzeri öneriler`;
+            fragment.appendChild(titleEl);
+        }
 
         results.forEach(item => {
             const card = document.createElement('div');
