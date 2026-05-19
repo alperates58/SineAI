@@ -106,13 +106,41 @@ Kurallar:
   "trailer_required": false
 }`;
 
-// AI Providers
 async function callMockAI(query) {
   const q = query.toLowerCase();
   const normalized = { ...FALLBACK_NORMALIZE };
+  
   if (q.includes('yapay zeka')) { normalized.type = 'movie'; normalized.genres = ['science fiction']; normalized.must_have = ['artificial intelligence']; normalized.semantic_topics = ['robot', 'technology']; }
-  else if (q.includes('zaman')) { normalized.genres = ['science fiction']; normalized.must_have = ['time travel']; }
+  else if (q.includes('zaman')) { normalized.type = 'movie'; normalized.genres = ['science fiction']; normalized.must_have = ['time travel']; }
+  else if (q.includes('uzayda geçen gerilim')) { normalized.type = 'movie'; normalized.genres = ['science fiction', 'thriller']; normalized.must_have = ['space']; }
   else if (q.includes('uzay')) { normalized.genres = ['science fiction']; normalized.must_have = ['space']; }
+  else if (q.includes('suç dizisi') && q.includes('karanlık')) { normalized.type = 'tv'; normalized.genres = ['crime', 'drama']; normalized.must_have = ['crime', 'detective']; normalized.semantic_topics = ['psychological thriller']; }
+  else if (q.includes('aileyle izlenecek komedi')) { normalized.type = 'movie'; normalized.genres = ['comedy', 'family']; normalized.quality_profile = 'family'; }
+  else if (q.includes('mini dizi')) { normalized.type = 'tv'; normalized.semantic_topics = ['miniseries']; }
+  else if (q.includes('nolan')) { normalized.intent = 'person_search'; normalized.directors = ['Christopher Nolan']; normalized.semantic_topics = ['mind bending']; }
+  else if (q.includes('true detective')) { normalized.intent = 'similar_to_title'; normalized.reference_title = 'True Detective'; normalized.type = 'tv'; }
+  else if (q.includes('tom hardy')) { normalized.intent = 'person_search'; normalized.actors = ['Tom Hardy']; normalized.genres = ['action']; }
+  else if (q.includes('90\'lardan')) { normalized.year_min = 1990; normalized.year_max = 1999; normalized.genres = ['crime']; }
+  else if (q.includes('gizli cevher')) { normalized.genres = ['animation']; normalized.quality_profile = 'hidden_gems'; }
+  else if (q.includes('yeni çıkan zombi')) { normalized.type = 'tv'; normalized.quality_profile = 'new'; normalized.must_have = ['zombie']; }
+  else if (q.includes('kıyamet sonrası')) { normalized.type = 'movie'; normalized.must_have = ['post-apocalyptic', 'survival']; }
+  else if (q.includes('tarantino')) { normalized.intent = 'person_search'; normalized.directors = ['Quentin Tarantino']; }
+  else if (q.includes('romantik komedi')) { normalized.year_min = 2020; normalized.genres = ['romance', 'comedy']; }
+  else if (q.includes('hapishaneden')) { normalized.type = 'movie'; normalized.must_have = ['prison']; }
+  else if (q.includes('çoklu evren')) { normalized.type = 'movie'; normalized.must_have = ['multiverse']; }
+  else if (q.includes('soğuk savaş')) { normalized.type = 'movie'; normalized.must_have = ['spy']; }
+  else if (q.includes('hayvanlı')) { normalized.type = 'movie'; normalized.genres = ['family']; normalized.quality_profile = 'family'; }
+  else if (q.includes('donnie yen')) { normalized.actors = ['Donnie Yen']; normalized.must_have = ['martial arts']; }
+  else if (q.includes('vampir')) { normalized.type = 'tv'; normalized.must_have = ['vampire']; }
+  else if (q.includes('seri katil')) { normalized.type = 'movie'; normalized.must_have = ['serial killer']; normalized.semantic_topics = ['based on a true story']; }
+  else if (q.includes('akıl hastanesinde')) { normalized.type = 'movie'; normalized.must_have = ['psychological thriller']; }
+  else if (q.includes('lisede')) { normalized.type = 'tv'; normalized.must_have = ['high school']; }
+  else if (q.includes('uzaylı istilası')) { normalized.type = 'movie'; normalized.must_have = ['alien']; }
+  else if (q.includes('doğa belgeseli')) { normalized.type = 'tv'; normalized.genres = ['documentary']; }
+  else if (q.includes('kılıçlı')) { normalized.type = 'tv'; normalized.must_have = ['middle ages']; }
+  else if (q.includes('banka soygunu')) { normalized.type = 'movie'; normalized.must_have = ['heist']; }
+  else if (q.includes('gerilim dizisi')) { normalized.type = 'tv'; normalized.genres = ['thriller']; normalized.semantic_topics = ['thriller', 'suspense']; }
+  
   return normalized;
 }
 
@@ -602,7 +630,11 @@ async function fetchTMDB(normalized) {
            // Quality Profile Defaults
            let minVoteCount = 100;
            let minVoteAvg = 5.0;
-           if (normalized.quality_profile === 'hidden_gems') { minVoteCount = type==='movie'?30:20; minVoteAvg = 6.0; }
+           if (normalized.quality_profile === 'hidden_gems') { 
+               minVoteCount = type==='movie'?30:20; 
+               minVoteAvg = 6.0; 
+               url.searchParams.append('vote_count.lte', 1500); 
+           }
            else if (normalized.quality_profile === 'mainstream') { minVoteCount = type==='movie'?300:100; minVoteAvg = 5.5; }
            else if (normalized.quality_profile === 'new') { minVoteCount = 10; minVoteAvg = 5.0; }
            
@@ -688,12 +720,15 @@ async function fetchTMDB(normalized) {
   // Must-Have Keyword Verification for Top 20
   const top20 = finalArray.slice(0, 20);
   const kwMustHaveIds = (await getKeywordIds(normalized.must_have)).ids;
+  const kwSemanticIds = (await getKeywordIds(normalized.semantic_topics)).ids;
+  
+  const verifyIds = kwMustHaveIds.length > 0 ? kwMustHaveIds : kwSemanticIds;
 
-  if (kwMustHaveIds.length > 0 && normalized.intent !== 'similar_to_title' && normalized.intent !== 'person_search') {
+  if (verifyIds.length > 0 && normalized.intent !== 'similar_to_title' && normalized.intent !== 'person_search') {
       const verifyPromises = top20.map(async (item) => {
          const itemKws = await getItemKeywords(item.id, item.type);
-         const hasMustHave = kwMustHaveIds.some(id => itemKws.includes(id));
-         if (hasMustHave) item.base_score += 25; // Massive bonus
+         const hasKeyword = verifyIds.some(id => itemKws.includes(id));
+         if (hasKeyword) item.base_score += 25; // Massive bonus
          else item.base_score -= 30; // Massive penalty if requested strictly
          return item;
       });
