@@ -53,6 +53,7 @@ docker run -p 3000:3000 --env-file .env sineai
 - `docker-compose.yml` dosyasında host portları açılmamıştır. Yalnızca `expose: "3000"` tanımlanmıştır.
 - Container'ın iç portu (Container Port) her zaman **3000** olarak yapılandırılmalıdır.
 - Network olarak dışarıdan `coolify` ağına entegre edilmiştir.
+- Coolify deploylarında container içinde `.git` klasörü bulunmaz. Bu nedenle uygulama içinden `git pull` ile güncelleme yapılamaz; yeni sürüm için Coolify üzerinden `Redeploy` kullanılmalıdır.
 
 ## Kod Kalitesi ve Kontroller
 

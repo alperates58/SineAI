@@ -97,26 +97,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!data.ok) throw new Error(data.error);
             if (data.hasUpdate) {
                 updateModalTitle.textContent = '⬆️ Güncelleme Mevcut!';
-                updateModalMsg.textContent   = 'GitHub\'ta yeni bir sürüm bulundu.';
+                updateModalMsg.textContent   = 'GitHub\'da yeni sürüm var. Coolify üzerinden Redeploy yapın.';
                 updateModalCommits.innerHTML = `
                     <div>Mevcut: <code>${data.currentCommit}</code></div>
                     <div>Yeni: <code>${data.latestCommit}</code></div>
                     ${data.latestMessage ? `<div class="update-commit-msg">"${data.latestMessage}"</div>` : ''}
                 `;
                 updateModalCommits.classList.remove('hidden');
-                doUpdateBtn.classList.remove('hidden');
-                doUpdateBtn.disabled    = false;
-                doUpdateBtn.textContent = '⬆️ Güncelle';
+                doUpdateBtn.classList.add('hidden');
                 updateModal.classList.remove('hidden');
                 closeUpdateModalBtn.focus();
             } else {
-                showToast('✅ Yeni güncelleme yok');
+                showToast('Uygulama güncel görünüyor.');
             }
         } catch (err) {
             showToast(`Kontrol başarısız: ${err.message}`);
         } finally {
             checkUpdateBtn.disabled    = false;
-            checkUpdateBtn.textContent = '🔄 Güncellemeleri Kontrol Et';
+            checkUpdateBtn.textContent = '🔄 Güncellemeyi Kontrol Et';
         }
     });
 
@@ -126,15 +124,17 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const res  = await fetch('/api/update', { method: 'POST' });
             const data = await res.json();
-            if (!data.ok) throw new Error(data.error);
-            updateModalTitle.textContent = '✅ Güncelleme Başarılı';
-            updateModalMsg.textContent   = 'Sunucu yeniden başlatılıyor. Lütfen birkaç saniye bekleyin...';
-            updateModalCommits.classList.add('hidden');
-            doUpdateBtn.classList.add('hidden');
-            setTimeout(() => location.reload(), 5000);
+            if (data.manual) {
+                updateModalTitle.textContent = 'ℹ️ Manuel Güncelleme Gerekli';
+                updateModalMsg.textContent   = data.message;
+                updateModalCommits.classList.add('hidden');
+                doUpdateBtn.classList.add('hidden');
+                return;
+            }
+            if (!data.ok) throw new Error(data.error || data.message);
         } catch (err) {
             doUpdateBtn.disabled    = false;
-            doUpdateBtn.textContent = '⬆️ Güncelle';
+            doUpdateBtn.textContent = 'Yeniden Dene';
             showToast(`Güncelleme başarısız: ${err.message}`);
         }
     });
