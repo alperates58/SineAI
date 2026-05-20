@@ -70,7 +70,7 @@ function setCache(key, data) {
 // Prompt Generation
 const SYSTEM_PROMPT = `Sen bir film ve dizi öneri asistanısın. Kullanıcının girdisini analiz et ve bir SEARCH PLAN (arama planı) oluşturarak sadece aşağıdaki JSON formatında çıktı ver.
 Kurallar:
-- "X benzeri", "X gibi" derse intent "similar_to_title" ve reference_title "X" olsun.
+- Eğer kullanıcı "X benzeri", "X gibi", "X tarzı", "X'e benzeyen", "X ayarında" gibi kalıplar kullanırsa HER ZAMAN intent "similar_to_title" ve reference_title "X" olsun. Bu kural Türkçe başlıklar ve yerli yapımlar için de geçerlidir (Örn: "Kurtlar Vadisi benzeri dizi öner" => intent: "similar_to_title", reference_title: "Kurtlar Vadisi", type: "tv").
 - "X oynadığı", "X yönettiği" gibi aramalarda aktör/yönetmen alanlarını mutlaka doldur. Niyet ne olursa olsun bu alanlar doluysa sistem onu dikkate alacaktır (Örn: "Donnie Yen dövüş filmleri" => actors:["Donnie Yen"], must_have:["martial arts"], intent:"discover").
 - "az bilinen", "gizli cevher", "bağımsız" derse quality_profile: "hidden_gems".
 - "yeni çıkan" derse quality_profile: "new".
@@ -109,8 +109,21 @@ Kurallar:
 async function callMockAI(query) {
   const q = query.toLowerCase();
   const normalized = { ...FALLBACK_NORMALIZE };
-  
-  if (q.includes('yapay zeka')) { normalized.type = 'movie'; normalized.genres = ['science fiction']; normalized.must_have = ['artificial intelligence']; normalized.semantic_topics = ['robot', 'technology']; }
+
+  // Türkçe benzeri kalıpları yakala (benzeri, gibi, tarzı, benzeyen, ayarında)
+  const similarPattern = /(.+?)\s+(benzeri|gibi|tarzı|benzeyen|ayarında)\s+(dizi|film)?/i;
+  const similarMatch = q.match(similarPattern);
+
+  if (q.includes('kurtlar vadisi benzeri') || q.includes('kurtlar vadisi gibi')) { normalized.intent = 'similar_to_title'; normalized.reference_title = 'Kurtlar Vadisi'; normalized.type = 'tv'; }
+  else if (similarMatch) {
+    // Generic fallback: benzeri kalıpı bulundu, intent'i similar_to_title yap
+    const titlePart = similarMatch[1].trim();
+    const typePart = similarMatch[3] ? (similarMatch[3].includes('dizi') ? 'tv' : 'movie') : 'any';
+    normalized.intent = 'similar_to_title';
+    normalized.reference_title = titlePart.charAt(0).toUpperCase() + titlePart.slice(1);
+    if (typePart !== 'any') normalized.type = typePart;
+  }
+  else if (q.includes('yapay zeka')) { normalized.type = 'movie'; normalized.genres = ['science fiction']; normalized.must_have = ['artificial intelligence']; normalized.semantic_topics = ['robot', 'technology']; }
   else if (q.includes('zaman')) { normalized.type = 'movie'; normalized.genres = ['science fiction']; normalized.must_have = ['time travel']; }
   else if (q.includes('uzayda geçen gerilim')) { normalized.type = 'movie'; normalized.genres = ['science fiction', 'thriller']; normalized.must_have = ['space']; }
   else if (q.includes('uzay')) { normalized.genres = ['science fiction']; normalized.must_have = ['space']; }
@@ -140,7 +153,7 @@ async function callMockAI(query) {
   else if (q.includes('kılıçlı')) { normalized.type = 'tv'; normalized.must_have = ['middle ages']; }
   else if (q.includes('banka soygunu')) { normalized.type = 'movie'; normalized.must_have = ['heist']; }
   else if (q.includes('gerilim dizisi')) { normalized.type = 'tv'; normalized.genres = ['thriller']; normalized.semantic_topics = ['thriller', 'suspense']; }
-  
+
   return normalized;
 }
 
@@ -551,12 +564,20 @@ async function enrichResults(results, normalized, reference) {
 }
 
 // MAIN TMDB WORKFLOW
-async function fetchTMDB(normalized) {
+async function fetchTMDB(normalized, originalQuery) {
   if (!TMDB_API_KEY) {
     return {
       reference: null, people: [], warnings: ["TMDB API key yok."],
       results: [{ id: 1, type: normalized.type || 'movie', title: "Mock Film", overview: "Test.", poster: null, vote_average: 8.5, vote_count: 100, popularity: 50, providers: [], trailer_url: null, reason: "Mock" }]
     };
+  }
+
+  // Backend fallback: AI yanlış normalize etse de reference_title doluysa ve query'de benzeri kalıpları varsa intent'i similar_to_title yap
+  if (normalized.reference_title && originalQuery) {
+    const q = originalQuery.toLowerCase();
+    if (/benzeri|gibi|tarzı|benzeyen|ayarında/.test(q)) {
+      normalized.intent = 'similar_to_title';
+    }
   }
 
   let reference = null;
@@ -805,10 +826,10 @@ fastify.post('/api/recommend', async (request, reply) => {
   if (cachedData) return { ok: true, ...cachedData, cached: true };
 
   let normalized;
-  try { normalized = await normalizeQuery(query); } 
+  try { normalized = await normalizeQuery(query); }
   catch (error) { normalized = { ...FALLBACK_NORMALIZE }; }
 
-  const tmdbData = await fetchTMDB(normalized);
+  const tmdbData = await fetchTMDB(normalized, query);
   const responseData = { ok: true, normalized, reference: tmdbData.reference, people: tmdbData.people, warnings: tmdbData.warnings, results: tmdbData.results };
   setCache(cacheKey, responseData);
   return responseData;
