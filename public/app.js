@@ -138,10 +138,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── See All buttons ──────────────────────────────────
     document.querySelectorAll('.see-all[data-query]').forEach(el => {
-        el.addEventListener('click', () => {
-            const q = el.dataset.query;
-            if (q) { queryInput.value = q; submitSearch(q); }
-        });
+        el.tabIndex = 0;
+        const run = () => { const q = el.dataset.query; if (q) { queryInput.value = q; submitSearch(q); } };
+        el.addEventListener('click', run);
+        el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
     });
 
     // ── Back to discover ─────────────────────────────────
@@ -161,8 +161,11 @@ document.addEventListener('DOMContentLoaded', () => {
         genres.forEach(g => {
             const chip = document.createElement('div');
             chip.className = 'genre-chip';
+            chip.tabIndex  = 0;
             chip.innerHTML = `<div class="genre-chip-icon">${g.icon}</div><div class="genre-chip-name">${g.name}</div>`;
-            chip.addEventListener('click', () => { queryInput.value = g.query; submitSearch(g.query); });
+            const run = () => { queryInput.value = g.query; submitSearch(g.query); };
+            chip.addEventListener('click', run);
+            chip.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
             container.appendChild(chip);
         });
     }
