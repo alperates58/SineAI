@@ -14,6 +14,92 @@ document.addEventListener('DOMContentLoaded', () => {
     let isListening = false;
     let recognition = null;
 
+    // Update check elements
+    const checkUpdateBtn = document.getElementById('checkUpdateBtn');
+    const updateModal = document.getElementById('updateModal');
+    const updateModalTitle = document.getElementById('updateModalTitle');
+    const updateModalMsg = document.getElementById('updateModalMsg');
+    const updateModalCommits = document.getElementById('updateModalCommits');
+    const doUpdateBtn = document.getElementById('doUpdateBtn');
+    const closeUpdateModalBtn = document.getElementById('closeUpdateModalBtn');
+    const toast = document.getElementById('toast');
+
+    let toastTimer = null;
+
+    function showToast(message, duration = 3000) {
+        if (toastTimer) clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.remove('hidden');
+        toastTimer = setTimeout(() => toast.classList.add('hidden'), duration);
+    }
+
+    function closeUpdateModal() {
+        updateModal.classList.add('hidden');
+    }
+
+    checkUpdateBtn.addEventListener('click', async () => {
+        checkUpdateBtn.disabled = true;
+        checkUpdateBtn.textContent = '🔄 Kontrol ediliyor...';
+        try {
+            const res = await fetch('/api/check-update');
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error);
+
+            if (data.hasUpdate) {
+                updateModalTitle.textContent = '⬆️ Güncelleme Mevcut!';
+                updateModalMsg.textContent = 'GitHub\'ta yeni bir sürüm bulundu.';
+                updateModalCommits.innerHTML = `
+                    <div>Mevcut: <code>${data.currentCommit}</code></div>
+                    <div>Yeni: <code>${data.latestCommit}</code></div>
+                    ${data.latestMessage ? `<div class="update-commit-msg">"${data.latestMessage}"</div>` : ''}
+                `;
+                updateModalCommits.classList.remove('hidden');
+                doUpdateBtn.classList.remove('hidden');
+                doUpdateBtn.disabled = false;
+                doUpdateBtn.textContent = '⬆️ Güncelle';
+            } else {
+                closeUpdateModal();
+                showToast('✅ Yeni güncelleme yok');
+                return;
+            }
+
+            updateModal.classList.remove('hidden');
+            closeUpdateModalBtn.focus();
+        } catch (err) {
+            showToast(`Kontrol başarısız: ${err.message}`);
+        } finally {
+            checkUpdateBtn.disabled = false;
+            checkUpdateBtn.textContent = '🔄 Güncellemeleri Kontrol Et';
+        }
+    });
+
+    doUpdateBtn.addEventListener('click', async () => {
+        doUpdateBtn.disabled = true;
+        doUpdateBtn.textContent = 'Güncelleniyor...';
+        try {
+            const res = await fetch('/api/update', { method: 'POST' });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error);
+
+            updateModalTitle.textContent = '✅ Güncelleme Başarılı';
+            updateModalMsg.textContent = 'Sunucu yeniden başlatılıyor. Lütfen birkaç saniye bekleyin...';
+            updateModalCommits.classList.add('hidden');
+            doUpdateBtn.classList.add('hidden');
+            setTimeout(() => location.reload(), 5000);
+        } catch (err) {
+            doUpdateBtn.disabled = false;
+            doUpdateBtn.textContent = '⬆️ Güncelle';
+            showToast(`Güncelleme başarısız: ${err.message}`);
+        }
+    });
+
+    closeUpdateModalBtn.addEventListener('click', closeUpdateModal);
+    closeUpdateModalBtn.addEventListener('keydown', (e) => { if (e.key === 'Enter') closeUpdateModal(); });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !updateModal.classList.contains('hidden')) closeUpdateModal();
+    });
+
     // Web Speech API Setup
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {

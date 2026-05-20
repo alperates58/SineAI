@@ -2,6 +2,10 @@ import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -815,8 +819,76 @@ async function fetchTMDB(normalized, originalQuery) {
   return { reference, people, warnings, results: enriched.slice(0, 10) };
 }
 
+// Update helpers
+async function getGitHubRepoPath() {
+  try {
+    const { stdout } = await execAsync('git remote get-url origin');
+    const match = stdout.trim().match(/github\.com[:/](.+?)(?:\.git)?$/);
+    if (match) return match[1];
+  } catch {}
+  return process.env.GITHUB_REPO || null;
+}
+
+async function getCurrentCommit() {
+  try {
+    const { stdout } = await execAsync('git rev-parse HEAD');
+    return stdout.trim();
+  } catch {}
+  return null;
+}
+
 // Routes
 fastify.get('/health', async (request, reply) => { return { ok: true, service: 'sineai', version: '0.3.0' }; });
+
+fastify.get('/api/check-update', async (request, reply) => {
+  try {
+    const repoPath = await getGitHubRepoPath();
+    if (!repoPath) return reply.status(500).send({ ok: false, error: 'GitHub repo bilgisi alınamadı. GITHUB_REPO env değişkeni ayarlayın.' });
+
+    const currentCommit = await getCurrentCommit();
+    const headers = { 'User-Agent': 'SineAI-UpdateChecker/1.0' };
+    if (process.env.GITHUB_TOKEN) headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
+
+    const apiRes = await fetch(`https://api.github.com/repos/${repoPath}/commits/main`, { headers });
+    if (!apiRes.ok) throw new Error(`GitHub API: ${apiRes.status}`);
+
+    const apiData = await apiRes.json();
+    const latestCommit = apiData.sha;
+    const hasUpdate = currentCommit ? currentCommit !== latestCommit : true;
+
+    return {
+      ok: true,
+      hasUpdate,
+      currentCommit: currentCommit ? currentCommit.substring(0, 7) : 'bilinmiyor',
+      latestCommit: latestCommit.substring(0, 7),
+      latestMessage: apiData.commit?.message?.split('\n')[0] || ''
+    };
+  } catch (err) {
+    fastify.log.error(err);
+    return reply.status(500).send({ ok: false, error: `Kontrol başarısız: ${err.message}` });
+  }
+});
+
+fastify.post('/api/update', async (request, reply) => {
+  try {
+    const repoPath = await getGitHubRepoPath();
+    // Docker'da SSH key olmadığından her zaman HTTPS kullan
+    let pullTarget;
+    if (repoPath) {
+      const auth = process.env.GITHUB_TOKEN ? `${process.env.GITHUB_TOKEN}@` : '';
+      pullTarget = `https://${auth}github.com/${repoPath}.git main`;
+    } else {
+      pullTarget = 'origin main';
+    }
+    const { stdout } = await execAsync(`git pull ${pullTarget}`);
+    fastify.log.info(`Git pull: ${stdout}`);
+    reply.send({ ok: true, message: 'Güncelleme indirildi. Sunucu yeniden başlatılıyor...' });
+    setTimeout(() => process.exit(1), 800);
+  } catch (err) {
+    fastify.log.error(err);
+    return reply.status(500).send({ ok: false, error: `Güncelleme başarısız: ${err.message}` });
+  }
+});
 
 fastify.post('/api/recommend', async (request, reply) => {
   const { query } = request.body;

@@ -43,8 +43,20 @@ body {
 }
 
 .app-header {
+    padding: 30px 0 20px;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    text-align: left;
+}
+
+.header-top > div {
+    flex: 1;
     text-align: center;
-    padding: 40px 0 20px;
 }
 
 .app-header h1 {
@@ -451,15 +463,212 @@ button:disabled {
 }
 
 .app-footer {
-    text-align: center;
     padding: 20px 0;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    border-top: 1px solid #333;
+    border-top: 1px solid #222;
     margin-top: auto;
 }
 
+.footer-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.footer-brand {
+    color: var(--primary-color);
+    font-weight: bold;
+    font-size: 0.95rem;
+}
+
+.footer-dot {
+    color: #444;
+}
+
+.footer-tmdb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tmdb-logo {
+    height: 13px;
+    opacity: 0.55;
+    vertical-align: middle;
+    filter: brightness(0.8);
+}
+
+/* Update check button */
+.update-check-btn {
+    flex: none;
+    background-color: #1e1e1e;
+    color: var(--text-muted);
+    border: 1px solid #444;
+    font-size: 0.85rem;
+    padding: 10px 16px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+    font-weight: normal;
+    margin-top: 6px;
+}
+
+.update-check-btn:hover,
+.update-check-btn:focus-visible {
+    background-color: #2a2a2a;
+    color: var(--text-color);
+    border-color: var(--primary-color);
+}
+
+.update-check-btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+/* Update modal */
+.update-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.update-modal.hidden {
+    display: none;
+}
+
+.update-modal-content {
+    background-color: var(--card-bg);
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 36px 32px;
+    max-width: 460px;
+    width: 90%;
+    text-align: center;
+}
+
+.update-modal-content h2 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    color: var(--primary-color);
+}
+
+.update-modal-content > p {
+    color: var(--text-muted);
+    margin-bottom: 20px;
+}
+
+.update-commits {
+    background-color: #0d0d0d;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-align: left;
+    line-height: 2;
+}
+
+.update-commits code {
+    color: var(--secondary-color);
+    font-family: monospace;
+}
+
+.update-commit-msg {
+    color: var(--text-color);
+    margin-top: 4px;
+    font-style: italic;
+    line-height: 1.4;
+}
+
+.update-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.update-confirm-btn {
+    background-color: var(--primary-color);
+    color: #000;
+    border: none;
+    padding: 12px 28px;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    flex: none;
+    transition: var(--transition);
+}
+
+.update-confirm-btn:hover,
+.update-confirm-btn:focus-visible {
+    background-color: var(--primary-hover);
+    color: #fff;
+}
+
+.update-confirm-btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.update-cancel-btn {
+    background-color: #2a2a2a;
+    color: var(--text-color);
+    border: 1px solid #555;
+    padding: 12px 28px;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    cursor: pointer;
+    flex: none;
+    transition: var(--transition);
+}
+
+.update-cancel-btn:hover,
+.update-cancel-btn:focus-visible {
+    background-color: #333;
+}
+
+/* Toast notification */
+.toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #2a2a2a;
+    color: var(--text-color);
+    border: 1px solid #444;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 1rem;
+    z-index: 3000;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    white-space: nowrap;
+}
+
+.toast.hidden {
+    display: none;
+}
+
 @media (max-width: 768px) {
+    .header-top {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .header-top > div {
+        text-align: center;
+    }
+    .update-check-btn {
+        margin-top: 0;
+        width: 100%;
+    }
     .results-grid {
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     }

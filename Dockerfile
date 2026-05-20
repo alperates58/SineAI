@@ -6,6 +6,8 @@ COPY package*.json ./
 
 RUN npm install --omit=dev
 
+RUN apk add --no-cache git
+
 COPY . .
 
 EXPOSE 3000
