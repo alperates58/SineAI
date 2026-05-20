@@ -1,15 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- TV ana ekranında görünen banner (320x180dp) -->
-<!-- Gerçek bir görsel için bu dosyayı banner.png (320x180) ile değiştirin -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#121212" />
+            <solid android:color="#06080E" />
         </shape>
     </item>
     <item android:gravity="center">
-        <shape android:shape="rectangle">
-            <solid android:color="#00000000" />
-        </shape>
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/tv_banner" />
     </item>
 </layer-list>

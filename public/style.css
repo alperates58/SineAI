@@ -40,10 +40,71 @@ body {
     padding: 0 24px;
 }
 
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 *:focus-visible {
     outline: none;
     box-shadow: var(--focus);
     border-radius: 6px;
+}
+
+/* Android TV WebView only: enabled from the native wrapper so desktop/web stays unchanged. */
+body.tv-nav-ready {
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+}
+
+body.tv-nav-ready .cards-row {
+    scroll-behavior: smooth;
+    scroll-padding-inline: 44px;
+}
+
+body.tv-focus-active .movie-card,
+body.tv-focus-active .genre-chip,
+body.tv-focus-active .pill,
+body.tv-focus-active .see-all,
+body.tv-focus-active button,
+body.tv-focus-active textarea,
+body.tv-focus-active a {
+    outline: none;
+}
+
+body.tv-focus-active .movie-card:focus,
+body.tv-focus-active .genre-chip:focus,
+body.tv-focus-active .pill:focus,
+body.tv-focus-active .see-all:focus,
+body.tv-focus-active button:focus,
+body.tv-focus-active textarea:focus,
+body.tv-focus-active a:focus {
+    box-shadow: 0 0 0 3px rgba(56,189,248,0.55), 0 18px 45px rgba(0,0,0,0.55);
+    border-color: rgba(56,189,248,0.75);
+}
+
+body.tv-focus-active .movie-card:focus {
+    transform: translateY(-7px) scale(1.035);
+    z-index: 4;
+}
+
+body.tv-focus-active .genre-chip:focus,
+body.tv-focus-active .pill:focus,
+body.tv-focus-active .see-all:focus,
+body.tv-focus-active button:focus,
+body.tv-focus-active a:focus {
+    transform: translateY(-2px) scale(1.03);
+}
+
+body.tv-focus-active .tv-row-active {
+    scroll-margin-block: 20vh;
 }
 
 /* ── HERO ─────────────────────────────────── */
@@ -77,30 +138,17 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 
-.logo-icon {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #7c3aed, #a855f7);
+.logo-image {
+    display: block;
+    width: min(320px, 78vw);
+    height: 108px;
+    object-fit: cover;
+    object-position: center;
     border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    flex-shrink: 0;
-}
-
-.logo-text {
-    font-size: 34px;
-    font-weight: 800;
-    background: linear-gradient(135deg, #c4b5fd, #38bdf8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: -1px;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.28);
 }
 
 .tagline {
@@ -876,5 +924,5 @@ textarea#query::placeholder { color: var(--muted); }
 @media (max-width: 480px) {
     .results-grid { grid-template-columns: repeat(2, 1fr); }
     .genre-grid { grid-template-columns: repeat(2, 1fr); }
-    .logo-text { font-size: 28px; }
+    .logo-image { width: min(260px, 88vw); height: 88px; }
 }

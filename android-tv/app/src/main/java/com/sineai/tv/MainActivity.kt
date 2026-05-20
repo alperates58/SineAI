@@ -20,6 +20,7 @@ import android.widget.TextView
 class MainActivity : Activity() {
 
     private var webView: WebView? = null
+    private var tvNavigationReady = false
     private val PREFS       = "sineai_prefs"
     private val KEY_URL     = "server_url"
     private val DEFAULT_URL = "https://sineai.alperates.com.tr"
@@ -93,8 +94,24 @@ class MainActivity : Activity() {
         wv.isScrollbarFadingEnabled = true
         wv.isHorizontalScrollBarEnabled = false
         wv.isVerticalScrollBarEnabled   = false
+        wv.isFocusable = true
+        wv.isFocusableInTouchMode = true
 
         wv.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                tvNavigationReady = false
+                view?.evaluateJavascript(
+                    """
+                    (function() {
+                        if (!window.SineAITV) return false;
+                        window.SineAITV.enable(true);
+                        return true;
+                    })();
+                    """.trimIndent()
+                ) { ready -> tvNavigationReady = ready == "true" }
+            }
+
             override fun onReceivedError(
                 view: WebView?,
                 request: WebResourceRequest?,
@@ -127,14 +144,56 @@ class MainActivity : Activity() {
         }
 
         setContentView(wv)
+        wv.requestFocus()
         wv.loadUrl(url)
     }
 
+    private fun sendTvDirection(direction: String): Boolean {
+        if (!tvNavigationReady) return false
+
+        webView?.evaluateJavascript(
+            "window.SineAITV && window.SineAITV.handleNativeKey('$direction');",
+            null
+        )
+        return true
+    }
+
+    private fun handleBackPress() {
+        val wv = webView ?: run {
+            finish()
+            return
+        }
+
+        wv.evaluateJavascript(
+            "window.SineAITV && window.SineAITV.handleBack ? window.SineAITV.handleBack() : false;"
+        ) { handled ->
+            if (handled != "true") {
+                if (wv.canGoBack()) wv.goBack() else finish()
+            }
+        }
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP    -> return sendTvDirection("up")
+            KeyEvent.KEYCODE_DPAD_DOWN  -> return sendTvDirection("down")
+            KeyEvent.KEYCODE_DPAD_LEFT  -> return sendTvDirection("left")
+            KeyEvent.KEYCODE_DPAD_RIGHT -> return sendTvDirection("right")
+        }
+
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            webView?.let { if (it.canGoBack()) { it.goBack(); return true } }
+            event?.startTracking()
+            return true
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (event?.isCanceled != true) handleBackPress()
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
     }
 
     // TV remote'da Back'e uzun basınca sunucu adresini değiştir

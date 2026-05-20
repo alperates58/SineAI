@@ -46,6 +46,280 @@ document.addEventListener('DOMContentLoaded', () => {
         isLoading: false,
     };
 
+    let modalReturnFocus = null;
+    let updateReturnFocus = null;
+
+    const TVNav = (() => {
+        const focusSelector = [
+            'textarea#query',
+            'button:not([disabled])',
+            'a[href]',
+            '.movie-card',
+            '.genre-chip',
+            '.pill',
+            '.see-all',
+            '[tabindex="0"]:not([disabled])'
+        ].join(',');
+
+        let enabled = false;
+        let lastFocused = null;
+        let refreshTimer = null;
+
+        function isVisible(el) {
+            if (!(el instanceof HTMLElement)) return false;
+            if (el.closest('.hidden')) return false;
+            const style = window.getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden') return false;
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+        }
+
+        function activeScope() {
+            if (!detailModal.classList.contains('hidden')) return detailModal;
+            if (!updateModal.classList.contains('hidden')) return updateModal;
+            if (!resultsSection.classList.contains('hidden')) return resultsSection;
+            return document;
+        }
+
+        function uniqueVisible(items) {
+            return Array.from(new Set(items)).filter(isVisible);
+        }
+
+        function focusables(scope = activeScope()) {
+            return uniqueVisible(Array.from(scope.querySelectorAll(focusSelector)));
+        }
+
+        function rowFrom(items, anchor = null) {
+            const visible = uniqueVisible(items);
+            if (!visible.length) return null;
+            return { items: visible, anchor: anchor || visible[0] };
+        }
+
+        function pushRow(rows, items, anchor = null) {
+            const row = rowFrom(items, anchor);
+            if (row) rows.push(row);
+        }
+
+        function pushVisualRows(rows, items) {
+            const visible = uniqueVisible(items);
+            const grouped = [];
+
+            visible.forEach(el => {
+                const top = Math.round(el.getBoundingClientRect().top / 28) * 28;
+                let row = grouped.find(r => Math.abs(r.top - top) <= 28);
+                if (!row) {
+                    row = { top, items: [] };
+                    grouped.push(row);
+                }
+                row.items.push(el);
+            });
+
+            grouped
+                .sort((a, b) => a.top - b.top)
+                .forEach(row => {
+                    row.items.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+                    pushRow(rows, row.items);
+                });
+        }
+
+        function buildRows() {
+            const scope = activeScope();
+            const rows = [];
+
+            if (scope === detailModal || scope === updateModal) {
+                pushVisualRows(rows, focusables(scope));
+                return rows;
+            }
+
+            if (scope === resultsSection) {
+                pushRow(rows, [backBtn]);
+                pushVisualRows(rows, Array.from(resultsGrid.querySelectorAll('.movie-card')));
+                return rows;
+            }
+
+            pushRow(rows, [checkUpdateBtn]);
+            pushRow(rows, [queryInput]);
+            pushVisualRows(rows, document.querySelectorAll('.search-actions button'));
+            pushVisualRows(rows, document.querySelectorAll('#moodPills .pill'));
+
+            document.querySelectorAll('#discoverSection .row-section').forEach(section => {
+                const cardsRow = section.querySelector('.cards-row');
+                const cards = cardsRow ? Array.from(cardsRow.querySelectorAll('.movie-card')) : [];
+                const seeAll = section.querySelector('.see-all');
+                if (cards.length) pushRow(rows, seeAll ? [...cards, seeAll] : cards, cardsRow);
+
+                const genreGrid = section.querySelector('.genre-grid');
+                if (genreGrid) pushVisualRows(rows, genreGrid.querySelectorAll('.genre-chip'));
+            });
+
+            return rows;
+        }
+
+        function currentPosition(rows) {
+            const active = document.activeElement;
+            for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+                const itemIndex = rows[rowIndex].items.indexOf(active);
+                if (itemIndex !== -1) return { rowIndex, itemIndex, el: active };
+            }
+
+            if (lastFocused && isVisible(lastFocused)) {
+                for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+                    const itemIndex = rows[rowIndex].items.indexOf(lastFocused);
+                    if (itemIndex !== -1) return { rowIndex, itemIndex, el: lastFocused };
+                }
+            }
+
+            return rows.length ? { rowIndex: 0, itemIndex: 0, el: rows[0].items[0] } : null;
+        }
+
+        function markActiveRow(target) {
+            document.querySelectorAll('.tv-row-active').forEach(el => el.classList.remove('tv-row-active'));
+            const rowEl = target?.closest('.cards-row, .genre-grid, .results-grid, .mood-pills, .search-actions');
+            if (rowEl) rowEl.classList.add('tv-row-active');
+        }
+
+        function focusElement(target) {
+            if (!enabled) return false;
+            if (!target || !isVisible(target)) return false;
+            lastFocused = target;
+            document.body.classList.add('tv-nav-ready', 'tv-focus-active');
+            target.focus({ preventScroll: true });
+            markActiveRow(target);
+
+            const rail = target.closest('.cards-row');
+            if (rail) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            } else {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+            }
+            return true;
+        }
+
+        function nearestInRow(row, referenceEl) {
+            if (!row?.items?.length) return null;
+            if (!referenceEl) return row.items[0];
+
+            const refRect = referenceEl.getBoundingClientRect();
+            const refCenter = refRect.left + refRect.width / 2;
+            return row.items.reduce((best, item) => {
+                const rect = item.getBoundingClientRect();
+                const center = rect.left + rect.width / 2;
+                const distance = Math.abs(center - refCenter);
+                return !best || distance < best.distance ? { item, distance } : best;
+            }, null)?.item || row.items[0];
+        }
+
+        function shouldLetInputEdit(direction) {
+            const active = document.activeElement;
+            if (!active?.matches?.('textarea, input, [contenteditable="true"]')) return false;
+            return direction === 'left' || direction === 'right';
+        }
+
+        function handle(direction) {
+            if (!enabled) return false;
+            if (!['up', 'down', 'left', 'right'].includes(direction)) return false;
+            if (shouldLetInputEdit(direction)) return false;
+
+            const rows = buildRows();
+            const position = currentPosition(rows);
+            if (!position) return false;
+
+            let target = null;
+            if (direction === 'left' || direction === 'right') {
+                const row = rows[position.rowIndex];
+                const nextIndex = position.itemIndex + (direction === 'right' ? 1 : -1);
+                target = row.items[nextIndex] || null;
+            } else {
+                const nextRowIndex = position.rowIndex + (direction === 'down' ? 1 : -1);
+                target = nearestInRow(rows[nextRowIndex], position.el);
+            }
+
+            return target ? focusElement(target) : true;
+        }
+
+        function refresh(shouldFocus = false) {
+            if (!enabled) return;
+            document.body.classList.add('tv-nav-ready');
+            window.clearTimeout(refreshTimer);
+            refreshTimer = window.setTimeout(() => {
+                const items = focusables();
+                if (!items.length) return;
+                if (shouldFocus && !items.includes(document.activeElement)) {
+                    focusElement(lastFocused && items.includes(lastFocused) ? lastFocused : items[0]);
+                } else if (items.includes(document.activeElement)) {
+                    markActiveRow(document.activeElement);
+                }
+            }, 40);
+        }
+
+        function defaultStartElement() {
+            return document.querySelector('#moodPills .pill')
+                || document.querySelector('.cards-row .movie-card')
+                || queryInput;
+        }
+
+        document.addEventListener('focusin', (event) => {
+            if (event.target instanceof HTMLElement && isVisible(event.target)) {
+                lastFocused = event.target;
+                markActiveRow(event.target);
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (!enabled) return;
+            const directionByKey = {
+                ArrowUp: 'up',
+                ArrowDown: 'down',
+                ArrowLeft: 'left',
+                ArrowRight: 'right'
+            };
+            const direction = directionByKey[event.key];
+            if (!direction) return;
+            if (handle(direction)) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        }, true);
+
+        function enable(shouldFocus = true) {
+            enabled = true;
+            refresh(false);
+            if (shouldFocus) {
+                window.setTimeout(() => focusElement(defaultStartElement()), 90);
+            }
+        }
+
+        function handleBack() {
+            if (!detailModal.classList.contains('hidden')) {
+                closeModal();
+                return true;
+            }
+            if (!updateModal.classList.contains('hidden')) {
+                closeUpdateModal();
+                return true;
+            }
+            if (!resultsSection.classList.contains('hidden')) {
+                backBtn.click();
+                return true;
+            }
+            return false;
+        }
+
+        return {
+            enable,
+            handleNativeKey: (direction) => {
+                enabled = true;
+                return handle(direction);
+            },
+            handleBack,
+            refresh,
+            focusElement,
+            focusFirst: () => enable(true)
+        };
+    })();
+
+    window.SineAITV = TVNav;
+
     // ── Genre definitions ────────────────────────────────
     const MOVIE_GENRES = [
         { id: 28,    name: 'Aksiyon',     icon: '💥' },
@@ -86,9 +360,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ── Update modal ─────────────────────────────────────
-    function closeUpdateModal() { updateModal.classList.add('hidden'); }
+    function closeUpdateModal() {
+        updateModal.classList.add('hidden');
+        if (updateReturnFocus) TVNav.focusElement(updateReturnFocus);
+    }
 
     checkUpdateBtn.addEventListener('click', async () => {
+        updateReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         checkUpdateBtn.disabled = true;
         checkUpdateBtn.textContent = '🔄 Kontrol ediliyor...';
         try {
@@ -106,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateModalCommits.classList.remove('hidden');
                 doUpdateBtn.classList.add('hidden');
                 updateModal.classList.remove('hidden');
-                closeUpdateModalBtn.focus();
+                TVNav.focusElement(closeUpdateModalBtn) || closeUpdateModalBtn.focus();
             } else {
                 showToast('Uygulama güncel görünüyor.');
             }
@@ -173,6 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollSentinel.classList.add('hidden');
         queryInput.value = '';
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        TVNav.refresh(true);
     });
 
     // ── Build genre grids (direct TMDB, no AI) ───────────
@@ -190,6 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
             chip.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
             container.appendChild(chip);
         });
+        TVNav.refresh();
     }
 
     buildGenreGrid('movieGenreGrid', MOVIE_GENRES, 'movie');
@@ -247,9 +527,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); openModal(); } });
                 container.appendChild(card);
             });
+            TVNav.refresh();
         } catch (err) {
             container.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 0;">Yüklenemedi.</div>';
             console.error('Popular load error:', err);
+            TVNav.refresh();
         }
     }
 
@@ -341,6 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsGrid.innerHTML = '';
         scrollSentinel.classList.add('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        TVNav.refresh(true);
     }
 
     // ── Render a batch of cards (appends) ────────────────
@@ -391,6 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         resultsGrid.appendChild(fragment);
         updateSentinel();
+        TVNav.refresh();
     }
 
     // ── Submit: Genre (direct TMDB, no AI) ───────────────
@@ -542,6 +826,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Modal ────────────────────────────────────────────
     function showModal(item, year, typeStr, rating, badgesHTML) {
+        modalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         const posterUrl  = item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : null;
         const posterHTML = posterUrl
             ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="lazy">`
@@ -594,14 +879,17 @@ document.addEventListener('DOMContentLoaded', () => {
         detailModal.classList.remove('hidden');
         setTimeout(() => {
             const trailerBtn = modalBody.querySelector('.trailer-btn');
-            if (trailerBtn) trailerBtn.focus(); else closeModalBtn.focus();
+            const target = trailerBtn || closeModalBtn;
+            TVNav.focusElement(target) || target.focus();
         }, 50);
     }
 
     function closeModal() {
         detailModal.classList.add('hidden');
         modalBody.innerHTML = '';
-        queryInput.focus();
+        if (!TVNav.focusElement(modalReturnFocus)) {
+            queryInput.focus();
+        }
     }
 
     closeModalBtn.addEventListener('click', closeModal);
