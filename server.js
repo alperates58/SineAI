@@ -11,6 +11,9 @@ const fastify = Fastify({ logger: true });
 // Environment Variables
 const PORT = process.env.PORT || 3000;
 const AI_PROVIDER = process.env.AI_PROVIDER || 'mock';
+const MEDIA_DATA_SOURCE = ['tmdb', 'local', 'hybrid'].includes(process.env.MEDIA_DATA_SOURCE)
+  ? process.env.MEDIA_DATA_SOURCE
+  : 'tmdb';
 
 // TMDB Settings
 const TMDB_API_KEY = process.env.TMDB_API_KEY || '';
@@ -21,6 +24,19 @@ const TMDB_REGION = process.env.TMDB_REGION || 'TR';
 // Cache Settings
 const CACHE_TTL_SECONDS = parseInt(process.env.CACHE_TTL_SECONDS || '900', 10);
 const cache = new Map();
+let mediaCatalogService = null;
+
+if (MEDIA_DATA_SOURCE !== 'tmdb') {
+  try {
+    const [{ openMediaDatabase }, { MediaCatalogService }] = await Promise.all([
+      import('./src/media/database.js'),
+      import('./src/media/media-catalog-service.js'),
+    ]);
+    mediaCatalogService = MediaCatalogService.forDatabase(openMediaDatabase(), { dataSource: MEDIA_DATA_SOURCE });
+  } catch (error) {
+    fastify.log.warn({ err: error }, 'Local media catalog could not be initialized; continuing with TMDB flow.');
+  }
+}
 
 // Default Mock Fallback Normalize
 const FALLBACK_NORMALIZE = {
