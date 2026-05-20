@@ -25,6 +25,9 @@ const TMDB_REGION = process.env.TMDB_REGION || 'TR';
 // Cache Settings
 const CACHE_TTL_SECONDS = parseInt(process.env.CACHE_TTL_SECONDS || '900', 10);
 const cache = new Map();
+const AI_RESULT_LIMIT = parseInt(process.env.AI_RESULT_LIMIT || '40', 10);
+const AI_CANDIDATE_LIMIT = Math.max(AI_RESULT_LIMIT * 2, 80);
+const DISCOVER_PAGES_PER_STRATEGY = parseInt(process.env.DISCOVER_PAGES_PER_STRATEGY || '3', 10);
 
 // Default Mock Fallback Normalize
 const FALLBACK_NORMALIZE = {
@@ -72,17 +75,17 @@ function setCache(key, data, ttlSeconds = CACHE_TTL_SECONDS) {
 }
 
 // Prompt Generation
-const SYSTEM_PROMPT = `Sen bir film ve dizi öneri asistanısın. Kullanıcının girdisini analiz et ve bir SEARCH PLAN (arama planı) oluşturarak sadece aşağıdaki JSON formatında çıktı ver.
+const SYSTEM_PROMPT = `Sen bir film ve dizi Ã¶neri asistanÄ±sÄ±n. KullanÄ±cÄ±nÄ±n girdisini analiz et ve bir SEARCH PLAN (arama planÄ±) oluÅŸturarak sadece aÅŸaÄŸÄ±daki JSON formatÄ±nda Ã§Ä±ktÄ± ver.
 Kurallar:
-- Eğer kullanıcı "X benzeri", "X gibi", "X tarzı", "X'e benzeyen", "X ayarında" gibi kalıplar kullanırsa HER ZAMAN intent "similar_to_title" ve reference_title "X" olsun. Bu kural Türkçe başlıklar ve yerli yapımlar için de geçerlidir (Örn: "Kurtlar Vadisi benzeri dizi öner" => intent: "similar_to_title", reference_title: "Kurtlar Vadisi", type: "tv").
-- "X oynadığı", "X yönettiği" gibi aramalarda aktör/yönetmen alanlarını mutlaka doldur. Niyet ne olursa olsun bu alanlar doluysa sistem onu dikkate alacaktır (Örn: "Donnie Yen dövüş filmleri" => actors:["Donnie Yen"], must_have:["martial arts"], intent:"discover").
-- "az bilinen", "gizli cevher", "bağımsız" derse quality_profile: "hidden_gems".
-- "yeni çıkan" derse quality_profile: "new".
+- EÄŸer kullanÄ±cÄ± "X benzeri", "X gibi", "X tarzÄ±", "X'e benzeyen", "X ayarÄ±nda" gibi kalÄ±plar kullanÄ±rsa HER ZAMAN intent "similar_to_title" ve reference_title "X" olsun. Bu kural TÃ¼rkÃ§e baÅŸlÄ±klar ve yerli yapÄ±mlar iÃ§in de geÃ§erlidir (Ã–rn: "Kurtlar Vadisi benzeri dizi Ã¶ner" => intent: "similar_to_title", reference_title: "Kurtlar Vadisi", type: "tv").
+- "X oynadÄ±ÄŸÄ±", "X yÃ¶nettiÄŸi" gibi aramalarda aktÃ¶r/yÃ¶netmen alanlarÄ±nÄ± mutlaka doldur. Niyet ne olursa olsun bu alanlar doluysa sistem onu dikkate alacaktÄ±r (Ã–rn: "Donnie Yen dÃ¶vÃ¼ÅŸ filmleri" => actors:["Donnie Yen"], must_have:["martial arts"], intent:"discover").
+- "az bilinen", "gizli cevher", "baÄŸÄ±msÄ±z" derse quality_profile: "hidden_gems".
+- "yeni Ã§Ä±kan" derse quality_profile: "new".
 - "klasik" derse quality_profile: "classic".
-- "aile", "çocuk" derse quality_profile: "family".
-- Varsayılan quality_profile: "mainstream".
-- Anlamsal konuları (uzay, yapay zeka, zaman yolculuğu, karanlık, dövüş vb.) İNGİLİZCE olarak semantic_topics, must_have ve nice_to_have dizilerine dağıt. En kritik temaları must_have içine koy.
-- Tarihler için: "90'lar" => year_min: 1990, year_max: 1999. "2020 sonrası" => year_min: 2020.
+- "aile", "Ã§ocuk" derse quality_profile: "family".
+- VarsayÄ±lan quality_profile: "mainstream".
+- Anlamsal konularÄ± (uzay, yapay zeka, zaman yolculuÄŸu, karanlÄ±k, dÃ¶vÃ¼ÅŸ vb.) Ä°NGÄ°LÄ°ZCE olarak semantic_topics, must_have ve nice_to_have dizilerine daÄŸÄ±t. En kritik temalarÄ± must_have iÃ§ine koy.
+- Tarihler iÃ§in: "90'lar" => year_min: 1990, year_max: 1999. "2020 sonrasÄ±" => year_min: 2020.
 {
   "intent": "discover" | "similar_to_title" | "person_search",
   "reference_title": "",
@@ -114,13 +117,13 @@ async function callMockAI(query) {
   const q = query.toLowerCase();
   const normalized = { ...FALLBACK_NORMALIZE };
 
-  // Türkçe benzeri kalıpları yakala (benzeri, gibi, tarzı, benzeyen, ayarında)
-  const similarPattern = /(.+?)\s+(benzeri|gibi|tarzı|benzeyen|ayarında)\s+(dizi|film)?/i;
+  // TÃ¼rkÃ§e benzeri kalÄ±plarÄ± yakala (benzeri, gibi, tarzÄ±, benzeyen, ayarÄ±nda)
+  const similarPattern = /(.+?)\s+(benzeri|gibi|tarzÄ±|benzeyen|ayarÄ±nda)\s+(dizi|film)?/i;
   const similarMatch = q.match(similarPattern);
 
   if (q.includes('kurtlar vadisi benzeri') || q.includes('kurtlar vadisi gibi')) { normalized.intent = 'similar_to_title'; normalized.reference_title = 'Kurtlar Vadisi'; normalized.type = 'tv'; }
   else if (similarMatch) {
-    // Generic fallback: benzeri kalıpı bulundu, intent'i similar_to_title yap
+    // Generic fallback: benzeri kalÄ±pÄ± bulundu, intent'i similar_to_title yap
     const titlePart = similarMatch[1].trim();
     const typePart = similarMatch[3] ? (similarMatch[3].includes('dizi') ? 'tv' : 'movie') : 'any';
     normalized.intent = 'similar_to_title';
@@ -129,9 +132,9 @@ async function callMockAI(query) {
   }
   else if (q.includes('yapay zeka')) { normalized.type = 'movie'; normalized.genres = ['science fiction']; normalized.must_have = ['artificial intelligence']; normalized.semantic_topics = ['robot', 'technology']; }
   else if (q.includes('zaman')) { normalized.type = 'movie'; normalized.genres = ['science fiction']; normalized.must_have = ['time travel']; }
-  else if (q.includes('uzayda geçen gerilim')) { normalized.type = 'movie'; normalized.genres = ['science fiction', 'thriller']; normalized.must_have = ['space']; }
+  else if (q.includes('uzayda geÃ§en gerilim')) { normalized.type = 'movie'; normalized.genres = ['science fiction', 'thriller']; normalized.must_have = ['space']; }
   else if (q.includes('uzay')) { normalized.genres = ['science fiction']; normalized.must_have = ['space']; }
-  else if (q.includes('suç dizisi') && q.includes('karanlık')) { normalized.type = 'tv'; normalized.genres = ['crime', 'drama']; normalized.must_have = ['crime', 'detective']; normalized.semantic_topics = ['psychological thriller']; }
+  else if (q.includes('suÃ§ dizisi') && q.includes('karanlÄ±k')) { normalized.type = 'tv'; normalized.genres = ['crime', 'drama']; normalized.must_have = ['crime', 'detective']; normalized.semantic_topics = ['psychological thriller']; }
   else if (q.includes('aileyle izlenecek komedi')) { normalized.type = 'movie'; normalized.genres = ['comedy', 'family']; normalized.quality_profile = 'family'; }
   else if (q.includes('mini dizi')) { normalized.type = 'tv'; normalized.semantic_topics = ['miniseries']; }
   else if (q.includes('nolan')) { normalized.intent = 'person_search'; normalized.directors = ['Christopher Nolan']; normalized.semantic_topics = ['mind bending']; }
@@ -139,22 +142,22 @@ async function callMockAI(query) {
   else if (q.includes('tom hardy')) { normalized.intent = 'person_search'; normalized.actors = ['Tom Hardy']; normalized.genres = ['action']; }
   else if (q.includes('90\'lardan')) { normalized.year_min = 1990; normalized.year_max = 1999; normalized.genres = ['crime']; }
   else if (q.includes('gizli cevher')) { normalized.genres = ['animation']; normalized.quality_profile = 'hidden_gems'; }
-  else if (q.includes('yeni çıkan zombi')) { normalized.type = 'tv'; normalized.quality_profile = 'new'; normalized.must_have = ['zombie']; }
-  else if (q.includes('kıyamet sonrası')) { normalized.type = 'movie'; normalized.must_have = ['post-apocalyptic', 'survival']; }
+  else if (q.includes('yeni Ã§Ä±kan zombi')) { normalized.type = 'tv'; normalized.quality_profile = 'new'; normalized.must_have = ['zombie']; }
+  else if (q.includes('kÄ±yamet sonrasÄ±')) { normalized.type = 'movie'; normalized.must_have = ['post-apocalyptic', 'survival']; }
   else if (q.includes('tarantino')) { normalized.intent = 'person_search'; normalized.directors = ['Quentin Tarantino']; }
   else if (q.includes('romantik komedi')) { normalized.year_min = 2020; normalized.genres = ['romance', 'comedy']; }
   else if (q.includes('hapishaneden')) { normalized.type = 'movie'; normalized.must_have = ['prison']; }
-  else if (q.includes('çoklu evren')) { normalized.type = 'movie'; normalized.must_have = ['multiverse']; }
-  else if (q.includes('soğuk savaş')) { normalized.type = 'movie'; normalized.must_have = ['spy']; }
-  else if (q.includes('hayvanlı')) { normalized.type = 'movie'; normalized.genres = ['family']; normalized.quality_profile = 'family'; }
+  else if (q.includes('Ã§oklu evren')) { normalized.type = 'movie'; normalized.must_have = ['multiverse']; }
+  else if (q.includes('soÄŸuk savaÅŸ')) { normalized.type = 'movie'; normalized.must_have = ['spy']; }
+  else if (q.includes('hayvanlÄ±')) { normalized.type = 'movie'; normalized.genres = ['family']; normalized.quality_profile = 'family'; }
   else if (q.includes('donnie yen')) { normalized.actors = ['Donnie Yen']; normalized.must_have = ['martial arts']; }
   else if (q.includes('vampir')) { normalized.type = 'tv'; normalized.must_have = ['vampire']; }
   else if (q.includes('seri katil')) { normalized.type = 'movie'; normalized.must_have = ['serial killer']; normalized.semantic_topics = ['based on a true story']; }
-  else if (q.includes('akıl hastanesinde')) { normalized.type = 'movie'; normalized.must_have = ['psychological thriller']; }
+  else if (q.includes('akÄ±l hastanesinde')) { normalized.type = 'movie'; normalized.must_have = ['psychological thriller']; }
   else if (q.includes('lisede')) { normalized.type = 'tv'; normalized.must_have = ['high school']; }
-  else if (q.includes('uzaylı istilası')) { normalized.type = 'movie'; normalized.must_have = ['alien']; }
-  else if (q.includes('doğa belgeseli')) { normalized.type = 'tv'; normalized.genres = ['documentary']; }
-  else if (q.includes('kılıçlı')) { normalized.type = 'tv'; normalized.must_have = ['middle ages']; }
+  else if (q.includes('uzaylÄ± istilasÄ±')) { normalized.type = 'movie'; normalized.must_have = ['alien']; }
+  else if (q.includes('doÄŸa belgeseli')) { normalized.type = 'tv'; normalized.genres = ['documentary']; }
+  else if (q.includes('kÄ±lÄ±Ã§lÄ±')) { normalized.type = 'tv'; normalized.must_have = ['middle ages']; }
   else if (q.includes('banka soygunu')) { normalized.type = 'movie'; normalized.must_have = ['heist']; }
   else if (q.includes('gerilim dizisi')) { normalized.type = 'tv'; normalized.genres = ['thriller']; normalized.semantic_topics = ['thriller', 'suspense']; }
 
@@ -204,13 +207,16 @@ async function callGemini(query) {
 async function normalizeQuery(query) {
   const safeQuery = query.substring(0, 500);
   try {
-    if (AI_PROVIDER === 'deepseek') return await callDeepSeek(safeQuery);
-    if (AI_PROVIDER === 'openai') return await callOpenAI(safeQuery);
-    if (AI_PROVIDER === 'gemini') return await callGemini(safeQuery);
-    return await callMockAI(safeQuery);
+    let normalized;
+    if (AI_PROVIDER === 'deepseek') normalized = await callDeepSeek(safeQuery);
+    else if (AI_PROVIDER === 'openai') normalized = await callOpenAI(safeQuery);
+    else if (AI_PROVIDER === 'gemini') normalized = await callGemini(safeQuery);
+    else normalized = await callMockAI(safeQuery);
+    return applyQueryHeuristics(normalized, safeQuery);
   } catch (error) {
     fastify.log.error(`AI Provider error:`, error);
-    return await callMockAI(safeQuery);
+    const fallback = await callMockAI(safeQuery);
+    return applyQueryHeuristics(fallback, safeQuery);
   }
 }
 
@@ -231,35 +237,169 @@ const TV_GENRES = {
 };
 
 const TMDB_GENRE_NAMES = {
-  28: "Aksiyon", 12: "Macera", 16: "Animasyon", 35: "Komedi", 80: "Suç",
+  28: "Aksiyon", 12: "Macera", 16: "Animasyon", 35: "Komedi", 80: "SuÃ§",
   99: "Belgesel", 18: "Dram", 10751: "Aile", 14: "Fantastik", 36: "Tarih",
-  27: "Korku", 10402: "Müzik", 9648: "Gizem", 10749: "Romantik",
-  878: "Bilim Kurgu", 53: "Gerilim", 10752: "Savaş", 37: "Vahşi Batı",
-  10759: "Aksiyon/Macera", 10762: "Çocuk", 10763: "Haber", 10764: "Reality",
+  27: "Korku", 10402: "MÃ¼zik", 9648: "Gizem", 10749: "Romantik",
+  878: "Bilim Kurgu", 53: "Gerilim", 10752: "SavaÅŸ", 37: "VahÅŸi BatÄ±",
+  10759: "Aksiyon/Macera", 10762: "Ã‡ocuk", 10763: "Haber", 10764: "Reality",
   10765: "Bilim Kurgu", 10766: "Pembe Dizi", 10767: "Talk Show", 10768: "Politika"
 };
 
 const KEYWORD_ALIASES = {
+  "ai": "artificial intelligence", "thought-provoking": "philosophy", "philosophical": "philosophy",
+  "complex": "mind bending", "single location": "single location", "single setting": "contained thriller",
+  "class conflict": "social commentary", "ambition": "obsession", "suspense": "suspense",
   "yapay zeka": "artificial intelligence", "robot": "robot", "android": "android",
-  "zaman yolculuğu": "time travel", "zamanda yolculuk": "time travel", "zaman döngüsü": "time loop",
-  "paralel evren": "parallel universe", "çoklu evren": "multiverse", "alternatif zaman çizgisi": "alternate timeline",
-  "uzay": "space", "uzay yolculuğu": "space travel", "astronot": "astronaut", "mars": "mars", "uzaylı": "alien",
-  "distopya": "dystopia", "kıyamet": "apocalypse", "kıyamet sonrası": "post-apocalyptic", "hayatta kalma": "survival",
-  "seri katil": "serial killer", "dedektif": "detective", "mafya": "mafia", "uyuşturucu": "drug cartel",
-  "siberpunk": "cyberpunk", "vampir": "vampire", "zombi": "zombie", "büyü": "magic", "cadı": "witch",
-  "doğaüstü": "supernatural", "kafa yakan": "mind bending", "psikolojik": "psychological thriller",
+  "zaman yolculuÄŸu": "time travel", "zamanda yolculuk": "time travel", "zaman dÃ¶ngÃ¼sÃ¼": "time loop",
+  "paralel evren": "parallel universe", "Ã§oklu evren": "multiverse", "alternatif zaman Ã§izgisi": "alternate timeline",
+  "uzay": "space", "uzay yolculuÄŸu": "space travel", "astronot": "astronaut", "mars": "mars", "uzaylÄ±": "alien",
+  "distopya": "dystopia", "kÄ±yamet": "apocalypse", "kÄ±yamet sonrasÄ±": "post-apocalyptic", "hayatta kalma": "survival",
+  "seri katil": "serial killer", "dedektif": "detective", "mafya": "mafia", "uyuÅŸturucu": "drug cartel",
+  "siberpunk": "cyberpunk", "vampir": "vampire", "zombi": "zombie", "bÃ¼yÃ¼": "magic", "cadÄ±": "witch",
+  "doÄŸaÃ¼stÃ¼": "supernatural", "kafa yakan": "mind bending", "psikolojik": "psychological thriller",
   "hapishane": "prison", "soygun": "heist", "casus": "spy", "politik": "politics",
-  "aile": "family", "çocuk": "children", "romantik": "romance", "komik": "comedy", "eğlenceli": "fun",
-  "dövüş": "martial arts", "dövüş sanatları": "martial arts", "samuray": "samurai", "ninja": "ninja",
-  "biyografi": "biography", "gerçek hikaye": "based on a true story", "tarihi": "history", "orta çağ": "middle ages",
-  "anime": "anime", "spor": "sports", "futbol": "football", "basketbol": "basketball", "yarış": "racing",
+  "aile": "family", "Ã§ocuk": "children", "romantik": "romance", "komik": "comedy", "eÄŸlenceli": "fun",
+  "dÃ¶vÃ¼ÅŸ": "martial arts", "dÃ¶vÃ¼ÅŸ sanatlarÄ±": "martial arts", "samuray": "samurai", "ninja": "ninja",
+  "biyografi": "biography", "gerÃ§ek hikaye": "based on a true story", "tarihi": "history", "orta Ã§aÄŸ": "middle ages",
+  "anime": "anime", "spor": "sports", "futbol": "football", "basketbol": "basketball", "yarÄ±ÅŸ": "racing",
   "gerilim": "thriller", "korku": "horror", "gizem": "mystery", "aksiyon": "action",
-  "aşk": "romance", "duygusal": "emotional", "dram": "drama", "suç": "crime"
+  "aÅŸk": "romance", "duygusal": "emotional", "dram": "drama", "suÃ§": "crime"
 };
 
 function normalizeTitle(title) {
   if (!title) return '';
   return title.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").replace(/\s{2,}/g, " ");
+}
+
+function toSearchText(value) {
+  return (value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function addUniqueStrings(target, values) {
+  const existing = new Set((target || []).map(v => String(v).toLowerCase()));
+  const merged = [...(target || [])];
+  for (const value of values || []) {
+    if (!value) continue;
+    const lower = String(value).toLowerCase();
+    if (!existing.has(lower)) {
+      existing.add(lower);
+      merged.push(value);
+    }
+  }
+  return merged;
+}
+
+function inferGenresFromQuery(query) {
+  const q = toSearchText(normalizeTitle(query));
+  const genres = [];
+  const push = (genre) => { if (!genres.includes(genre)) genres.push(genre); };
+
+  if (/\bkomedi\b/.test(q)) push('comedy');
+  if (/\bdram\b/.test(q)) push('drama');
+  if (/bilim kurgu|sci fi|science fiction/.test(q)) push('science fiction');
+  if (/\baksiyon\b/.test(q)) push('action');
+  if (/\bsuc\b|\bsuÃ§\b|\bmafya\b/.test(query.toLowerCase())) push('crime');
+  if (/gerilim|thriller/.test(q)) push('thriller');
+  if (/korku|horror/.test(q)) push('horror');
+  if (/gizem|mystery|dedektif/.test(q)) push('mystery');
+  if (/romantik|ask|aÅŸk|romance/.test(query.toLowerCase())) push('romance');
+  if (/animasyon|anime/.test(q)) push('animation');
+  if (/belgesel|documentary/.test(q)) push('documentary');
+  if (/fantastik|fantasy/.test(q)) push('fantasy');
+  if (/aile|cocuk|Ã§ocuk/.test(query.toLowerCase())) push('family');
+
+  return genres;
+}
+
+function applyQueryHeuristics(normalizedInput, query) {
+  const normalized = { ...FALLBACK_NORMALIZE, ...(normalizedInput || {}) };
+  const q = toSearchText(query);
+  const inferredGenres = inferGenresFromQuery(query);
+
+  normalized.genres = addUniqueStrings(normalized.genres, inferredGenres);
+
+  if (/\bkomedi\b/.test(q)) {
+    normalized.must_have = addUniqueStrings(normalized.must_have, ['comedy']);
+  }
+
+  if (/\bmini dizi|minidizi\b/.test(q)) {
+    normalized.type = 'tv';
+    normalized.must_have = addUniqueStrings(normalized.must_have, ['miniseries']);
+    normalized.semantic_topics = addUniqueStrings(normalized.semantic_topics, ['limited series', 'miniseries']);
+  }
+
+  if ((/\bdizi|diziler|sezon\b/.test(q)) && normalized.type === 'any') normalized.type = 'tv';
+  if ((/\bfilm|filmler|sinemasi|sinemasÄ±\b/.test(q)) && normalized.type === 'any') normalized.type = 'movie';
+
+  if (/netflix/.test(q)) normalized.watch_provider = normalized.watch_provider || 'Netflix';
+  if (/oscar/.test(q)) {
+    normalized.sort_by = normalized.sort_by === 'relevance' ? 'vote_average' : normalized.sort_by;
+    normalized.min_vote_average = Math.max(normalized.min_vote_average || 0, 7);
+    normalized.min_vote_count = Math.max(normalized.min_vote_count || 0, 500);
+  }
+
+  if (/tek mekan|tek mekanda|tek ortam|single location|single setting/.test(q)) {
+    normalized.must_have = addUniqueStrings(normalized.must_have, ['single location']);
+    normalized.semantic_topics = addUniqueStrings(normalized.semantic_topics, ['single setting', 'claustrophobic']);
+  }
+
+  if (/yapay zeka/.test(q)) {
+    normalized.must_have = addUniqueStrings(normalized.must_have, ['artificial intelligence']);
+    normalized.semantic_topics = addUniqueStrings(normalized.semantic_topics, ['technology', 'thought-provoking']);
+    normalized.type = normalized.type === 'any' ? 'movie' : normalized.type;
+  }
+
+  if (/aksiyondan cok|aksiyondan çok|fikir veren|dusunduren|düşündüren/.test(q)) {
+    normalized.semantic_topics = addUniqueStrings(normalized.semantic_topics, ['philosophical']);
+  }
+
+  if (/beyin yakan|akil oyunu|akÄ±l oyunu|ters kose|ters kÃ¶ÅŸe|tokat gibi final|plot twist/.test(q)) {
+    normalized.must_have = addUniqueStrings(normalized.must_have, ['mind bending', 'plot twist']);
+    normalized.semantic_topics = addUniqueStrings(normalized.semantic_topics, ['mind-bending', 'twist']);
+  }
+
+  if (/zamanla oynayan|zaman yolculugu|zaman yolculuÄŸu|zaman dongusu|zaman dÃ¶ngÃ¼sÃ¼|paradoks/.test(q)) {
+    normalized.must_have = addUniqueStrings(normalized.must_have, ['time travel']);
+    normalized.semantic_topics = addUniqueStrings(normalized.semantic_topics, ['time loop', 'alternate timeline']);
+  }
+
+  if (/sinif catismasi|sÄ±nÄ±f Ã§atÄ±ÅŸmasÄ±|class conflict/.test(q)) {
+    normalized.must_have = addUniqueStrings(normalized.must_have, ['class conflict']);
+    normalized.semantic_topics = addUniqueStrings(normalized.semantic_topics, ['social inequality']);
+  }
+
+  if (/hirs|hÄ±rs/.test(q) || /takinti|takÄ±ntÄ±/.test(q)) {
+    normalized.must_have = addUniqueStrings(normalized.must_have, ['ambition', 'obsession']);
+  }
+
+  if (/kisa ve surukleyici|kÄ±sa ve sÃ¼rÃ¼kleyici/.test(q)) {
+    normalized.semantic_topics = addUniqueStrings(normalized.semantic_topics, ['fast-paced']);
+  }
+
+  if (/ailece|cocuklarla|Ã§ocuklarla/.test(q)) normalized.quality_profile = 'family';
+  if (/yeni cikan|yeni Ã§Ä±kan/.test(q)) normalized.quality_profile = 'new';
+
+  return normalized;
+}
+
+function parseReleaseYear(releaseDate) {
+  if (!releaseDate || typeof releaseDate !== 'string' || releaseDate.length < 4) return null;
+  const year = parseInt(releaseDate.substring(0, 4), 10);
+  return Number.isFinite(year) ? year : null;
+}
+
+function isFutureRelease(releaseDate) {
+  if (!releaseDate) return false;
+  const time = Date.parse(releaseDate);
+  return Number.isFinite(time) && time > Date.now();
+}
+
+function countGenreOverlap(itemGenreIds = [], targetGenreIds = []) {
+  if (!itemGenreIds.length || !targetGenreIds.length) return 0;
+  return itemGenreIds.filter(id => targetGenreIds.includes(id)).length;
 }
 
 let movieProvidersMap = null;
@@ -364,8 +504,8 @@ async function searchTMDB(title, type) {
   let bestScore = -1;
   const queryNorm = normalizeTitle(title);
 
-  // Hem yerel dil hem en-US aranır; aynı film farklı dilde daha yüksek skor alabilir (örn. "Exit 8" tr-TR'de "Çıkış 8")
-  // Her film için diller arasındaki MAX skor tutulur
+  // Hem yerel dil hem en-US aranÄ±r; aynÄ± film farklÄ± dilde daha yÃ¼ksek skor alabilir (Ã¶rn. "Exit 8" tr-TR'de "Ã‡Ä±kÄ±ÅŸ 8")
+  // Her film iÃ§in diller arasÄ±ndaki MAX skor tutulur
   for (const t of typesToSearch) {
     const candidateMap = new Map(); // id -> {score, matchData}
 
@@ -388,7 +528,7 @@ async function searchTMDB(title, type) {
 
             if (tNorm === queryNorm) score += 50000;
             else if (otNorm === queryNorm) score += 40000;
-            // startsWith yalnızca tam kelime sınırında geçerli: "exit 8 something" ✓, "exit 8a" ✗
+            // startsWith yalnÄ±zca tam kelime sÄ±nÄ±rÄ±nda geÃ§erli: "exit 8 something" âœ“, "exit 8a" âœ—
             else if (tNorm.startsWith(queryNorm) && (tNorm.length === queryNorm.length || tNorm[queryNorm.length] === ' ')) score += 5000;
             else if (otNorm.startsWith(queryNorm) && (otNorm.length === queryNorm.length || otNorm[queryNorm.length] === ' ')) score += 4000;
             else if (tNorm.includes(queryNorm)) score += 1000;
@@ -400,7 +540,7 @@ async function searchTMDB(title, type) {
             if (match.genre_ids && match.genre_ids.includes(99)) score -= 10000;
 
             const existing = candidateMap.get(match.id);
-            // Aynı film için en yüksek skoru ve o skora karşılık gelen başlığı sakla
+            // AynÄ± film iÃ§in en yÃ¼ksek skoru ve o skora karÅŸÄ±lÄ±k gelen baÅŸlÄ±ÄŸÄ± sakla
             if (!existing || score > existing.score) {
               candidateMap.set(match.id, {
                 score,
@@ -412,7 +552,7 @@ async function searchTMDB(title, type) {
       } catch (err) {}
     }
 
-    // Bu tür için en iyi adayı global bestMatch ile karşılaştır
+    // Bu tÃ¼r iÃ§in en iyi adayÄ± global bestMatch ile karÅŸÄ±laÅŸtÄ±r
     for (const { score, data } of candidateMap.values()) {
       if (score > bestScore) {
         bestScore = score;
@@ -439,12 +579,51 @@ async function fetchSimilarTMDB(reference, normalized) {
   const results = [];
   const endpoints = ['recommendations', 'similar'];
   for (const ep of endpoints) {
+    for (let page = 1; page <= 2; page++) {
+      try {
+        const url = new URL(`${TMDB_BASE_URL}/${reference.type}/${reference.id}/${ep}?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}&page=${page}`);
+        const res = await fetch(url.toString());
+        if (res.ok) {
+          const data = await res.json();
+          results.push(...(data.results || []).map(i => ({ ...i, type: reference.type, strategy: page === 1 ? 'strict' : 'relaxed' })));
+        }
+      } catch (err) {}
+    }
+  }
+  return results;
+}
+
+async function fetchReferenceDiscoverTMDB(reference, normalized, providerId = null) {
+  const results = [];
+  const referenceKeywordIds = await getItemKeywords(reference.id, reference.type);
+  const genreSeed = (reference.genre_ids || []).slice(0, 3);
+  const keywordSeed = referenceKeywordIds.slice(0, 4);
+
+  for (let page = 1; page <= 2; page++) {
     try {
-      const url = new URL(`${TMDB_BASE_URL}/${reference.type}/${reference.id}/${ep}?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}`);
+      const url = new URL(`${TMDB_BASE_URL}/discover/${reference.type}`);
+      url.searchParams.append('api_key', TMDB_API_KEY);
+      url.searchParams.append('language', TMDB_LANGUAGE);
+      url.searchParams.append('region', TMDB_REGION);
+      url.searchParams.append('sort_by', page === 1 ? 'vote_average.desc' : 'popularity.desc');
+      url.searchParams.append('vote_count.gte', normalized.quality_profile === 'hidden_gems' ? '50' : '150');
+      url.searchParams.append('vote_average.gte', normalized.quality_profile === 'hidden_gems' ? '6' : '6.5');
+      url.searchParams.append('page', page);
+
+      if (genreSeed.length > 0) url.searchParams.append('with_genres', genreSeed.join(','));
+      if (keywordSeed.length > 0) url.searchParams.append('with_keywords', keywordSeed.join('|'));
+      if (providerId) {
+        url.searchParams.append('with_watch_providers', providerId);
+        url.searchParams.append('watch_region', 'TR');
+      }
+      if (reference.original_language && reference.original_language !== 'en') {
+        url.searchParams.append('with_original_language', reference.original_language);
+      }
+
       const res = await fetch(url.toString());
       if (res.ok) {
         const data = await res.json();
-        results.push(...(data.results || []).map(i => ({...i, type: reference.type})));
+        results.push(...(data.results || []).map(i => ({ ...i, type: reference.type, strategy: 'reference_discover' })));
       }
     } catch (err) {}
   }
@@ -460,21 +639,21 @@ async function enrichResults(results, normalized, reference) {
       const intersection = itemIds.filter(id => refIds.includes(id));
       if (intersection.length > 0) {
         const genreNames = intersection.slice(0, 2).map(id => TMDB_GENRE_NAMES[id]).filter(Boolean);
-        item.reason = genreNames.length > 0 ? `"${reference.title}" ile ortak ${genreNames.join('/')} teması taşıyor` : `"${reference.title}" ile benzer bir atmosfere sahip`;
+        item.reason = genreNames.length > 0 ? `"${reference.title}" ile ortak ${genreNames.join('/')} temasÄ± taÅŸÄ±yor` : `"${reference.title}" ile benzer bir atmosfere sahip`;
       } else {
-        item.reason = `"${reference.title}" ile benzer tarzda bir yapım`;
+        item.reason = `"${reference.title}" ile benzer tarzda bir yapÄ±m`;
       }
     } else if (normalized.intent === 'person_search' && normalized.actors && normalized.actors.length > 0) {
-      item.reason = `"${normalized.actors[0]}" yer alıyor`;
+      item.reason = `"${normalized.actors[0]}" yer alÄ±yor`;
     } else if (normalized.intent === 'person_search' && normalized.directors && normalized.directors.length > 0) {
-      item.reason = `"${normalized.directors[0]}" yönetti`;
+      item.reason = `"${normalized.directors[0]}" yÃ¶netti`;
     } else {
        // Search Plan Reasons
        let reasonParts = [];
        if (normalized.resolved_must_have && normalized.resolved_must_have.length > 0) {
-           reasonParts.push(`${normalized.resolved_must_have.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ve ')} temasını merkeze alan`);
+           reasonParts.push(`${normalized.resolved_must_have.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ve ')} temasÄ±nÄ± merkeze alan`);
        } else if (normalized.resolved_semantic && normalized.resolved_semantic.length > 0) {
-           reasonParts.push(`${normalized.resolved_semantic.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')} temalarına sahip`);
+           reasonParts.push(`${normalized.resolved_semantic.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')} temalarÄ±na sahip`);
        }
 
        let genreStr = "";
@@ -488,9 +667,9 @@ async function enrichResults(results, normalized, reference) {
        }
 
        if (reasonParts.length > 0) {
-           item.reason = `${reasonParts.join(' ')} başarılı bir ${genreStr ? genreStr : (item.type==='movie'?'film':'dizi')} önerisi`;
+           item.reason = `${reasonParts.join(' ')} baÅŸarÄ±lÄ± bir ${genreStr ? genreStr : (item.type==='movie'?'film':'dizi')} Ã¶nerisi`;
        } else {
-           item.reason = `İsteğinize uygun popüler bir öneri`;
+           item.reason = `Ä°steÄŸinize uygun popÃ¼ler bir Ã¶neri`;
        }
     }
 
@@ -500,6 +679,7 @@ async function enrichResults(results, normalized, reference) {
     item.genres = [];
     item.runtime = null;
     item.director = null;
+    item.number_of_seasons = null;
     
     try {
       const url = new URL(`${TMDB_BASE_URL}/${item.type}/${item.id}?api_key=${TMDB_API_KEY}&language=tr-TR&append_to_response=watch/providers,videos,credits`);
@@ -515,6 +695,7 @@ async function enrichResults(results, normalized, reference) {
            if (director) item.director = director.name;
         } else {
            item.runtime = d.episode_run_time && d.episode_run_time.length > 0 ? d.episode_run_time[0] : null;
+           item.number_of_seasons = d.number_of_seasons || null;
            const creator = (d.created_by && d.created_by.length > 0) ? d.created_by[0].name : null;
            if (creator) item.director = creator;
            else {
@@ -577,7 +758,6 @@ async function fetchTMDB(normalized, originalQuery) {
     };
   }
 
-  // Backend fallback: AI yanlış normalize etse de reference_title doluysa ve query'de benzeri kalıpları varsa intent'i similar_to_title yap
   if (normalized.reference_title && originalQuery) {
     const q = originalQuery.toLowerCase();
     if (/benzeri|gibi|tarzı|benzeyen|ayarında/.test(q)) {
@@ -590,13 +770,24 @@ async function fetchTMDB(normalized, originalQuery) {
   let warnings = [];
   let rawResults = [];
   const types = normalized.type === 'any' ? ['movie', 'tv'] : [normalized.type];
+  const queryGenresByType = {};
 
-  // Similar to Title Logic
+  for (const type of types) {
+    const map = type === 'movie' ? MOVIE_GENRES : TV_GENRES;
+    queryGenresByType[type] = Array.from(new Set(
+      (normalized.genres || [])
+        .map(g => String(g).toLowerCase())
+        .map(g => map[g])
+        .filter(id => id !== undefined)
+    ));
+  }
+
   if (normalized.intent === 'similar_to_title' && normalized.reference_title) {
     reference = await searchTMDB(normalized.reference_title, normalized.type || 'any');
     if (reference && reference.vote_count >= 150) {
       rawResults = await fetchSimilarTMDB(reference, normalized);
-      // Non-English content: supplement with same-language discover (e.g. Kurtlar Vadisi)
+      rawResults.push(...await fetchReferenceDiscoverTMDB(reference, normalized));
+
       if (reference.original_language && reference.original_language !== 'en') {
         try {
           const suppUrl = new URL(`${TMDB_BASE_URL}/discover/${reference.type}`);
@@ -611,13 +802,11 @@ async function fetchTMDB(normalized, originalQuery) {
           const suppRes = await fetch(suppUrl.toString());
           if (suppRes.ok) {
             const suppData = await suppRes.json();
-            rawResults.push(...(suppData.results || []).map(i => ({ ...i, type: reference.type, strategy: 'relaxed' })));
+            rawResults.push(...(suppData.results || []).map(i => ({ ...i, type: reference.type, strategy: 'language_supplement' })));
           }
         } catch (err) {}
       }
     } else {
-      // Referans bulunamadı veya çok az oylanmış (bilinmeyen/hatalı başlık)
-      // AI'ın çıkardığı genre/must_have ile discover moduna geç
       const refLabel = reference ? `"${reference.title}" (${reference.vote_count} oy)` : `"${normalized.reference_title}"`;
       warnings.push(`${refLabel} için yeterli eşleşme bulunamadı, tema bazlı arama yapılıyor.`);
       reference = null;
@@ -625,14 +814,16 @@ async function fetchTMDB(normalized, originalQuery) {
     }
   }
 
-  // Provider Resolution
   let providerId = null;
   if (normalized.watch_provider) {
     providerId = await getProviderId(normalized.watch_provider, normalized.type || 'any');
     if (!providerId) warnings.push(`'${normalized.watch_provider}' platformu bulunamadı.`);
   }
 
-  // Person Logic (Always check if actors/directors are present)
+  if (reference && normalized.intent === 'similar_to_title') {
+    rawResults.push(...await fetchReferenceDiscoverTMDB(reference, normalized, providerId));
+  }
+
   let personId = null;
   const personName = (normalized.actors && normalized.actors[0]) || (normalized.directors && normalized.directors[0]);
   if (personName) {
@@ -645,8 +836,6 @@ async function fetchTMDB(normalized, originalQuery) {
     }
   }
 
-  // PERSON CREDITS: Filmografiyi doğrudan person/{id}/credits'ten çek
-  // discover with_cast/with_crew filtresi TV için güvenilmez; bu yaklaşım kesin sonuç verir
   if (personId) {
     const role = normalized.directors?.length > 0 ? 'director' : 'actor';
     for (const type of types) {
@@ -664,186 +853,248 @@ async function fetchTMDB(normalized, originalQuery) {
     }
   }
 
-  // DISCOVER LOGIC (Multi-Strategy) — sadece person olmayan sorgular için
-  if (!personId && (normalized.intent !== 'similar_to_title' || (normalized.intent === 'similar_to_title' && rawResults.length < 10))) {
-     const kwMustHave = await getKeywordIds(normalized.must_have);
-     const kwSemantic = await getKeywordIds(normalized.semantic_topics);
-     const kwNice = await getKeywordIds(normalized.nice_to_have);
-     const kwLegacy = await getKeywordIds(normalized.keywords);
+  const shouldRunDiscover = !personId && (
+    normalized.intent !== 'similar_to_title'
+    || rawResults.length < 10
+    || (normalized.intent === 'similar_to_title' && (
+      (normalized.must_have && normalized.must_have.length > 0)
+      || (normalized.semantic_topics && normalized.semantic_topics.length > 0)
+    ))
+  );
 
-     normalized.resolved_must_have = kwMustHave.resolvedNames;
-     normalized.resolved_semantic = kwSemantic.resolvedNames;
+  if (shouldRunDiscover) {
+    const kwMustHave = await getKeywordIds(normalized.must_have);
+    const kwSemantic = await getKeywordIds(normalized.semantic_topics);
+    const kwLegacy = await getKeywordIds(normalized.keywords);
 
-     const strictIds = Array.from(new Set([...kwMustHave.ids]));
-     const relaxedIds = Array.from(new Set([...kwMustHave.ids, ...kwSemantic.ids, ...kwLegacy.ids]));
+    normalized.resolved_must_have = kwMustHave.resolvedNames;
+    normalized.resolved_semantic = kwSemantic.resolvedNames;
 
-     for (const type of types) {
-        const fetchDiscover = async (keywordIds, strategy) => {
-           const url = new URL(`${TMDB_BASE_URL}/discover/${type}`);
-           url.searchParams.append('api_key', TMDB_API_KEY);
-           url.searchParams.append('language', TMDB_LANGUAGE);
-           url.searchParams.append('region', TMDB_REGION);
+    const strictIds = Array.from(new Set([...kwMustHave.ids]));
+    const relaxedIds = Array.from(new Set([...kwMustHave.ids, ...kwSemantic.ids, ...kwLegacy.ids]));
 
-           if (normalized.sort_by === 'release_date') url.searchParams.append('sort_by', 'primary_release_date.desc');
-           else if (normalized.sort_by === 'vote_average') url.searchParams.append('sort_by', 'vote_average.desc');
-           else url.searchParams.append('sort_by', 'popularity.desc');
+    for (const type of types) {
+      const fetchDiscover = async (keywordIds, strategy) => {
+        for (let page = 1; page <= DISCOVER_PAGES_PER_STRATEGY; page++) {
+          const url = new URL(`${TMDB_BASE_URL}/discover/${type}`);
+          url.searchParams.append('api_key', TMDB_API_KEY);
+          url.searchParams.append('language', TMDB_LANGUAGE);
+          url.searchParams.append('region', TMDB_REGION);
+          url.searchParams.append('page', page);
 
-           if (normalized.year_min) {
-             if (type === 'movie') url.searchParams.append('primary_release_date.gte', `${normalized.year_min}-01-01`);
-             else url.searchParams.append('first_air_date.gte', `${normalized.year_min}-01-01`);
-           }
-           if (normalized.year_max) {
-             if (type === 'movie') url.searchParams.append('primary_release_date.lte', `${normalized.year_max}-12-31`);
-             else url.searchParams.append('first_air_date.lte', `${normalized.year_max}-12-31`);
-           }
+          if (normalized.sort_by === 'release_date') url.searchParams.append('sort_by', type === 'movie' ? 'primary_release_date.desc' : 'first_air_date.desc');
+          else if (normalized.sort_by === 'vote_average') url.searchParams.append('sort_by', 'vote_average.desc');
+          else url.searchParams.append('sort_by', page === 1 ? 'popularity.desc' : 'vote_average.desc');
 
-           if (providerId) {
-             url.searchParams.append('with_watch_providers', providerId);
-             url.searchParams.append('watch_region', 'TR');
-           }
+          if (normalized.year_min) {
+            if (type === 'movie') url.searchParams.append('primary_release_date.gte', `${normalized.year_min}-01-01`);
+            else url.searchParams.append('first_air_date.gte', `${normalized.year_min}-01-01`);
+          }
+          if (normalized.year_max) {
+            if (type === 'movie') url.searchParams.append('primary_release_date.lte', `${normalized.year_max}-12-31`);
+            else url.searchParams.append('first_air_date.lte', `${normalized.year_max}-12-31`);
+          }
 
-           if (normalized.genres && normalized.genres.length > 0) {
-             const map = type === 'movie' ? MOVIE_GENRES : TV_GENRES;
-             const genreIds = normalized.genres.map(g => g.toLowerCase()).map(g => map[g]).filter(id => id !== undefined);
-             if (genreIds.length > 0) url.searchParams.append('with_genres', genreIds.join(','));
-           }
+          if (providerId) {
+            url.searchParams.append('with_watch_providers', providerId);
+            url.searchParams.append('watch_region', 'TR');
+          }
 
-           if (keywordIds.length > 0) {
-             // OR mantığı (|): AND (,) çok kısıtlayıcı, keyword doğrulama top-20'yi zaten filtreler
-             url.searchParams.append('with_keywords', keywordIds.join('|'));
-           }
+          if (queryGenresByType[type].length > 0) {
+            url.searchParams.append('with_genres', queryGenresByType[type].join(','));
+          }
 
-           // Quality Profile Defaults
-           let minVoteCount = 100;
-           let minVoteAvg = 5.0;
-           if (normalized.quality_profile === 'hidden_gems') { 
-               minVoteCount = type==='movie'?30:20; 
-               minVoteAvg = 6.0; 
-               url.searchParams.append('vote_count.lte', 1500); 
-           }
-           else if (normalized.quality_profile === 'mainstream') { minVoteCount = type==='movie'?300:100; minVoteAvg = 5.5; }
-           else if (normalized.quality_profile === 'new') { minVoteCount = 10; minVoteAvg = 5.0; }
-           
-           if (normalized.min_vote_count) minVoteCount = normalized.min_vote_count;
-           if (normalized.min_vote_average) minVoteAvg = normalized.min_vote_average;
+          if (keywordIds.length > 0) {
+            url.searchParams.append('with_keywords', keywordIds.join('|'));
+          }
 
-           url.searchParams.append('vote_count.gte', minVoteCount);
-           url.searchParams.append('vote_average.gte', minVoteAvg);
+          let minVoteCount = 100;
+          let minVoteAvg = 5.0;
+          if (normalized.quality_profile === 'hidden_gems') {
+            minVoteCount = type === 'movie' ? 30 : 20;
+            minVoteAvg = 6.0;
+            url.searchParams.append('vote_count.lte', 1500);
+          } else if (normalized.quality_profile === 'mainstream') {
+            minVoteCount = type === 'movie' ? 300 : 120;
+            minVoteAvg = 5.8;
+          } else if (normalized.quality_profile === 'new') {
+            minVoteCount = 10;
+            minVoteAvg = 5.0;
+          }
 
-           try {
-             const res = await fetch(url.toString());
-             if (res.ok) {
-                const data = await res.json();
-                rawResults.push(...(data.results || []).map(i => ({...i, type, strategy})));
-             }
-           } catch (e) {}
-        };
+          if (normalized.min_vote_count) minVoteCount = normalized.min_vote_count;
+          if (normalized.min_vote_average) minVoteAvg = normalized.min_vote_average;
 
-        const promises = [];
-        if (strictIds.length > 0) promises.push(fetchDiscover(strictIds, 'strict'));
-        if (relaxedIds.length > 0) promises.push(fetchDiscover(relaxedIds, 'relaxed'));
+          url.searchParams.append('vote_count.gte', minVoteCount);
+          url.searchParams.append('vote_average.gte', minVoteAvg);
 
-        await Promise.all(promises);
-
-        // Fallback Strategy: Sadece hedef odaklı aramalardan yeterli sonuç çıkmazsa tetikle!
-        const strictAndRelaxedYield = rawResults.filter(r => r.type === type && (r.strategy === 'strict' || r.strategy === 'relaxed'));
-        if (strictAndRelaxedYield.length < 5) {
-            await fetchDiscover([], 'fallback');
+          try {
+            const res = await fetch(url.toString());
+            if (res.ok) {
+              const data = await res.json();
+              rawResults.push(...(data.results || []).map(i => ({ ...i, type, strategy })));
+            }
+          } catch (err) {}
         }
-     }
+      };
+
+      const promises = [];
+      if (strictIds.length > 0) promises.push(fetchDiscover(strictIds, 'strict'));
+      if (relaxedIds.length > 0) promises.push(fetchDiscover(relaxedIds, 'relaxed'));
+      await Promise.all(promises);
+
+      const strictAndRelaxedYield = rawResults.filter(r => r.type === type && ['strict', 'relaxed', 'reference_discover'].includes(r.strategy));
+      if (strictAndRelaxedYield.length < 8) {
+        await fetchDiscover([], 'fallback');
+      }
+    }
   }
 
-  // Deduplication & Quality Filtering
   const uniqueMap = new Map();
   for (const item of rawResults) {
-     if (reference && item.id === reference.id) continue;
-     if (uniqueMap.has(item.id)) continue;
+    if (reference && item.id === reference.id) continue;
 
-     const year = item.release_date || item.first_air_date ? parseInt((item.release_date || item.first_air_date).substring(0, 4)) : null;
-     if (normalized.year_min && year && year < normalized.year_min) continue;
-     if (normalized.year_max && year && year > normalized.year_max) continue;
-     
-     if (normalized.quality_profile === 'family') {
-         if (item.adult) continue;
-         const genres = item.genre_ids || [];
-         if (genres.includes(27) || genres.includes(53)) continue; // korku, gerilim cikar
-     }
+    const uniqueKey = `${item.type || 'movie'}_${item.id}`;
+    if (uniqueMap.has(uniqueKey)) continue;
 
-     if (normalized.exclude && normalized.exclude.length > 0) {
-         const map = item.type === 'movie' ? MOVIE_GENRES : TV_GENRES;
-         const excludeIds = normalized.exclude.map(g => g.toLowerCase()).map(g => map[g]).filter(id => id !== undefined);
-         const itemGenres = item.genre_ids || [];
-         const hasExcluded = itemGenres.some(id => excludeIds.includes(id));
-         if (hasExcluded) continue;
-     }
+    const year = parseReleaseYear(item.release_date || item.first_air_date);
+    if (normalized.year_min && year && year < normalized.year_min) continue;
+    if (normalized.year_max && year && year > normalized.year_max) continue;
 
-     uniqueMap.set(item.id, {
-        id: item.id, type: item.type, title: item.type === 'movie' ? item.title : item.name,
-        overview: item.overview, poster: item.poster_path, 
-        release_date: item.type === 'movie' ? item.release_date : item.first_air_date,
-        vote_average: item.vote_average || 0, vote_count: item.vote_count || 0,
-        popularity: item.popularity || 0, genre_ids: item.genre_ids || [], strategy: item.strategy
-     });
+    if (normalized.quality_profile === 'family') {
+      if (item.adult) continue;
+      const genres = item.genre_ids || [];
+      if (genres.includes(27) || genres.includes(53)) continue;
+    }
+
+    if (normalized.exclude && normalized.exclude.length > 0) {
+      const map = item.type === 'movie' ? MOVIE_GENRES : TV_GENRES;
+      const excludeIds = normalized.exclude.map(g => g.toLowerCase()).map(g => map[g]).filter(id => id !== undefined);
+      const itemGenres = item.genre_ids || [];
+      if (itemGenres.some(id => excludeIds.includes(id))) continue;
+    }
+
+    uniqueMap.set(uniqueKey, {
+      id: item.id,
+      type: item.type,
+      title: item.type === 'movie' ? item.title : item.name,
+      overview: item.overview,
+      poster: item.poster_path,
+      release_date: item.type === 'movie' ? item.release_date : item.first_air_date,
+      vote_average: item.vote_average || 0,
+      vote_count: item.vote_count || 0,
+      popularity: item.popularity || 0,
+      genre_ids: item.genre_ids || [],
+      strategy: item.strategy
+    });
   }
 
   let finalArray = Array.from(uniqueMap.values());
-
-  // Base Scoring
-  for (let item of finalArray) {
-     let score = (item.vote_average * 2) 
-               + (Math.log10(item.vote_count + 1) * 4) 
-               + (Math.log10(item.popularity + 1) * 2);
-     if (item.poster) score += 5;
-     if (!item.release_date) score -= 10;
-     if (item.strategy === 'strict') score += 20; // Artırıldı
-     if (item.strategy === 'relaxed') score += 10; // Artırıldı
-     if (item.strategy === 'fallback') score -= 20; // Cezalandırıldı
-     item.base_score = score;
-  }
-  
-  finalArray.sort((a,b) => b.base_score - a.base_score);
-  
-  // Must-Have Keyword Verification for Top 20
-  const top20 = finalArray.slice(0, 20);
+  const refKeywordIds = reference ? await getItemKeywords(reference.id, reference.type) : [];
   const kwMustHaveIds = (await getKeywordIds(normalized.must_have)).ids;
   const kwSemanticIds = (await getKeywordIds(normalized.semantic_topics)).ids;
-  
   const verifyIds = kwMustHaveIds.length > 0 ? kwMustHaveIds : kwSemanticIds;
 
-  if (verifyIds.length > 0 && normalized.intent !== 'similar_to_title' && normalized.intent !== 'person_search') {
-      const verifyPromises = top20.map(async (item) => {
-         const itemKws = await getItemKeywords(item.id, item.type);
-         const hasKeyword = verifyIds.some(id => itemKws.includes(id));
-         if (hasKeyword) item.base_score += 25; // Massive bonus
-         else item.base_score -= 30; // Massive penalty if requested strictly
-         return item;
-      });
-      await Promise.all(verifyPromises);
-      top20.sort((a,b) => b.base_score - a.base_score);
+  for (const item of finalArray) {
+    let score = (item.vote_average * 2)
+      + (Math.log10(item.vote_count + 1) * 4)
+      + (Math.log10(item.popularity + 1) * 2);
+
+    if (item.poster) score += 5;
+    if (!item.release_date) score -= 10;
+
+    const releaseYear = parseReleaseYear(item.release_date);
+    if (isFutureRelease(item.release_date) && normalized.quality_profile !== 'new') score -= 35;
+    if (releaseYear && releaseYear >= 2025 && normalized.quality_profile !== 'new') score -= 10;
+    if (item.vote_count < 50 && !['hidden_gems', 'new'].includes(normalized.quality_profile)) score -= 20;
+    if (item.vote_count < 150 && normalized.quality_profile === 'mainstream') score -= 10;
+
+    if (item.strategy === 'strict') score += 24;
+    if (item.strategy === 'relaxed') score += 10;
+    if (item.strategy === 'reference_discover') score += 12;
+    if (item.strategy === 'language_supplement') score -= 10;
+    if (item.strategy === 'fallback') score -= 28;
+
+    const requestedGenreIds = queryGenresByType[item.type] || [];
+    const genreOverlap = countGenreOverlap(item.genre_ids, requestedGenreIds);
+    if (requestedGenreIds.length > 0) {
+      if (genreOverlap > 0) score += genreOverlap * 18;
+      else score -= 35;
+    }
+
+    if (reference) {
+      const refGenreOverlap = countGenreOverlap(item.genre_ids, reference.genre_ids || []);
+      if (refGenreOverlap > 0) score += refGenreOverlap * 20;
+      else if (normalized.intent === 'similar_to_title') score -= 18;
+    }
+
+    item.base_score = score;
   }
 
-  const itemsToEnrich = top20.slice(0, 20);
+  finalArray.sort((a, b) => b.base_score - a.base_score);
+  const topCandidates = finalArray.slice(0, AI_CANDIDATE_LIMIT);
+
+  if (verifyIds.length > 0 && normalized.intent !== 'person_search') {
+    await Promise.all(topCandidates.map(async (item) => {
+      const itemKws = await getItemKeywords(item.id, item.type);
+      const hasKeyword = verifyIds.some(id => itemKws.includes(id));
+      item.keyword_verified = hasKeyword;
+      if (hasKeyword) item.base_score += 28;
+      else item.base_score -= 24;
+
+      if (normalized.intent === 'similar_to_title' && refKeywordIds.length > 0) {
+        const keywordOverlap = refKeywordIds.filter(id => itemKws.includes(id)).length;
+        item.ref_keyword_overlap = keywordOverlap;
+        if (keywordOverlap > 0) item.base_score += keywordOverlap * 8;
+        else item.base_score -= 12;
+      }
+    }));
+  } else if (normalized.intent === 'similar_to_title' && refKeywordIds.length > 0) {
+    await Promise.all(topCandidates.map(async (item) => {
+      const itemKws = await getItemKeywords(item.id, item.type);
+      const keywordOverlap = refKeywordIds.filter(id => itemKws.includes(id)).length;
+      item.ref_keyword_overlap = keywordOverlap;
+      if (keywordOverlap > 0) item.base_score += keywordOverlap * 8;
+      else item.base_score -= 10;
+    }));
+  }
+
+  topCandidates.sort((a, b) => b.base_score - a.base_score);
+
+  const verifiedCandidates = topCandidates.filter(item => item.keyword_verified);
+  const stronglySimilarCandidates = topCandidates.filter(item => (item.ref_keyword_overlap || 0) > 0);
+  let rankedCandidates = topCandidates;
+
+  if (verifyIds.length > 0 && verifiedCandidates.length >= Math.min(8, AI_RESULT_LIMIT / 2)) {
+    rankedCandidates = [...verifiedCandidates, ...topCandidates.filter(item => !item.keyword_verified)];
+  } else if (normalized.intent === 'similar_to_title' && stronglySimilarCandidates.length >= Math.min(6, AI_RESULT_LIMIT / 2)) {
+    rankedCandidates = [...stronglySimilarCandidates, ...topCandidates.filter(item => (item.ref_keyword_overlap || 0) === 0)];
+  }
+
+  const itemsToEnrich = rankedCandidates.slice(0, AI_RESULT_LIMIT);
   let enriched = await enrichResults(itemsToEnrich, normalized, reference);
 
-  // Post Enrichment Filters (Trailer/Provider)
   enriched = enriched.filter(item => {
     if (normalized.trailer_required && !item.trailer_url) return false;
     if (normalized.watch_provider) {
-       const nameNorm = normalized.watch_provider.toLowerCase().replace(/\s+/g, '');
-       const hasProvider = item.providers && item.providers.some(p => p.provider_name.toLowerCase().replace(/\s+/g, '').includes(nameNorm));
-       if (!hasProvider) return false;
+      const nameNorm = normalized.watch_provider.toLowerCase().replace(/\s+/g, '');
+      const hasProvider = item.providers && item.providers.some(p => p.provider_name.toLowerCase().replace(/\s+/g, '').includes(nameNorm));
+      if (!hasProvider) return false;
+    }
+    if ((normalized.must_have || []).includes('miniseries')) {
+      if (item.type !== 'tv') return false;
+      if (item.number_of_seasons && item.number_of_seasons > 2) return false;
     }
     return true;
   });
 
-  return { reference, people, warnings, results: enriched.slice(0, 20) };
+  return { reference, people, warnings, results: enriched.slice(0, AI_RESULT_LIMIT) };
 }
-
 // Popular endpoint
 fastify.get('/api/popular', async (request, reply) => {
   const { type, page = 1 } = request.query;
   if (!type || !['movie', 'tv'].includes(type)) {
-    return reply.status(400).send({ ok: false, error: 'type parametresi "movie" veya "tv" olmalıdır.' });
+    return reply.status(400).send({ ok: false, error: 'type parametresi "movie" veya "tv" olmalÄ±dÄ±r.' });
   }
 
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
@@ -857,12 +1108,12 @@ fastify.get('/api/popular', async (request, reply) => {
       : `${TMDB_BASE_URL}/tv/popular?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}&page=${pageNum}`;
 
     const listRes = await fetch(listUrl);
-    if (!listRes.ok) throw new Error(`TMDB popular hatası: ${listRes.status}`);
+    if (!listRes.ok) throw new Error(`TMDB popular hatasÄ±: ${listRes.status}`);
     const listData = await listRes.json();
     const items = (listData.results || []).slice(0, 20);
     const hasNextPage = (listData.total_pages || 1) > pageNum;
 
-    // Tam veri: providers + videos + credits tek çağrıda
+    // Tam veri: providers + videos + credits tek Ã§aÄŸrÄ±da
     const results = await Promise.all(items.map(async (item) => {
       const title       = type === 'movie' ? (item.title || item.original_title) : (item.name || item.original_name);
       const origTitle   = type === 'movie' ? item.original_title : item.original_name;
@@ -925,7 +1176,7 @@ fastify.get('/api/popular', async (request, reply) => {
 fastify.get('/api/genre', async (request, reply) => {
   const { type, genre_id, page = 1 } = request.query;
   if (!type || !['movie', 'tv'].includes(type)) {
-    return reply.status(400).send({ ok: false, error: 'type parametresi "movie" veya "tv" olmalıdır.' });
+    return reply.status(400).send({ ok: false, error: 'type parametresi "movie" veya "tv" olmalÄ±dÄ±r.' });
   }
   if (!genre_id) {
     return reply.status(400).send({ ok: false, error: 'genre_id gereklidir.' });
@@ -947,7 +1198,7 @@ fastify.get('/api/genre', async (request, reply) => {
     url.searchParams.append('page', pageNum);
 
     const listRes = await fetch(url.toString());
-    if (!listRes.ok) throw new Error(`TMDB discover hatası: ${listRes.status}`);
+    if (!listRes.ok) throw new Error(`TMDB discover hatasÄ±: ${listRes.status}`);
     const listData = await listRes.json();
     const items = (listData.results || []).slice(0, 20);
     const hasNextPage = (listData.total_pages || 1) > pageNum;
@@ -1010,7 +1261,7 @@ fastify.get('/health', async (request, reply) => { return { ok: true, service: '
 fastify.get('/api/check-update', async (request, reply) => {
   try {
     const repoPath = await getGitHubRepoPath();
-    if (!repoPath) return reply.status(500).send({ ok: false, error: 'GitHub repo bilgisi alınamadı. GITHUB_REPO env değişkeni ayarlayın.' });
+    if (!repoPath) return reply.status(500).send({ ok: false, error: 'GitHub repo bilgisi alÄ±namadÄ±. GITHUB_REPO env deÄŸiÅŸkeni ayarlayÄ±n.' });
 
     const currentCommit = await getCurrentCommit();
     const headers = { 'User-Agent': 'SineAI-UpdateChecker/1.0' };
@@ -1032,14 +1283,14 @@ fastify.get('/api/check-update', async (request, reply) => {
     };
   } catch (err) {
     fastify.log.error(err);
-    return reply.status(500).send({ ok: false, error: `Kontrol başarısız: ${err.message}` });
+    return reply.status(500).send({ ok: false, error: `Kontrol baÅŸarÄ±sÄ±z: ${err.message}` });
   }
 });
 
 fastify.post('/api/update', async (request, reply) => {
   try {
     const repoPath = await getGitHubRepoPath();
-    // Docker'da SSH key olmadığından her zaman HTTPS kullan
+    // Docker'da SSH key olmadÄ±ÄŸÄ±ndan her zaman HTTPS kullan
     let pullTarget;
     if (repoPath) {
       const auth = process.env.GITHUB_TOKEN ? `${process.env.GITHUB_TOKEN}@` : '';
@@ -1049,11 +1300,11 @@ fastify.post('/api/update', async (request, reply) => {
     }
     const { stdout } = await execAsync(`git pull ${pullTarget}`);
     fastify.log.info(`Git pull: ${stdout}`);
-    reply.send({ ok: true, message: 'Güncelleme indirildi. Sunucu yeniden başlatılıyor...' });
+    reply.send({ ok: true, message: 'GÃ¼ncelleme indirildi. Sunucu yeniden baÅŸlatÄ±lÄ±yor...' });
     setTimeout(() => process.exit(1), 800);
   } catch (err) {
     fastify.log.error(err);
-    return reply.status(500).send({ ok: false, error: `Güncelleme başarısız: ${err.message}` });
+    return reply.status(500).send({ ok: false, error: `GÃ¼ncelleme baÅŸarÄ±sÄ±z: ${err.message}` });
   }
 });
 
