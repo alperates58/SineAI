@@ -6,14 +6,11 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js",
-    "test": "node --test",
-    "media:import-csv": "node bin/media-import-csv.js"
+    "check": "node --check server.js"
   },
   "dependencies": {
-    "@fastify/static": "^7.0.3",
-    "better-sqlite3": "^11.8.1",
-    "fastify": "^4.26.2"
+    "fastify": "^4.26.2",
+    "@fastify/static": "^7.0.3"
   },
   "engines": {
     "node": ">=20.0.0"

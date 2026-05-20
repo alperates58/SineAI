@@ -47,17 +47,6 @@ docker build -t sineai .
 docker run -p 3000:3000 --env-file .env sineai
 ```
 
-## Local Media CSV Import
-
-The current recommendation flow still defaults to TMDB. The local media database foundation can be prepared with:
-
-```bash
-npm run media:import-csv -- --type=movie --path=/path/to/movies.csv --limit=100
-npm run media:import-csv -- --type=tv --path=/path/to/tv.csv --limit=100
-```
-
-Use `MEDIA_DATA_SOURCE=tmdb` to keep existing behavior. Future supported values are `local` and `hybrid`.
-
 ## Coolify Deploy Notları
 
 - SineAI, Coolify veya Traefik üzerinden deploy edilmeye uygun olarak tasarlanmıştır.
