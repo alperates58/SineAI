@@ -8,66 +8,121 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+    <!-- HERO -->
     <header class="app-header">
+        <div class="hero-glow"></div>
         <div class="container">
-            <div class="header-top">
-                <div>
-                    <h1>SineAI 🎬</h1>
-                    <p>Ne izlemek istediğini yaz, SineAI sana uygun film ve dizi önerileri getirsin.</p>
-                </div>
-                <button type="button" id="checkUpdateBtn" class="update-check-btn" tabindex="0">🔄 Güncellemeleri Kontrol Et</button>
+            <div class="logo-area">
+                <div class="logo-icon">🎬</div>
+                <h1 class="logo-text">SineAI</h1>
             </div>
+            <p class="tagline">Ne izlemek istediğini yaz, yapay zeka senin için en iyisini bulsun</p>
+
+            <div class="search-wrap">
+                <form id="recommendForm">
+                    <textarea id="query" name="query" rows="2"
+                        placeholder="Örn: Karanlık atmosferli, zeka işi, 2020 sonrası bir dizi öner..."
+                        required></textarea>
+                    <div class="search-actions">
+                        <button type="button" id="voiceBtn" class="btn-voice" tabindex="0">🎤 Ses</button>
+                        <button type="submit" id="submitBtn" class="btn-submit" tabindex="0">Öneri getir ✨</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="mood-pills" id="moodPills">
+                <button class="pill" data-query="Gerilim ve korku filmleri öner">😨 Gerilim & Korku</button>
+                <button class="pill" data-query="Zeka gerektiren gizem dizileri öner">🤔 Zeka & Gizem</button>
+                <button class="pill" data-query="Komedi filmleri öner">😂 Komedi</button>
+                <button class="pill" data-query="Romantik filmler öner">❤️ Romantik</button>
+                <button class="pill" data-query="Bilim kurgu filmleri öner">🚀 Bilim Kurgu</button>
+                <button class="pill" data-query="Oscar ödüllü filmler öner">🏆 Ödüllü Yapımlar</button>
+            </div>
+
+            <div id="errorBox" class="error-box hidden"></div>
+
+            <button type="button" id="checkUpdateBtn" class="update-check-btn" tabindex="0">🔄 Güncellemeleri Kontrol Et</button>
         </div>
     </header>
 
-    <main class="container">
-        <section class="search-section">
-            <form id="recommendForm">
-                <div class="input-group">
-                    <textarea id="query" name="query" rows="3" placeholder="Örn: Karanlık atmosferli, zeka işi, 2020 sonrası bir dizi öner..." required></textarea>
-                </div>
-                <div class="action-buttons">
-                    <button type="button" id="voiceBtn" class="voice-btn" tabindex="0">🎤 Sesle Ara</button>
-                    <button type="submit" id="submitBtn" tabindex="0">Öneri getir ✨</button>
-                </div>
-            </form>
-            <div id="errorBox" class="error-box hidden"></div>
+    <!-- DISCOVER (başlangıç ekranı) -->
+    <div id="discoverSection">
+
+        <!-- Popüler Filmler -->
+        <section class="row-section container">
+            <div class="section-head">
+                <div class="section-title"><span class="section-dot"></span>Popüler Filmler</div>
+                <div class="see-all" data-query="Bu hafta en popüler filmler öner">Tümünü gör →</div>
+            </div>
+            <div class="cards-row" id="popularMoviesRow">
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+            </div>
         </section>
 
-        <section class="results-section">
-            <div id="loading" class="loading hidden">
-                <div class="spinner"></div>
-                <p>AI analiz ediyor ve TMDB'de aranıyor...</p>
+        <!-- Popüler Diziler -->
+        <section class="row-section container">
+            <div class="section-head">
+                <div class="section-title"><span class="section-dot"></span>Popüler Diziler</div>
+                <div class="see-all" data-query="Bu hafta en popüler diziler öner">Tümünü gör →</div>
             </div>
-            
-            <div id="resultsGrid" class="results-grid">
-                <!-- Sonuçlar buraya dinamik eklenecek -->
+            <div class="cards-row" id="popularTvRow">
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
             </div>
         </section>
+
+        <!-- Film Kategorileri -->
+        <section class="row-section container">
+            <div class="section-head">
+                <div class="section-title"><span class="section-dot"></span>Film Türleri</div>
+            </div>
+            <div class="genre-grid" id="movieGenreGrid"></div>
+        </section>
+
+        <!-- Dizi Kategorileri -->
+        <section class="row-section container">
+            <div class="section-head">
+                <div class="section-title"><span class="section-dot"></span>Dizi Türleri</div>
+            </div>
+            <div class="genre-grid" id="tvGenreGrid"></div>
+        </section>
+
+    </div>
+
+    <!-- RESULTS (arama sonrası) -->
+    <main class="container results-container hidden" id="resultsSection">
+        <div class="results-back">
+            <button id="backToDiscoverBtn" class="back-btn">← Keşfete Dön</button>
+        </div>
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>AI analiz ediyor ve TMDB'de aranıyor...</p>
+        </div>
+        <div id="resultsGrid" class="results-grid"></div>
     </main>
 
     <footer class="app-footer">
         <div class="container">
-            <div class="footer-content">
-                <span class="footer-brand">SineAI 🎬</span>
-                <span class="footer-dot">·</span>
-                <span>AI destekli film &amp; dizi keşfi</span>
-                <span class="footer-dot">·</span>
-                <span class="footer-tmdb">
-                    Veriler:
-                    <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB" class="tmdb-logo">
-                </span>
-            </div>
+            <span class="tmdb-badge">TMDB</span>
+            <p>Bu ürün TMDB API kullanır.</p>
         </div>
     </footer>
 
-    <!-- TV Modal -->
+    <!-- Detail Modal -->
     <div id="detailModal" class="modal hidden" role="dialog" aria-modal="true" tabindex="-1">
         <div class="modal-content">
             <button id="closeModalBtn" class="close-btn" aria-label="Kapat" tabindex="0">✕ Kapat</button>
-            <div class="modal-body" id="modalBody">
-                <!-- Content will be injected here -->
-            </div>
+            <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
 
@@ -84,7 +139,6 @@
         </div>
     </div>
 
-    <!-- Toast -->
     <div id="toast" class="toast hidden"></div>
 
     <script src="app.js"></script>

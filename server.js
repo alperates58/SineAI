@@ -67,8 +67,8 @@ function getFromCache(key) {
   return null;
 }
 
-function setCache(key, data) {
-  cache.set(key, { data, expires: Date.now() + (CACHE_TTL_SECONDS * 1000) });
+function setCache(key, data, ttlSeconds = CACHE_TTL_SECONDS) {
+  cache.set(key, { data, expires: Date.now() + (ttlSeconds * 1000) });
 }
 
 // Prompt Generation
@@ -818,6 +818,71 @@ async function fetchTMDB(normalized, originalQuery) {
 
   return { reference, people, warnings, results: enriched.slice(0, 10) };
 }
+
+// Popular endpoint
+fastify.get('/api/popular', async (request, reply) => {
+  const { type } = request.query;
+  if (!type || !['movie', 'tv'].includes(type)) {
+    return reply.status(400).send({ ok: false, error: 'type parametresi "movie" veya "tv" olmalıdır.' });
+  }
+
+  const cacheKey = `popular_${type}`;
+  const cached = getFromCache(cacheKey);
+  if (cached) return { ok: true, ...cached, cached: true };
+
+  try {
+    const listUrl = type === 'movie'
+      ? `${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}&region=${TMDB_REGION}&page=1`
+      : `${TMDB_BASE_URL}/tv/popular?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}&page=1`;
+
+    const listRes = await fetch(listUrl);
+    if (!listRes.ok) throw new Error(`TMDB popular hatası: ${listRes.status}`);
+    const listData = await listRes.json();
+    const items = (listData.results || []).slice(0, 20);
+
+    // Provider'ları tüm öğeler için paralel çek
+    const results = await Promise.all(items.map(async (item) => {
+      const title       = type === 'movie' ? (item.title || item.original_title) : (item.name || item.original_name);
+      const origTitle   = type === 'movie' ? item.original_title : item.original_name;
+      const releaseDate = type === 'movie' ? item.release_date : item.first_air_date;
+
+      let providers = [];
+      try {
+        const provRes = await fetch(`${TMDB_BASE_URL}/${type}/${item.id}/watch/providers?api_key=${TMDB_API_KEY}`);
+        if (provRes.ok) {
+          const provData = await provRes.json();
+          const trData   = provData.results?.TR;
+          if (trData?.flatrate) {
+            providers = trData.flatrate.map(p => ({
+              provider_id:   p.provider_id,
+              provider_name: p.provider_name,
+              logo_path:     p.logo_path,
+            }));
+          }
+        }
+      } catch {}
+
+      return {
+        id:             item.id,
+        title,
+        original_title: origTitle,
+        overview:       item.overview || '',
+        poster:         item.poster_path,
+        release_date:   releaseDate,
+        vote_average:   item.vote_average,
+        type,
+        providers,
+      };
+    }));
+
+    const responseData = { results };
+    setCache(cacheKey, responseData, 1800); // 30 dakika
+    return { ok: true, ...responseData };
+  } catch (err) {
+    fastify.log.error(err);
+    return { ok: false, error: err.message };
+  }
+});
 
 // Update helpers
 async function getGitHubRepoPath() {
