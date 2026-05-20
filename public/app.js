@@ -30,6 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const toast               = document.getElementById('toast');
 
     let toastTimer = null;
+    const AI_BATCH_SIZE = 10;
+    const FOCUS_PREFETCH_THRESHOLD = 4;
 
     // ── Page state for infinite scroll ───────────────────
     let pageState = {
@@ -275,6 +277,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function maybeLoadMoreFromFocus(cardEl) {
+        if (!cardEl || pageState.isLoading || !pageState.hasMore) return;
+
+        const cards = resultsGrid.querySelectorAll('.movie-card');
+        const cardIndex = Array.prototype.indexOf.call(cards, cardEl);
+        if (cardIndex === -1) return;
+
+        const remainingCards = cards.length - cardIndex - 1;
+        if (remainingCards <= FOCUS_PREFETCH_THRESHOLD) {
+            loadMoreResults();
+        }
+    }
+
     // ── Load more results ────────────────────────────────
     async function loadMoreResults() {
         if (pageState.isLoading || !pageState.hasMore) return;
@@ -282,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             if (pageState.mode === 'ai') {
-                const nextItems = pageState.aiItems.slice(pageState.shownCount, pageState.shownCount + 10);
+                const nextItems = pageState.aiItems.slice(pageState.shownCount, pageState.shownCount + AI_BATCH_SIZE);
                 if (nextItems.length > 0) {
                     renderCards(nextItems);
                     pageState.shownCount += nextItems.length;
@@ -371,6 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const openModal = () => showModal(item, year, typeStr, rating, badgesHTML);
             card.addEventListener('click', openModal);
             card.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); openModal(); } });
+            card.addEventListener('focus', () => maybeLoadMoreFromFocus(card));
             fragment.appendChild(card);
         });
         resultsGrid.appendChild(fragment);
@@ -515,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsGrid.appendChild(titleEl);
 
         // Show first 10, keep rest for scroll-load
-        const firstBatch = results.slice(0, 10);
+        const firstBatch = results.slice(0, AI_BATCH_SIZE);
         pageState.aiItems    = results;
         pageState.shownCount = firstBatch.length;
         pageState.hasMore    = results.length > firstBatch.length;
