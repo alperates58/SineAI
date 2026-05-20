@@ -427,6 +427,7 @@ async function searchTMDB(title, type) {
       if (res.ok) {
         const dData = await res.json();
         bestMatch.genre_ids = (dData.genres || []).map(g => g.id);
+        bestMatch.original_language = dData.original_language || null;
       }
     } catch(err) {}
   }
@@ -595,6 +596,25 @@ async function fetchTMDB(normalized, originalQuery) {
     reference = await searchTMDB(normalized.reference_title, normalized.type || 'any');
     if (reference && reference.vote_count >= 150) {
       rawResults = await fetchSimilarTMDB(reference, normalized);
+      // Non-English content: supplement with same-language discover (e.g. Kurtlar Vadisi)
+      if (reference.original_language && reference.original_language !== 'en') {
+        try {
+          const suppUrl = new URL(`${TMDB_BASE_URL}/discover/${reference.type}`);
+          suppUrl.searchParams.append('api_key', TMDB_API_KEY);
+          suppUrl.searchParams.append('language', TMDB_LANGUAGE);
+          suppUrl.searchParams.append('sort_by', 'popularity.desc');
+          suppUrl.searchParams.append('with_original_language', reference.original_language);
+          if (reference.genre_ids?.length > 0) {
+            suppUrl.searchParams.append('with_genres', reference.genre_ids.slice(0, 2).join(','));
+          }
+          suppUrl.searchParams.append('vote_count.gte', 50);
+          const suppRes = await fetch(suppUrl.toString());
+          if (suppRes.ok) {
+            const suppData = await suppRes.json();
+            rawResults.push(...(suppData.results || []).map(i => ({ ...i, type: reference.type, strategy: 'relaxed' })));
+          }
+        } catch (err) {}
+      }
     } else {
       // Referans bulunamadı veya çok az oylanmış (bilinmeyen/hatalı başlık)
       // AI'ın çıkardığı genre/must_have ile discover moduna geç
@@ -802,7 +822,7 @@ async function fetchTMDB(normalized, originalQuery) {
       top20.sort((a,b) => b.base_score - a.base_score);
   }
 
-  const itemsToEnrich = top20.slice(0, 15);
+  const itemsToEnrich = top20.slice(0, 20);
   let enriched = await enrichResults(itemsToEnrich, normalized, reference);
 
   // Post Enrichment Filters (Trailer/Provider)
@@ -816,31 +836,122 @@ async function fetchTMDB(normalized, originalQuery) {
     return true;
   });
 
-  return { reference, people, warnings, results: enriched.slice(0, 10) };
+  return { reference, people, warnings, results: enriched.slice(0, 20) };
 }
 
 // Popular endpoint
 fastify.get('/api/popular', async (request, reply) => {
-  const { type } = request.query;
+  const { type, page = 1 } = request.query;
   if (!type || !['movie', 'tv'].includes(type)) {
     return reply.status(400).send({ ok: false, error: 'type parametresi "movie" veya "tv" olmalıdır.' });
   }
 
-  const cacheKey = `popular_${type}`;
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const cacheKey = `popular_${type}_p${pageNum}`;
   const cached = getFromCache(cacheKey);
   if (cached) return { ok: true, ...cached, cached: true };
 
   try {
     const listUrl = type === 'movie'
-      ? `${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}&region=${TMDB_REGION}&page=1`
-      : `${TMDB_BASE_URL}/tv/popular?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}&page=1`;
+      ? `${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}&region=${TMDB_REGION}&page=${pageNum}`
+      : `${TMDB_BASE_URL}/tv/popular?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}&page=${pageNum}`;
 
     const listRes = await fetch(listUrl);
     if (!listRes.ok) throw new Error(`TMDB popular hatası: ${listRes.status}`);
     const listData = await listRes.json();
     const items = (listData.results || []).slice(0, 20);
+    const hasNextPage = (listData.total_pages || 1) > pageNum;
 
-    // Provider'ları tüm öğeler için paralel çek
+    // Tam veri: providers + videos + credits tek çağrıda
+    const results = await Promise.all(items.map(async (item) => {
+      const title       = type === 'movie' ? (item.title || item.original_title) : (item.name || item.original_name);
+      const origTitle   = type === 'movie' ? item.original_title : item.original_name;
+      const releaseDate = type === 'movie' ? item.release_date : item.first_air_date;
+
+      let providers = [], trailer_url = null, runtime = null, number_of_seasons = null, genres = [];
+      try {
+        const detailRes = await fetch(`${TMDB_BASE_URL}/${type}/${item.id}?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}&append_to_response=watch/providers,videos,credits`);
+        if (detailRes.ok) {
+          const d = await detailRes.json();
+          genres = (d.genres || []).map(g => g.name);
+          if (type === 'movie') {
+            runtime = d.runtime || null;
+          } else {
+            number_of_seasons = d.number_of_seasons || null;
+            runtime = d.episode_run_time?.[0] || null;
+          }
+          const trData = d['watch/providers']?.results?.TR;
+          if (trData?.flatrate) {
+            providers = trData.flatrate.map(p => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path }));
+          }
+          const videos = d.videos?.results || [];
+          const trailer = videos.find(v => v.type === 'Trailer' && v.site === 'YouTube' && v.official)
+                       || videos.find(v => v.type === 'Trailer' && v.site === 'YouTube')
+                       || videos.find(v => v.site === 'YouTube');
+          if (trailer) trailer_url = `https://www.youtube.com/watch?v=${trailer.key}`;
+        }
+      } catch {}
+
+      if (!trailer_url) {
+        try {
+          const vRes = await fetch(`${TMDB_BASE_URL}/${type}/${item.id}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
+          if (vRes.ok) {
+            const vData = await vRes.json();
+            const trailer = (vData.results || []).find(v => v.type === 'Trailer' && v.site === 'YouTube' && v.official)
+                         || (vData.results || []).find(v => v.type === 'Trailer' && v.site === 'YouTube');
+            if (trailer) trailer_url = `https://www.youtube.com/watch?v=${trailer.key}`;
+          }
+        } catch {}
+      }
+
+      return {
+        id: item.id, title, original_title: origTitle,
+        overview: item.overview || '', poster: item.poster_path,
+        release_date: releaseDate, vote_average: item.vote_average,
+        type, genres, runtime, number_of_seasons, providers, trailer_url,
+      };
+    }));
+
+    const responseData = { results, hasNextPage, page: pageNum };
+    setCache(cacheKey, responseData, 1800); // 30 dakika
+    return { ok: true, ...responseData };
+  } catch (err) {
+    fastify.log.error(err);
+    return { ok: false, error: err.message };
+  }
+});
+
+// Genre endpoint
+fastify.get('/api/genre', async (request, reply) => {
+  const { type, genre_id, page = 1 } = request.query;
+  if (!type || !['movie', 'tv'].includes(type)) {
+    return reply.status(400).send({ ok: false, error: 'type parametresi "movie" veya "tv" olmalıdır.' });
+  }
+  if (!genre_id) {
+    return reply.status(400).send({ ok: false, error: 'genre_id gereklidir.' });
+  }
+
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const cacheKey = `genre_${type}_${genre_id}_p${pageNum}`;
+  const cached = getFromCache(cacheKey);
+  if (cached) return { ok: true, ...cached, cached: true };
+
+  try {
+    const url = new URL(`${TMDB_BASE_URL}/discover/${type}`);
+    url.searchParams.append('api_key', TMDB_API_KEY);
+    url.searchParams.append('language', TMDB_LANGUAGE);
+    url.searchParams.append('region', TMDB_REGION);
+    url.searchParams.append('sort_by', 'popularity.desc');
+    url.searchParams.append('with_genres', genre_id);
+    url.searchParams.append('vote_count.gte', 50);
+    url.searchParams.append('page', pageNum);
+
+    const listRes = await fetch(url.toString());
+    if (!listRes.ok) throw new Error(`TMDB discover hatası: ${listRes.status}`);
+    const listData = await listRes.json();
+    const items = (listData.results || []).slice(0, 20);
+    const hasNextPage = (listData.total_pages || 1) > pageNum;
+
     const results = await Promise.all(items.map(async (item) => {
       const title       = type === 'movie' ? (item.title || item.original_title) : (item.name || item.original_name);
       const origTitle   = type === 'movie' ? item.original_title : item.original_name;
@@ -853,30 +964,21 @@ fastify.get('/api/popular', async (request, reply) => {
           const provData = await provRes.json();
           const trData   = provData.results?.TR;
           if (trData?.flatrate) {
-            providers = trData.flatrate.map(p => ({
-              provider_id:   p.provider_id,
-              provider_name: p.provider_name,
-              logo_path:     p.logo_path,
-            }));
+            providers = trData.flatrate.map(p => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path }));
           }
         }
       } catch {}
 
       return {
-        id:             item.id,
-        title,
-        original_title: origTitle,
-        overview:       item.overview || '',
-        poster:         item.poster_path,
-        release_date:   releaseDate,
-        vote_average:   item.vote_average,
-        type,
-        providers,
+        id: item.id, title, original_title: origTitle,
+        overview: item.overview || '', poster: item.poster_path,
+        release_date: releaseDate, vote_average: item.vote_average,
+        type, providers,
       };
     }));
 
-    const responseData = { results };
-    setCache(cacheKey, responseData, 1800); // 30 dakika
+    const responseData = { results, hasNextPage, page: pageNum };
+    setCache(cacheKey, responseData, 900); // 15 dakika
     return { ok: true, ...responseData };
   } catch (err) {
     fastify.log.error(err);

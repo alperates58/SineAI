@@ -260,6 +260,7 @@ textarea#query::placeholder { color: var(--muted); }
 }
 
 .hidden { display: none !important; }
+.scroll-sentinel { height: 40px; }
 
 /* ── LOADING ──────────────────────────────── */
 .results-container { flex: 1; padding-top: 8px; padding-bottom: 48px; }

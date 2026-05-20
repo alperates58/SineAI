@@ -53,7 +53,7 @@
         <section class="row-section container">
             <div class="section-head">
                 <div class="section-title"><span class="section-dot"></span>Popüler Filmler</div>
-                <div class="see-all" data-query="Bu hafta en popüler filmler öner">Tümünü gör →</div>
+                <div class="see-all" data-type="movie">Tümünü gör →</div>
             </div>
             <div class="cards-row" id="popularMoviesRow">
                 <div class="skeleton-card"></div>
@@ -69,7 +69,7 @@
         <section class="row-section container">
             <div class="section-head">
                 <div class="section-title"><span class="section-dot"></span>Popüler Diziler</div>
-                <div class="see-all" data-query="Bu hafta en popüler diziler öner">Tümünü gör →</div>
+                <div class="see-all" data-type="tv">Tümünü gör →</div>
             </div>
             <div class="cards-row" id="popularTvRow">
                 <div class="skeleton-card"></div>
@@ -106,9 +106,10 @@
         </div>
         <div id="loading" class="loading hidden">
             <div class="spinner"></div>
-            <p>AI analiz ediyor ve TMDB'de aranıyor...</p>
+            <p id="loadingText">Yükleniyor...</p>
         </div>
         <div id="resultsGrid" class="results-grid"></div>
+        <div id="scrollSentinel" class="scroll-sentinel hidden"></div>
     </main>
 
     <footer class="app-footer">
