@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let isListening = false;
     let recognition = null;
+    let pendingVoiceStart = false;
 
     // Update elements
     const checkUpdateBtn      = document.getElementById('checkUpdateBtn');
@@ -188,9 +189,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const rail = target.closest('.cards-row');
             if (rail) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                target.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
             } else {
-                target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                target.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' });
             }
             return true;
         }
@@ -450,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsGrid.innerHTML = '';
         scrollSentinel.classList.add('hidden');
         queryInput.value = '';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: document.body.classList.contains('tv-nav-ready') ? 'auto' : 'smooth' });
         TVNav.refresh(true);
     });
 
@@ -622,7 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsSection.classList.remove('hidden');
         resultsGrid.innerHTML = '';
         scrollSentinel.classList.add('hidden');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: document.body.classList.contains('tv-nav-ready') ? 'auto' : 'smooth' });
         TVNav.refresh(true);
     }
 
@@ -633,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const year    = item.release_date ? new Date(item.release_date).getFullYear() : 'Bilinmiyor';
             const typeStr = item.type === 'tv' ? 'Dizi' : 'Film';
             const rating  = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
-            const posterUrl  = item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : null;
+            const posterUrl  = item.poster ? `https://image.tmdb.org/t/p/w342${item.poster}` : null;
             const posterHTML = posterUrl
                 ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="lazy">`
                 : `<div class="no-poster">Afiş Bulunamadı</div>`;
@@ -733,6 +734,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    document.addEventListener('click', (event) => {
+        const trailerLink = event.target?.closest?.('.trailer-btn');
+        if (!trailerLink || !document.body.classList.contains('tv-nav-ready')) return;
+
+        event.preventDefault();
+        window.location.href = trailerLink.href;
+    });
+
     // ── Speech ───────────────────────────────────────────
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -742,16 +751,57 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition.interimResults  = false;
         recognition.onstart  = () => { isListening = true;  voiceBtn.classList.add('listening');    voiceBtn.textContent = 'Dinleniyor...'; };
         recognition.onresult = (e) => { queryInput.value = e.results[0][0].transcript; };
-        recognition.onerror  = (e) => { showError(`Ses algılanamadı (${e.error}).`); };
+        recognition.onerror  = (e) => {
+            pendingVoiceStart = false;
+            const messages = {
+                'not-allowed': 'Mikrofon izni verilmedi. Sesli arama için izin verip tekrar deneyin.',
+                'service-not-allowed': 'Cihaz ses tanıma servisine izin vermedi.',
+                'no-speech': 'Ses algılanamadı. Biraz daha yakından ve net konuşmayı deneyin.',
+                'audio-capture': 'Mikrofon bulunamadı veya TV mikrofonu erişilebilir değil.'
+            };
+            showError(messages[e.error] || `Ses algılanamadı (${e.error}).`);
+        };
         recognition.onend    = () => { isListening = false; voiceBtn.classList.remove('listening'); voiceBtn.textContent = '🎤 Ses'; };
     } else {
         voiceBtn.style.display = 'none';
     }
 
+    function startVoiceRecognition() {
+        if (!recognition) { showError('Sesli arama desteklenmiyor.'); return; }
+        errorBox.classList.add('hidden');
+        try {
+            recognition.start();
+        } catch (err) {
+            pendingVoiceStart = false;
+            showError(`Sesli arama başlatılamadı: ${err.message}`);
+        }
+    }
+
+    window.addEventListener('sineai:microphone-permission', (event) => {
+        if (!pendingVoiceStart) return;
+        pendingVoiceStart = false;
+        if (event.detail?.granted) {
+            startVoiceRecognition();
+        } else {
+            showError('Mikrofon izni verilmedi. Sesli arama için izin vermeniz gerekiyor.');
+        }
+    });
+
     voiceBtn.addEventListener('click', () => {
         if (!recognition) { showError('Sesli arama desteklenmiyor.'); return; }
-        if (isListening) recognition.stop();
-        else { errorBox.classList.add('hidden'); recognition.start(); }
+        if (isListening) {
+            pendingVoiceStart = false;
+            recognition.stop();
+            return;
+        }
+
+        if (window.SineAIAndroid?.requestMicrophonePermission) {
+            pendingVoiceStart = true;
+            window.SineAIAndroid.requestMicrophonePermission();
+            return;
+        }
+
+        startVoiceRecognition();
     });
 
     // ── Form submit ──────────────────────────────────────
