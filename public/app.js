@@ -590,10 +590,10 @@ document.addEventListener('DOMContentLoaded', () => {
     backBtn.addEventListener('click', showDiscoverPage);
 
     // ── Card Rendering Engine ───────────────────────────
-    function renderCardsInContainer(items, containerEl) {
-        containerEl.innerHTML = '';
+    function renderCardsInContainer(items, containerEl, append = false) {
+        if (!append) containerEl.innerHTML = '';
         if (!items || items.length === 0) {
-            containerEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:48px 20px;">Kriterlere uygun sonuç bulunamadı.</div>';
+            if (!append) containerEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:48px 20px;">Kriterlere uygun sonuç bulunamadı.</div>';
             return;
         }
 

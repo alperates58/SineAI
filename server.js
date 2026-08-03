@@ -125,6 +125,8 @@ fastify.register(fastifyStatic, {
 const SYSTEM_PROMPT = `Sen SineAI sinema ve dizi öneri asistanısın. Kullanıcının isteğini derinlemesine analiz et ve sadece aşağıdaki JSON formatında çıktı ver.
 
 Kurallar:
+- Kullanıcı bir film veya dizi belirttiğinde (ör: "The Room benzeri", "Inception gibi", "True Detective tarzı"), o yapımın kültürel mirasını, sinematik tonunu ve spesifik temasını iyi kavra.
+- "recommended_titles" dizisine istek ile GERÇEKTEN birebir tematik/sinematik uyum sağlayan en az 5 adet spesifik yapım adı (title) ve kısa Türkçe öneri nedeni (reason) ekle. Örneğin "The Room" istendiyse "The Disaster Artist", "Troll 2", "Plan 9 from Outer Space", "Room (2015)" gibi kült/absürt veya mekansal benzerlik gösteren yapımları öner; genel romantik filmler önerme.
 - Kullanıcı mekan, mekan atmosferi (ör: "okyanus", "deniz", "gemi", "uzay", "ıssız ada", "dağ", "okul", "hapishane") belirttiğinde bunları must_have ve semantic_topics dizilerine ekle (ör: "ocean", "sea", "romance", "ship").
 - Kullanıcı "X benzeri", "X gibi", "X tarzı", "X'e benzeyen", "X ayarında" derse intent mutlaka "similar_to_title" olsun ve reference_title alanına X yaz.
 - "X oynadığı", "X'in filmleri", "X yönettiği" gibi isteklerde actors veya directors alanlarını doldur.
@@ -137,6 +139,9 @@ Kurallar:
 {
   "intent": "discover" | "similar_to_title" | "person_search",
   "reference_title": "",
+  "recommended_titles": [
+    { "title": "Film/Dizi Adı", "reason": "Türkçe kısa açıklama" }
+  ],
   "type": "movie|tv|any",
   "genres": [],
   "mood": "",
@@ -168,7 +173,18 @@ async function callMockAI(query) {
   const similarPattern = /(.+?)\s+(benzeri|gibi|tarz\u0131|benzeyen|ayar\u0131nda)\s+(dizi|film)?/i;
   const similarMatch = q.match(similarPattern);
 
-  if (q.includes('kurtlar vadisi benzeri') || q.includes('kurtlar vadisi gibi')) { normalized.intent = 'similar_to_title'; normalized.reference_title = 'Kurtlar Vadisi'; normalized.type = 'tv'; }
+  if (q.includes('the room')) {
+    normalized.intent = 'similar_to_title';
+    normalized.reference_title = 'The Room';
+    normalized.recommended_titles = [
+      { title: 'The Disaster Artist', reason: "Tommy Wiseau'nun 'The Room' filminin çekim sürecini ve absürt macerasını anlatan harika komedi" },
+      { title: 'Troll 2', reason: "'The Room' gibi sinema tarihinin en ünlü 'o kadar kötü ki harika' kült yapımı" },
+      { title: 'Plan 9 from Outer Space', reason: "Sinema tarihinin unutulmaz absürt kült klasikleri arasında" },
+      { title: 'Room', reason: "Tek odada geçen sürükleyici ve duygusal psikolojik dram" },
+      { title: 'Exam', reason: "Kapalı tek mekanda geçen akıl oyunları ve gerilim" },
+      { title: '10 Cloverfield Lane', reason: "Yeraltı sığınağında geçen klostrofobik ve gizemli gerilim" }
+    ];
+  } else if (q.includes('kurtlar vadisi benzeri') || q.includes('kurtlar vadisi gibi')) { normalized.intent = 'similar_to_title'; normalized.reference_title = 'Kurtlar Vadisi'; normalized.type = 'tv'; }
   else if (similarMatch) {
     // Generic fallback: benzeri kalÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±pÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± bulundu, intent'i similar_to_title yap
     const titlePart = similarMatch[1].trim();
@@ -680,7 +696,9 @@ async function fetchReferenceDiscoverTMDB(reference, normalized, providerId = nu
 async function enrichResults(results, normalized, reference) {
   const enrichPromises = results.map(async (item) => {
     // Advanced Reason
-    if (normalized.intent === 'similar_to_title' && reference) {
+    if (item.custom_reason) {
+      item.reason = item.custom_reason;
+    } else if (normalized.intent === 'similar_to_title' && reference) {
       const refIds = reference.genre_ids || [];
       const itemIds = item.genre_ids || [];
       const intersection = itemIds.filter(id => refIds.includes(id));
@@ -827,6 +845,24 @@ async function fetchTMDB(normalized, originalQuery) {
         .map(g => map[g])
         .filter(id => id !== undefined)
     ));
+  }
+
+  // Process direct AI title recommendations
+  if (normalized.recommended_titles && Array.isArray(normalized.recommended_titles) && normalized.recommended_titles.length > 0) {
+    for (const recItem of normalized.recommended_titles) {
+      const recTitle = typeof recItem === 'string' ? recItem : recItem.title;
+      const recReason = typeof recItem === 'object' ? recItem.reason : null;
+      if (recTitle) {
+        try {
+          const match = await searchTMDB(recTitle, normalized.type || 'any');
+          if (match) {
+            if (recReason) match.custom_reason = recReason;
+            match.strategy = 'ai_direct_recommendation';
+            rawResults.push(match);
+          }
+        } catch (err) {}
+      }
+    }
   }
 
   if (normalized.intent === 'similar_to_title' && normalized.reference_title) {
@@ -1032,7 +1068,8 @@ async function fetchTMDB(normalized, originalQuery) {
       vote_count: item.vote_count || 0,
       popularity: item.popularity || 0,
       genre_ids: item.genre_ids || [],
-      strategy: item.strategy
+      strategy: item.strategy,
+      custom_reason: item.custom_reason
     });
   }
 
@@ -1056,6 +1093,7 @@ async function fetchTMDB(normalized, originalQuery) {
     if (item.vote_count < 50 && !['hidden_gems', 'new'].includes(normalized.quality_profile)) score -= 20;
     if (item.vote_count < 150 && normalized.quality_profile === 'mainstream') score -= 10;
 
+    if (item.strategy === 'ai_direct_recommendation') score += 500;
     if (item.strategy === 'strict') score += 24;
     if (item.strategy === 'relaxed') score += 10;
     if (item.strategy === 'reference_discover') score += 12;
