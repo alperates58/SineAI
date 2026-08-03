@@ -29,51 +29,53 @@
                 </div>
             </div>
 
-            <div class="logo-area">
-                <img src="/webiclogo.png" alt="SineAI" class="logo-image">
-            </div>
-            <h1 class="sr-only">SineAI</h1>
-            <p class="tagline">Ne izlemek istediğini yaz, yapay zeka senin için en iyisini bulsun</p>
+            <div id="heroSearchArea" class="hero-search-area">
+                <div class="logo-area" id="brandLogoBtn" style="cursor:pointer;" title="Ana Sayfaya Dön">
+                    <img src="/webiclogo.png" alt="SineAI" class="logo-image">
+                </div>
+                <h1 class="sr-only">SineAI</h1>
+                <p class="tagline">Ne izlemek istediğini yaz, yapay zeka senin için en iyisini bulsun</p>
 
-            <!-- Search Mode Tabs -->
-            <div class="search-mode-tabs">
-                <button type="button" class="mode-tab active" data-mode="ai" tabindex="0">✨ AI Akıllı Öneri</button>
-                <button type="button" class="mode-tab" data-mode="direct" tabindex="0">🔍 İsimle Direk Ara (TMDB)</button>
-                <button type="button" id="openAdvSearchBtn" class="mode-tab" tabindex="0">⚙️ Detaylı Filtreleme</button>
-            </div>
+                <!-- Search Mode Tabs -->
+                <div class="search-mode-tabs">
+                    <button type="button" class="mode-tab active" data-mode="ai" tabindex="0">✨ AI Akıllı Öneri</button>
+                    <button type="button" class="mode-tab" data-mode="direct" tabindex="0">🔍 İsimle Direk Ara (TMDB)</button>
+                    <button type="button" id="openAdvSearchBtn" class="mode-tab" tabindex="0">⚙️ Detaylı Filtreleme</button>
+                </div>
 
-            <!-- SaaS Grade AI Search Card -->
-            <div class="saas-search-box">
-                <form id="recommendForm">
-                    <div class="search-input-area">
-                        <span id="searchIcon" class="search-sparkle-icon">✨</span>
-                        <textarea id="query" name="query" rows="2"
-                            placeholder="Ne izlemek istiyorsun? (Örn: Okyanusta geçen romantik film öner veya From benzeri dizi...)"
-                            required></textarea>
-                    </div>
-                    <div class="search-bottom-bar">
-                        <div class="search-quick-actions">
-                            <button type="button" id="voiceBtn" class="saas-pill-btn btn-voice" tabindex="0">🎤 Sesli Arama</button>
-                            <button type="button" id="randomPickBtn" class="saas-pill-btn btn-random" tabindex="0">🎲 Şanslı Hissediyorum</button>
+                <!-- SaaS Grade AI Search Card -->
+                <div class="saas-search-box">
+                    <form id="recommendForm">
+                        <div class="search-input-area">
+                            <span id="searchIcon" class="search-sparkle-icon">✨</span>
+                            <textarea id="query" name="query" rows="2"
+                                placeholder="Ne izlemek istiyorsun? (Örn: Okyanusta geçen romantik film öner veya From benzeri dizi...)"
+                                required></textarea>
                         </div>
-                        <button type="submit" id="submitBtn" class="saas-submit-btn" tabindex="0">
-                            <span id="submitBtnText">Öneri Getir</span>
-                            <span id="submitBtnIcon" class="btn-arrow">✨</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
+                        <div class="search-bottom-bar">
+                            <div class="search-quick-actions">
+                                <button type="button" id="voiceBtn" class="saas-pill-btn btn-voice" tabindex="0">🎤 Sesli Arama</button>
+                                <button type="button" id="randomPickBtn" class="saas-pill-btn btn-random" tabindex="0">🎲 Şanslı Hissediyorum</button>
+                            </div>
+                            <button type="submit" id="submitBtn" class="saas-submit-btn" tabindex="0">
+                                <span id="submitBtnText">Öneri Getir</span>
+                                <span id="submitBtnIcon" class="btn-arrow">✨</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
 
-            <div class="mood-pills" id="moodPills">
-                <button class="pill" data-query="Okyanusta geçen aşk ve romantizm filmleri">🌊 Okyanusta Aşk</button>
-                <button class="pill" data-query="Gerilim ve korku filmleri öner">😨 Gerilim & Korku</button>
-                <button class="pill" data-query="Zeka gerektiren gizem dizileri öner">🤔 Zeka & Gizem</button>
-                <button class="pill" data-query="Komedi filmleri öner">😂 Komedi</button>
-                <button class="pill" data-query="Bilim kurgu filmleri öner">🚀 Bilim Kurgu</button>
-                <button class="pill" data-query="Oscar ödüllü filmler öner">🏆 Ödüllü Yapımlar</button>
-            </div>
+                <div class="mood-pills" id="moodPills">
+                    <button class="pill" data-query="Okyanusta geçen aşk ve romantizm filmleri">🌊 Okyanusta Aşk</button>
+                    <button class="pill" data-query="Gerilim ve korku filmleri öner">😨 Gerilim & Korku</button>
+                    <button class="pill" data-query="Zeka gerektiren gizem dizileri öner">🤔 Zeka & Gizem</button>
+                    <button class="pill" data-query="Komedi filmleri öner">😂 Komedi</button>
+                    <button class="pill" data-query="Bilim kurgu filmleri öner">🚀 Bilim Kurgu</button>
+                    <button class="pill" data-query="Oscar ödüllü filmler öner">🏆 Ödüllü Yapımlar</button>
+                </div>
 
-            <div id="errorBox" class="error-box hidden"></div>
+                <div id="errorBox" class="error-box hidden"></div>
+            </div>
         </div>
     </header>
 

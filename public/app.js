@@ -299,7 +299,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    const heroSearchArea = document.getElementById('heroSearchArea');
+    const brandLogoBtn   = document.getElementById('brandLogoBtn');
+
     function showProfilePage() {
+        if (heroSearchArea) heroSearchArea.classList.add('hidden');
         discoverSection.classList.add('hidden');
         resultsSection.classList.add('hidden');
         profileSection.classList.remove('hidden');
@@ -308,15 +312,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showDiscoverPage() {
+        if (heroSearchArea) heroSearchArea.classList.remove('hidden');
         profileSection.classList.add('hidden');
         resultsSection.classList.add('hidden');
         discoverSection.classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    function showResultsSection() {
+        if (heroSearchArea) heroSearchArea.classList.remove('hidden');
+        discoverSection.classList.add('hidden');
+        profileSection.classList.add('hidden');
+        resultsSection.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     userProfileBtn.addEventListener('click', showProfilePage);
     if (profileBackBtn) profileBackBtn.addEventListener('click', showDiscoverPage);
     if (goToDiscoverBtn) goToDiscoverBtn.addEventListener('click', showDiscoverPage);
+    if (brandLogoBtn) brandLogoBtn.addEventListener('click', showDiscoverPage);
 
     // ── Toast Notification ─────────────────────────────
     function showToast(message) {
