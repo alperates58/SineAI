@@ -130,14 +130,29 @@
             </div>
         </div>
 
-        <!-- Quick Filters -->
-        <div id="quickFilterBar" class="quick-filter-bar">
-            <button class="filter-pill active" data-filter="all">Tümü</button>
-            <button class="filter-pill" data-filter="movie">🎬 Filmler</button>
-            <button class="filter-pill" data-filter="tv">📺 Diziler</button>
-            <button class="filter-pill" data-filter="netflix">🔴 Netflix</button>
-            <button class="filter-pill" data-filter="prime">📦 Prime Video</button>
-            <button class="filter-pill" data-filter="high_rating">⭐ 8.0+ IMDb</button>
+        <!-- Quick Filters & Sort Toolbar -->
+        <div class="results-toolbar-wrapper">
+            <div id="quickFilterBar" class="quick-filter-bar">
+                <button class="filter-pill active" data-filter="all">Tümü</button>
+                <button class="filter-pill" data-filter="movie">🎬 Filmler</button>
+                <button class="filter-pill" data-filter="tv">📺 Diziler</button>
+                <button class="filter-pill" data-filter="netflix">🔴 Netflix</button>
+                <button class="filter-pill" data-filter="prime">📦 Prime Video</button>
+                <button class="filter-pill" data-filter="high_rating">⭐ 8.0+ IMDb</button>
+            </div>
+
+            <div class="sort-control-group">
+                <label for="sortSelect" class="sort-label">Sırala:</label>
+                <select id="sortSelect" class="saas-select" tabindex="0">
+                    <option value="popularity_desc">🔥 Popülerlik (Varsayılan)</option>
+                    <option value="vote_desc">⭐ IMDb Puanı (Yüksek → Düşük)</option>
+                    <option value="vote_asc">📉 IMDb Puanı (Düşük → Yüksek)</option>
+                    <option value="year_desc">📅 Yapım Yılı (En Yeni → En Eski)</option>
+                    <option value="year_asc">⏳ Yapım Yılı (En Eski → En Yeni)</option>
+                    <option value="title_asc">🔤 İsim (A - Z)</option>
+                </select>
+                <div id="pageInfoBadge" class="page-info-badge hidden">Sayfa 1 / 1</div>
+            </div>
         </div>
 
         <div id="loading" class="loading hidden">
@@ -153,6 +168,14 @@
         </div>
 
         <div id="resultsGrid" class="results-grid"></div>
+
+        <!-- Pagination Controls -->
+        <div id="paginationBar" class="pagination-bar hidden">
+            <button type="button" id="prevPageBtn" class="pagination-btn" tabindex="0">← Önceki Sayfa</button>
+            <div id="pageNumbersContainer" class="page-numbers-container"></div>
+            <button type="button" id="nextPageBtn" class="pagination-btn" tabindex="0">Sonraki Sayfa →</button>
+        </div>
+
         <div id="scrollSentinel" class="scroll-sentinel hidden"></div>
     </main>
 

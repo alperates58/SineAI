@@ -19,6 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsHeading  = document.getElementById('resultsHeading');
     const quickFilterBar  = document.getElementById('quickFilterBar');
 
+    // Sort & Pagination References
+    const sortSelect           = document.getElementById('sortSelect');
+    const pageInfoBadge        = document.getElementById('pageInfoBadge');
+    const paginationBar        = document.getElementById('paginationBar');
+    const prevPageBtn          = document.getElementById('prevPageBtn');
+    const nextPageBtn          = document.getElementById('nextPageBtn');
+    const pageNumbersContainer = document.getElementById('pageNumbersContainer');
+
     // Modals
     const detailModal          = document.getElementById('detailModal');
     const closeModalBtn        = document.getElementById('closeModalBtn');
@@ -95,12 +103,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeFilter = 'all';
 
     let pageState = {
-        mode: 'ai',
+        mode: 'ai', // 'ai' | 'genre' | 'popular'
         page: 1,
+        totalPages: 1,
         genreId: null,
         mediaType: null,
         label: '',
-        aiItems: [],
+        sortBy: 'popularity_desc',
         shownCount: 0,
         hasMore: false,
         isLoading: false,
@@ -353,8 +362,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="poster-container">
                         ${posterHTML}
                         <button class="fav-btn ${favActive}" title="Favorilere Ekle/Çıkar" tabindex="0">❤️</button>
-                        <div class="card-type-badge">${typeStr}</div>
-                        <div class="card-score-badge">⭐ ${rating}</div>
+                        <div class="card-badges-row">
+                            <div class="card-type-badge">${typeStr}</div>
+                            <div class="card-score-badge">⭐ ${rating}</div>
+                        </div>
                     </div>
                     <div class="card-content">
                         <h3 class="card-title">${item.title}</h3>
@@ -388,44 +399,160 @@ document.addEventListener('DOMContentLoaded', () => {
             chip.className = 'genre-chip';
             chip.tabIndex = 0;
             chip.innerHTML = `<div class="genre-chip-icon">${g.icon}</div><div class="genre-chip-name">${g.name}</div>`;
-            const run = () => submitGenre(mediaType, g.id, g.name);
+            const run = () => submitGenre(mediaType, g.id, g.name, 1);
             chip.addEventListener('click', run);
             chip.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
             container.appendChild(chip);
         });
     }
 
-    async function submitGenre(mediaType, genreId, genreName) {
+    // Map client sort key to TMDB sort_by
+    function getTmdbSortParam(sortKey) {
+        switch (sortKey) {
+            case 'vote_desc': return 'vote_average.desc';
+            case 'vote_asc': return 'vote_average.asc';
+            case 'year_desc': return 'primary_release_date.desc';
+            case 'year_asc': return 'primary_release_date.asc';
+            case 'title_asc': return 'title.asc';
+            default: return 'popularity.desc';
+        }
+    }
+
+    async function submitGenre(mediaType, genreId, genreName, targetPage = 1) {
         errorBox.classList.add('hidden');
         showResultsSection();
         resultsHeading.textContent = `${genreName} ${mediaType === 'tv' ? 'Dizileri' : 'Filmleri'}`;
-        loadingText.textContent = 'Yükleniyor...';
+        loadingText.textContent = `${genreName} yapımları yükleniyor (Sayfa ${targetPage})...`;
         loadingEl.classList.remove('hidden');
 
-        pageState = { mode: 'genre', page: 1, genreId, mediaType, label: genreName, aiItems: [], shownCount: 0, hasMore: false, isLoading: false };
+        pageState = {
+            mode: 'genre',
+            page: targetPage,
+            totalPages: 1,
+            genreId,
+            mediaType,
+            label: genreName,
+            sortBy: sortSelect ? sortSelect.value : 'popularity_desc',
+            shownCount: 0,
+            hasMore: false,
+            isLoading: true
+        };
+
+        const tmdbSort = getTmdbSortParam(pageState.sortBy);
 
         try {
-            const res = await fetch(`/api/genre?type=${mediaType}&genre_id=${genreId}&page=1`);
+            const res = await fetch(`/api/genre?type=${mediaType}&genre_id=${genreId}&page=${targetPage}&sort_by=${tmdbSort}`);
             const data = await res.json();
             if (!data.ok) throw new Error(data.error);
 
             currentRawResults = data.results || [];
-            pageState.shownCount = Math.min(currentRawResults.length, AI_BATCH_SIZE);
+            pageState.totalPages = data.totalPages || 20;
             pageState.hasMore = data.hasNextPage || false;
-            renderCards(currentRawResults.slice(0, pageState.shownCount));
-            setupInfiniteScroll();
+            pageState.isLoading = false;
+
+            applyClientSortingAndRender();
+            renderPaginationUI();
         } catch (err) {
             showError(`Bir hata oluştu: ${err.message}`);
         } finally {
             loadingEl.classList.add('hidden');
+            pageState.isLoading = false;
         }
     }
 
-    // ── Infinite Scroll & Results Navigation ────────────
+    // ── Sorting Logic ──────────────────────────────────
+    if (sortSelect) {
+        sortSelect.addEventListener('change', () => {
+            pageState.sortBy = sortSelect.value;
+            if (pageState.mode === 'genre') {
+                submitGenre(pageState.mediaType, pageState.genreId, pageState.label, pageState.page);
+            } else {
+                applyClientSortingAndRender();
+            }
+        });
+    }
+
+    function applyClientSortingAndRender() {
+        if (!currentRawResults) return;
+        let items = [...currentRawResults];
+
+        const s = pageState.sortBy;
+        if (s === 'vote_desc') {
+            items.sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+        } else if (s === 'vote_asc') {
+            items.sort((a, b) => (a.vote_average || 0) - (b.vote_average || 0));
+        } else if (s === 'year_desc') {
+            items.sort((a, b) => (new Date(b.release_date || 0)) - (new Date(a.release_date || 0)));
+        } else if (s === 'year_asc') {
+            items.sort((a, b) => (new Date(a.release_date || 0)) - (new Date(b.release_date || 0)));
+        } else if (s === 'title_asc') {
+            items.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+        }
+
+        renderCards(items);
+    }
+
+    // ── Pagination UI Handler ──────────────────────────
+    function renderPaginationUI() {
+        if (pageState.mode !== 'genre' || pageState.totalPages <= 1) {
+            paginationBar.classList.add('hidden');
+            pageInfoBadge.classList.add('hidden');
+            return;
+        }
+
+        paginationBar.classList.remove('hidden');
+        pageInfoBadge.classList.remove('hidden');
+        pageInfoBadge.textContent = `Sayfa ${pageState.page} / ${pageState.totalPages}`;
+
+        // Prev/Next buttons state
+        prevPageBtn.disabled = pageState.page <= 1;
+        nextPageBtn.disabled = pageState.page >= pageState.totalPages;
+
+        // Render page number buttons
+        pageNumbersContainer.innerHTML = '';
+        const currentP = pageState.page;
+        const totalP = pageState.totalPages;
+
+        let startP = Math.max(1, currentP - 2);
+        let endP = Math.min(totalP, startP + 4);
+        if (endP - startP < 4) startP = Math.max(1, endP - 4);
+
+        for (let i = startP; i <= endP; i++) {
+            const numBtn = document.createElement('button');
+            numBtn.className = `page-num-btn ${i === currentP ? 'active' : ''}`;
+            numBtn.textContent = i;
+            numBtn.tabIndex = 0;
+            numBtn.addEventListener('click', () => {
+                submitGenre(pageState.mediaType, pageState.genreId, pageState.label, i);
+                window.scrollTo({ top: resultsSection.offsetTop - 40, behavior: 'smooth' });
+            });
+            pageNumbersContainer.appendChild(numBtn);
+        }
+    }
+
+    if (prevPageBtn) {
+        prevPageBtn.addEventListener('click', () => {
+            if (pageState.page > 1) {
+                submitGenre(pageState.mediaType, pageState.genreId, pageState.label, pageState.page - 1);
+                window.scrollTo({ top: resultsSection.offsetTop - 40, behavior: 'smooth' });
+            }
+        });
+    }
+
+    if (nextPageBtn) {
+        nextPageBtn.addEventListener('click', () => {
+            if (pageState.page < pageState.totalPages) {
+                submitGenre(pageState.mediaType, pageState.genreId, pageState.label, pageState.page + 1);
+                window.scrollTo({ top: resultsSection.offsetTop - 40, behavior: 'smooth' });
+            }
+        });
+    }
+
+    // ── Infinite Scroll Handler ─────────────────────────
     function setupInfiniteScroll() {
         scrollSentinel.classList.remove('hidden');
         const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && pageState.hasMore && !pageState.isLoading) {
+            if (entries[0].isIntersecting && pageState.hasMore && !pageState.isLoading && pageState.mode === 'ai') {
                 loadNextBatch();
             }
         }, { rootMargin: '300px' });
@@ -447,7 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateSentinel() {
-        if (!pageState.hasMore) scrollSentinel.classList.add('hidden');
+        if (!pageState.hasMore || pageState.mode === 'genre') scrollSentinel.classList.add('hidden');
         else scrollSentinel.classList.remove('hidden');
     }
 
@@ -500,8 +627,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="poster-container">
                     ${posterHTML}
                     <button class="fav-btn ${favActive}" title="Favorilere Ekle/Çıkar" tabindex="0">❤️</button>
-                    <div class="card-type-badge">${typeStr}</div>
-                    <div class="card-score-badge">⭐ ${rating}</div>
+                    <div class="card-badges-row">
+                        <div class="card-type-badge">${typeStr}</div>
+                        <div class="card-score-badge">⭐ ${rating}</div>
+                    </div>
                 </div>
                 <div class="card-content">
                     <h3 class="card-title">${item.title}</h3>
@@ -561,9 +690,7 @@ document.addEventListener('DOMContentLoaded', () => {
             filtered = filtered.filter(i => (i.vote_average || 0) >= 8.0);
         }
 
-        pageState.shownCount = Math.min(filtered.length, AI_BATCH_SIZE);
-        pageState.hasMore = filtered.length > pageState.shownCount;
-        renderCards(filtered.slice(0, pageState.shownCount), false);
+        renderCards(filtered, false);
     }
 
     // ── Search & Recommendations Submissions ────────────
@@ -581,7 +708,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingEl.classList.remove('hidden');
         submitBtn.disabled = true;
 
-        pageState = { mode: 'ai', page: 1, genreId: null, mediaType: null, label: query, aiItems: [], shownCount: 0, hasMore: false, isLoading: false };
+        pageState = { mode: 'ai', page: 1, totalPages: 1, genreId: null, mediaType: null, label: query, sortBy: 'popularity_desc', shownCount: 0, hasMore: false, isLoading: false };
+        renderPaginationUI();
 
         try {
             const response = await fetch('/api/recommend', {
@@ -742,7 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', () => {
                 const reactionType = btn.dataset.type;
                 setReaction(item, reactionType);
-                showModal(item, year, typeStr, rating, badgesHTML); // refresh modal UI
+                showModal(item, year, typeStr, rating, badgesHTML);
             });
         });
 

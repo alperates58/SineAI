@@ -1221,16 +1221,16 @@ fastify.get('/api/popular', async (request, reply) => {
 
 // Genre endpoint
 fastify.get('/api/genre', async (request, reply) => {
-  const { type, genre_id, page = 1 } = request.query;
+  const { type, genre_id, page = 1, sort_by = 'popularity.desc' } = request.query;
   if (!type || !['movie', 'tv'].includes(type)) {
-    return reply.status(400).send({ ok: false, error: 'type parametresi "movie" veya "tv" olmal\u0131d\u0131r.' });
+    return reply.status(400).send({ ok: false, error: 'type parametresi "movie" veya "tv" olmalıdır.' });
   }
   if (!genre_id) {
     return reply.status(400).send({ ok: false, error: 'genre_id gereklidir.' });
   }
 
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
-  const cacheKey = `genre_${type}_${genre_id}_p${pageNum}`;
+  const cacheKey = `genre_${type}_${genre_id}_p${pageNum}_s${sort_by}`;
   const cached = getFromCache(cacheKey);
   if (cached) return { ok: true, ...cached, cached: true };
 
@@ -1239,13 +1239,13 @@ fastify.get('/api/genre', async (request, reply) => {
     url.searchParams.append('api_key', TMDB_API_KEY);
     url.searchParams.append('language', TMDB_LANGUAGE);
     url.searchParams.append('region', TMDB_REGION);
-    url.searchParams.append('sort_by', 'popularity.desc');
+    url.searchParams.append('sort_by', sort_by);
     url.searchParams.append('with_genres', genre_id);
     url.searchParams.append('vote_count.gte', 50);
     url.searchParams.append('page', pageNum);
 
     const listRes = await fetch(url.toString());
-    if (!listRes.ok) throw new Error(`TMDB discover hatas\u0131: ${listRes.status}`);
+    if (!listRes.ok) throw new Error(`TMDB discover hatası: ${listRes.status}`);
     const listData = await listRes.json();
     const items = (listData.results || []).slice(0, 20);
     const hasNextPage = (listData.total_pages || 1) > pageNum;
@@ -1275,7 +1275,7 @@ fastify.get('/api/genre', async (request, reply) => {
       };
     }));
 
-    const responseData = { results, hasNextPage, page: pageNum };
+    const responseData = { results, hasNextPage, page: pageNum, totalPages: listData.total_pages || 1 };
     setCache(cacheKey, responseData, 900); // 15 dakika
     return { ok: true, ...responseData };
   } catch (err) {
