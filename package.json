@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js"
+    "check": "node --check server.js",
+    "test:recommendations": "node scripts/evaluate-recommendations.mjs"
   },
   "dependencies": {
     "fastify": "^4.26.2",

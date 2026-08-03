@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const scrollSentinel  = document.getElementById('scrollSentinel');
     const resultsHeading  = document.getElementById('resultsHeading');
     const quickFilterBar  = document.getElementById('quickFilterBar');
+    const aiAnalysisSummary = document.getElementById('aiAnalysisSummary');
+    const aiAnalysisText  = document.getElementById('aiAnalysisText');
+    const aiAnalysisSource = document.getElementById('aiAnalysisSource');
 
     // Sort & Pagination References
     const sortSelect           = document.getElementById('sortSelect');
@@ -622,7 +625,18 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsSection.classList.remove('hidden');
         resultsGrid.innerHTML = '';
         scrollSentinel.classList.add('hidden');
+        if (aiAnalysisSummary) aiAnalysisSummary.classList.add('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderAIAnalysis(analysis) {
+        if (!aiAnalysisSummary || !aiAnalysisText || !analysis?.summary) return;
+        aiAnalysisText.textContent = analysis.summary;
+        aiAnalysisSource.textContent = analysis.fallback
+            ? '⚠️ Yerel yedek analiz'
+            : `✨ ${analysis.model || analysis.provider || 'AI'}`;
+        aiAnalysisSource.classList.toggle('fallback', Boolean(analysis.fallback));
+        aiAnalysisSummary.classList.remove('hidden');
     }
 
     backBtn.addEventListener('click', showDiscoverPage);
@@ -956,6 +970,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok || !data.ok) throw new Error(data.error || 'Sunucu ile iletişim kurulamadı.');
 
             currentRawResults = data.results || [];
+            renderAIAnalysis(data.analysis);
             const resultsCountBadge = document.getElementById('resultsCountBadge');
             if (resultsCountBadge) resultsCountBadge.textContent = `✨ ${currentRawResults.length} Yapım Hazır`;
 
@@ -993,6 +1008,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!data.ok) throw new Error(data.error);
 
                 currentRawResults = data.results || [];
+                renderAIAnalysis(data.analysis);
                 renderAIPage(1);
                 showToast('✨ Zevkinize özel öneriler hazırlandı!');
             } catch (err) {
