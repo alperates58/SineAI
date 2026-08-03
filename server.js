@@ -125,9 +125,8 @@ fastify.register(fastifyStatic, {
 const SYSTEM_PROMPT = `Sen SineAI sinema ve dizi öneri asistanısın. Kullanıcının isteğini derinlemesine analiz et ve sadece aşağıdaki JSON formatında çıktı ver.
 
 Kurallar:
-- Kullanıcı bir film veya dizi belirttiğinde (ör: "Kurtlar Vadisi benzeri", "The Room benzeri", "Inception gibi", "True Detective tarzı"), o yapımın kültürel mirasını, tonunu ve spesifik temasını MÜKEMMEL kavra.
-- "Kurtlar Vadisi" istendiyse Ezel, Sıfır Bir, Çukur, The Sopranos, Peaky Blinders, Gomorrah, Behzat Ç., Poyraz Karayel gibi kült mafya/aksiyon/derin devlet yapımlarını öner. Çizgi film (Uğur Böceği vb.) veya medikal drama (Grey's Anatomy vb.) KESİNLİKLE ÖNERME.
-- "recommended_titles" dizisine istek ile GERÇEKTEN birebir tematik/sinematik uyum sağlayan en az 6-8 adet spesifik yapım adı (title) ve kısa Türkçe öneri nedeni (reason) ekle.
+- Kullanıcı herhangi bir film veya dizi belirttiğinde (ör: "Kurtlar Vadisi benzeri", "Inception gibi", "Game of Thrones tarzı", "The Office benzeri", "Breaking Bad gibi", "Shrek tarzı", "Dark benzeri"), o yapımın alt türünü, atmosferini, kültürel mirasını ve tonunu KUSURSUZ kavra.
+- "recommended_titles" dizisine istek ile GERÇEKTEN birebir tematik/sinematik uyum sağlayan 8-10 adet spesifik yapım adı (title) ve kısa Türkçe öneri nedeni (reason) ekle. Örneğin mafya/suç dizisi istendiyse Ezel, Sıfır Bir, The Sopranos, Peaky Blinders, Gomorrah gibi mafya yapımlarını öner; çizgi film (Uğur Böceği vb.) veya medikal drama (Grey's Anatomy vb.) KESİNLİKLE ÖNERME.
 - Kullanıcı mekan, mekan atmosferi (ör: "okyanus", "deniz", "gemi", "uzay", "ıssız ada", "dağ", "okul", "hapishane") belirttiğinde bunları must_have ve semantic_topics dizilerine ekle (ör: "ocean", "sea", "romance", "ship").
 - Kullanıcı "X benzeri", "X gibi", "X tarzı", "X'e benzeyen", "X ayarında" derse intent mutlaka "similar_to_title" olsun ve reference_title alanına X yaz.
 - "X oynadığı", "X'in filmleri", "X yönettiği" gibi isteklerde actors veya directors alanlarını doldur.
@@ -951,14 +950,7 @@ async function fetchTMDB(normalized, originalQuery) {
     }
   }
 
-  const shouldRunDiscover = !personId && (
-    normalized.intent !== 'similar_to_title'
-    || rawResults.length < 10
-    || (normalized.intent === 'similar_to_title' && (
-      (normalized.must_have && normalized.must_have.length > 0)
-      || (normalized.semantic_topics && normalized.semantic_topics.length > 0)
-    ))
-  );
+  const shouldRunDiscover = !personId && normalized.intent === 'discover' && rawResults.length < 10;
 
   if (shouldRunDiscover) {
     const kwMustHave = await getKeywordIds(normalized.must_have);
