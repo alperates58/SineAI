@@ -494,7 +494,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Pagination UI Handler ──────────────────────────
     function renderPaginationUI() {
-        if (pageState.mode !== 'genre' || pageState.totalPages <= 1) {
+        const isPaginatable = ['genre', 'direct', 'advanced'].includes(pageState.mode) && pageState.totalPages > 1;
+        if (!isPaginatable) {
             paginationBar.classList.add('hidden');
             pageInfoBadge.classList.add('hidden');
             return;
@@ -523,28 +524,32 @@ document.addEventListener('DOMContentLoaded', () => {
             numBtn.textContent = i;
             numBtn.tabIndex = 0;
             numBtn.addEventListener('click', () => {
-                submitGenre(pageState.mediaType, pageState.genreId, pageState.label, i);
-                window.scrollTo({ top: resultsSection.offsetTop - 40, behavior: 'smooth' });
+                handlePageSwitch(i);
             });
             pageNumbersContainer.appendChild(numBtn);
         }
     }
 
+    function handlePageSwitch(targetPage) {
+        if (pageState.mode === 'genre') {
+            submitGenre(pageState.mediaType, pageState.genreId, pageState.label, targetPage);
+        } else if (pageState.mode === 'direct') {
+            submitDirectSearch(pageState.label, targetPage);
+        } else if (pageState.mode === 'advanced') {
+            submitAdvSearch(targetPage);
+        }
+        window.scrollTo({ top: resultsSection.offsetTop - 40, behavior: 'smooth' });
+    }
+
     if (prevPageBtn) {
         prevPageBtn.addEventListener('click', () => {
-            if (pageState.page > 1) {
-                submitGenre(pageState.mediaType, pageState.genreId, pageState.label, pageState.page - 1);
-                window.scrollTo({ top: resultsSection.offsetTop - 40, behavior: 'smooth' });
-            }
+            if (pageState.page > 1) handlePageSwitch(pageState.page - 1);
         });
     }
 
     if (nextPageBtn) {
         nextPageBtn.addEventListener('click', () => {
-            if (pageState.page < pageState.totalPages) {
-                submitGenre(pageState.mediaType, pageState.genreId, pageState.label, pageState.page + 1);
-                window.scrollTo({ top: resultsSection.offsetTop - 40, behavior: 'smooth' });
-            }
+            if (pageState.page < pageState.totalPages) handlePageSwitch(pageState.page + 1);
         });
     }
 
@@ -738,7 +743,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    async function submitDirectSearch(query) {
+    async function submitDirectSearch(query, targetPage = 1) {
         errorBox.classList.add('hidden');
         showResultsSection();
         resultsHeading.textContent = `"${query}" Arama Sonuçları (TMDB API)`;
@@ -746,23 +751,23 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingEl.classList.remove('hidden');
         submitBtn.disabled = true;
 
-        pageState = { mode: 'direct', page: 1, totalPages: 1, genreId: null, mediaType: null, label: query, sortBy: 'popularity_desc', shownCount: 0, hasMore: false, isLoading: false };
-        renderPaginationUI();
+        pageState = { mode: 'direct', page: targetPage, totalPages: 1, genreId: null, mediaType: null, label: query, sortBy: 'popularity_desc', shownCount: 0, hasMore: false, isLoading: false };
 
         try {
-            const response = await fetch(`/api/search/direct?query=${encodeURIComponent(query)}`);
+            const response = await fetch(`/api/search/direct?query=${encodeURIComponent(query)}&page=${targetPage}`);
             const data = await response.json();
             if (!response.ok || !data.ok) throw new Error(data.error || 'Sunucu ile iletişim kurulamadı.');
 
             currentRawResults = data.results || [];
-            pageState.shownCount = Math.min(currentRawResults.length, AI_BATCH_SIZE);
-            pageState.hasMore = currentRawResults.length > pageState.shownCount;
+            pageState.totalPages = data.totalPages || 1;
+            pageState.shownCount = currentRawResults.length;
+            pageState.hasMore = false;
 
             const resultsCountBadge = document.getElementById('resultsCountBadge');
             if (resultsCountBadge) resultsCountBadge.textContent = `🔍 ${currentRawResults.length} Sonuç Bulundu`;
 
-            renderCards(currentRawResults.slice(0, pageState.shownCount));
-            setupInfiniteScroll();
+            renderCards(currentRawResults);
+            renderPaginationUI();
         } catch (error) {
             console.error('API Error:', error);
             showError(`Bir hata oluştu: ${error.message}. Lütfen tekrar deneyin.`);
@@ -842,52 +847,56 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    async function submitAdvSearch(targetPage = 1) {
+        const yearMin = document.getElementById('advYearMin').value;
+        const yearMax = document.getElementById('advYearMax').value;
+        const minVote = document.getElementById('advMinScore').value;
+        const sortBy = document.getElementById('advSortBy').value;
+        const genresStr = advSelectedGenres.join(',');
+
+        showResultsSection();
+        resultsHeading.textContent = `⚙️ Detaylı Filtreleme Sonuçları (${advSelectedType === 'movie' ? 'Filmler' : 'Diziler'})`;
+        loadingText.textContent = 'Detaylı kriterlerinize uygun yapımlar filtreleniyor...';
+        loadingEl.classList.remove('hidden');
+
+        pageState = { mode: 'advanced', page: targetPage, totalPages: 1, genreId: null, mediaType: advSelectedType, label: 'Detaylı Arama', sortBy: 'popularity_desc', shownCount: 0, hasMore: false, isLoading: false };
+
+        try {
+            const params = new URLSearchParams({
+                type: advSelectedType,
+                genres: genresStr,
+                year_min: yearMin,
+                year_max: yearMax,
+                min_vote: minVote,
+                sort_by: sortBy,
+                page: targetPage
+            });
+            const res = await fetch(`/api/search/advanced?${params.toString()}`);
+            const data = await res.json();
+            if (!res.ok || !data.ok) throw new Error(data.error);
+
+            currentRawResults = data.results || [];
+            pageState.totalPages = data.totalPages || 1;
+            pageState.shownCount = currentRawResults.length;
+            pageState.hasMore = false;
+
+            const resultsCountBadge = document.getElementById('resultsCountBadge');
+            if (resultsCountBadge) resultsCountBadge.textContent = `⚙️ ${currentRawResults.length} Filtrelenmiş Yapım`;
+
+            renderCards(currentRawResults);
+            renderPaginationUI();
+        } catch (err) {
+            showError(`Bir hata oluştu: ${err.message}`);
+        } finally {
+            loadingEl.classList.add('hidden');
+        }
+    }
+
     if (advSearchForm) {
-        advSearchForm.addEventListener('submit', async (e) => {
+        advSearchForm.addEventListener('submit', (e) => {
             e.preventDefault();
             advSearchModal.classList.add('hidden');
-
-            const yearMin = document.getElementById('advYearMin').value;
-            const yearMax = document.getElementById('advYearMax').value;
-            const minVote = document.getElementById('advMinScore').value;
-            const sortBy = document.getElementById('advSortBy').value;
-            const genresStr = advSelectedGenres.join(',');
-
-            showResultsSection();
-            resultsHeading.textContent = `⚙️ Detaylı Filtreleme Sonuçları (${advSelectedType === 'movie' ? 'Filmler' : 'Diziler'})`;
-            loadingText.textContent = 'Detaylı kriterlerinize uygun yapımlar filtreleniyor...';
-            loadingEl.classList.remove('hidden');
-
-            pageState = { mode: 'advanced', page: 1, totalPages: 1, genreId: null, mediaType: advSelectedType, label: 'Detaylı Arama', sortBy: 'popularity_desc', shownCount: 0, hasMore: false, isLoading: false };
-            renderPaginationUI();
-
-            try {
-                const params = new URLSearchParams({
-                    type: advSelectedType,
-                    genres: genresStr,
-                    year_min: yearMin,
-                    year_max: yearMax,
-                    min_vote: minVote,
-                    sort_by: sortBy
-                });
-                const res = await fetch(`/api/search/advanced?${params.toString()}`);
-                const data = await res.json();
-                if (!res.ok || !data.ok) throw new Error(data.error);
-
-                currentRawResults = data.results || [];
-                pageState.shownCount = Math.min(currentRawResults.length, AI_BATCH_SIZE);
-                pageState.hasMore = currentRawResults.length > pageState.shownCount;
-
-                const resultsCountBadge = document.getElementById('resultsCountBadge');
-                if (resultsCountBadge) resultsCountBadge.textContent = `⚙️ ${currentRawResults.length} Filtrelenmiş Yapım`;
-
-                renderCards(currentRawResults.slice(0, pageState.shownCount));
-                setupInfiniteScroll();
-            } catch (err) {
-                showError(`Bir hata oluştu: ${err.message}`);
-            } finally {
-                loadingEl.classList.add('hidden');
-            }
+            submitAdvSearch(1);
         });
     }
 
