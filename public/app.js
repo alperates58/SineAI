@@ -504,12 +504,29 @@ document.addEventListener('DOMContentLoaded', () => {
             items.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
         }
 
-        renderCards(items);
+        currentRawResults = items;
+        if (pageState.mode === 'ai') {
+            renderAIPage(1);
+        } else {
+            renderCards(items);
+        }
+    }
+
+    const AI_PAGE_SIZE = 12;
+
+    function renderAIPage(targetPage = 1) {
+        pageState.page = targetPage;
+        pageState.totalPages = Math.max(1, Math.ceil(currentRawResults.length / AI_PAGE_SIZE));
+        const start = (targetPage - 1) * AI_PAGE_SIZE;
+        const pageItems = currentRawResults.slice(start, start + AI_PAGE_SIZE);
+        renderCards(pageItems);
+        renderPaginationUI();
+        updateSentinel();
     }
 
     // ── Pagination UI Handler ──────────────────────────
     function renderPaginationUI() {
-        const isPaginatable = ['genre', 'direct', 'advanced'].includes(pageState.mode) && pageState.totalPages > 1;
+        const isPaginatable = ['genre', 'direct', 'advanced', 'ai'].includes(pageState.mode) && pageState.totalPages > 1;
         if (!isPaginatable) {
             paginationBar.classList.add('hidden');
             pageInfoBadge.classList.add('hidden');
@@ -552,6 +569,8 @@ document.addEventListener('DOMContentLoaded', () => {
             submitDirectSearch(pageState.label, targetPage);
         } else if (pageState.mode === 'advanced') {
             submitAdvSearch(targetPage);
+        } else if (pageState.mode === 'ai') {
+            renderAIPage(targetPage);
         }
         window.scrollTo({ top: resultsSection.offsetTop - 40, behavior: 'smooth' });
     }
@@ -937,14 +956,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok || !data.ok) throw new Error(data.error || 'Sunucu ile iletişim kurulamadı.');
 
             currentRawResults = data.results || [];
-            pageState.shownCount = currentRawResults.length;
-            pageState.hasMore = false;
-
             const resultsCountBadge = document.getElementById('resultsCountBadge');
             if (resultsCountBadge) resultsCountBadge.textContent = `✨ ${currentRawResults.length} Yapım Hazır`;
 
-            renderCards(currentRawResults);
-            updateSentinel();
+            renderAIPage(1);
         } catch (error) {
             console.error('API Error:', error);
             showError(`Bir hata oluştu: ${error.message}. Lütfen tekrar deneyin.`);
@@ -978,11 +993,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!data.ok) throw new Error(data.error);
 
                 currentRawResults = data.results || [];
-                pageState.shownCount = currentRawResults.length;
-                pageState.hasMore = false;
-
-                renderCards(currentRawResults);
-                updateSentinel();
+                renderAIPage(1);
                 showToast('✨ Zevkinize özel öneriler hazırlandı!');
             } catch (err) {
                 showError(`Profil öneri hatası: ${err.message}`);
