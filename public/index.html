@@ -35,11 +35,18 @@
             <h1 class="sr-only">SineAI</h1>
             <p class="tagline">Ne izlemek istediğini yaz, yapay zeka senin için en iyisini bulsun</p>
 
+            <!-- Search Mode Tabs -->
+            <div class="search-mode-tabs">
+                <button type="button" class="mode-tab active" data-mode="ai" tabindex="0">✨ AI Akıllı Öneri</button>
+                <button type="button" class="mode-tab" data-mode="direct" tabindex="0">🔍 İsimle Direk Ara (TMDB)</button>
+                <button type="button" id="openAdvSearchBtn" class="mode-tab" tabindex="0">⚙️ Detaylı Filtreleme</button>
+            </div>
+
             <!-- SaaS Grade AI Search Card -->
             <div class="saas-search-box">
                 <form id="recommendForm">
                     <div class="search-input-area">
-                        <span class="search-sparkle-icon">✨</span>
+                        <span id="searchIcon" class="search-sparkle-icon">✨</span>
                         <textarea id="query" name="query" rows="2"
                             placeholder="Ne izlemek istiyorsun? (Örn: Okyanusta geçen romantik film öner veya From benzeri dizi...)"
                             required></textarea>
@@ -50,8 +57,8 @@
                             <button type="button" id="randomPickBtn" class="saas-pill-btn btn-random" tabindex="0">🎲 Şanslı Hissediyorum</button>
                         </div>
                         <button type="submit" id="submitBtn" class="saas-submit-btn" tabindex="0">
-                            <span>Öneri Getir</span>
-                            <span class="btn-arrow">✨</span>
+                            <span id="submitBtnText">Öneri Getir</span>
+                            <span id="submitBtnIcon" class="btn-arrow">✨</span>
                         </button>
                     </div>
                 </form>
@@ -323,6 +330,76 @@
                 </div>
                 <div id="regError" class="auth-error hidden"></div>
                 <button type="submit" class="btn-submit auth-submit-btn">Kayıt Ol ✨</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Advanced Search & Filter Modal -->
+    <div id="advSearchModal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-content adv-modal-content">
+            <button id="closeAdvSearchModalBtn" class="close-btn" aria-label="Kapat" tabindex="0">✕ Kapat</button>
+            
+            <div class="adv-modal-header">
+                <h2>⚙️ Detaylı Film & Dizi Filtreleme</h2>
+                <p class="adv-modal-subtext">Yapay zekadan bağımsız, tür, yıl ve IMDb puanı kriterleri ile TMDB veritabanından doğrudan filtrelenmiş sonuçlar çekin.</p>
+            </div>
+
+            <form id="advSearchForm" class="adv-form">
+                <!-- İçerik Türü -->
+                <div class="form-group">
+                    <label class="adv-label">İçerik Türü</label>
+                    <div class="adv-type-switcher">
+                        <button type="button" class="adv-type-pill active" data-type="movie" tabindex="0">🎬 Filmler</button>
+                        <button type="button" class="adv-type-pill" data-type="tv" tabindex="0">📺 Diziler</button>
+                    </div>
+                </div>
+
+                <!-- Yapım Yılı Aralığı -->
+                <div class="form-row">
+                    <div class="form-group half-group">
+                        <label for="advYearMin" class="adv-label">Başlangıç Yılı</label>
+                        <input type="number" id="advYearMin" min="1920" max="2026" placeholder="Örn: 1990" class="saas-input">
+                    </div>
+                    <div class="form-group half-group">
+                        <label for="advYearMax" class="adv-label">Bitiş Yılı</label>
+                        <input type="number" id="advYearMax" min="1920" max="2026" placeholder="Örn: 2026" class="saas-input">
+                    </div>
+                </div>
+
+                <!-- Minimum IMDb Puanı -->
+                <div class="form-group">
+                    <label for="advMinScore" class="adv-label">En Az IMDb Puanı</label>
+                    <select id="advMinScore" class="saas-select-full">
+                        <option value="">Fark Etmez (Tüm Puanlar)</option>
+                        <option value="5">⭐ 5.0 ve Üzeri</option>
+                        <option value="6">⭐ 6.0 ve Üzeri</option>
+                        <option value="7" selected>⭐ 7.0 ve Üzeri (İyi Yapımlar)</option>
+                        <option value="8">⭐ 8.0 ve Üzeri (Efsaneler)</option>
+                        <option value="8.5">⭐ 8.5 ve Üzeri (Şaheserler)</option>
+                    </select>
+                </div>
+
+                <!-- Tür Seçimi -->
+                <div class="form-group">
+                    <label class="adv-label">Film / Dizi Türleri (Çoklu Seçim)</label>
+                    <div id="advGenrePills" class="adv-genres-grid"></div>
+                </div>
+
+                <!-- Sıralama Kriteri -->
+                <div class="form-group">
+                    <label for="advSortBy" class="adv-label">Sıralama Kriteri</label>
+                    <select id="advSortBy" class="saas-select-full">
+                        <option value="popularity.desc">🔥 Popülerlik (En Popülerler)</option>
+                        <option value="vote_average.desc">⭐ IMDb Puanı (Yüksek → Düşük)</option>
+                        <option value="primary_release_date.desc">📅 Yapım Yılı (En Yeni → En Eski)</option>
+                        <option value="primary_release_date.asc">⏳ Yapım Yılı (En Eski → En Yeni)</option>
+                    </select>
+                </div>
+
+                <div class="adv-actions">
+                    <button type="button" id="advResetBtn" class="adv-reset-btn">🧹 Temizle</button>
+                    <button type="submit" class="adv-submit-btn">🔍 Filtrele ve Getir ✨</button>
+                </div>
             </form>
         </div>
     </div>

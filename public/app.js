@@ -693,12 +693,203 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCards(filtered, false);
     }
 
-    // ── Search & Recommendations Submissions ────────────
+    // ── Search Modes (AI vs Direct TMDB) ────────────────
+    let currentSearchMode = 'ai';
+    const searchModeTabs = document.querySelectorAll('.mode-tab');
+    const searchIcon = document.getElementById('searchIcon');
+    const submitBtnText = document.getElementById('submitBtnText');
+    const submitBtnIcon = document.getElementById('submitBtnIcon');
+
+    if (searchModeTabs.length > 0) {
+        searchModeTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                if (tab.id === 'openAdvSearchBtn') {
+                    openAdvSearchModal();
+                    return;
+                }
+                searchModeTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentSearchMode = tab.dataset.mode;
+
+                if (currentSearchMode === 'direct') {
+                    queryInput.placeholder = "Film veya dizi adı girin (Örn: Interstellar, Kurtlar Vadisi, Breaking Bad...)";
+                    if (searchIcon) searchIcon.textContent = '🔍';
+                    if (submitBtnText) submitBtnText.textContent = 'Aramayı Başlat';
+                    if (submitBtnIcon) submitBtnIcon.textContent = '🔍';
+                } else {
+                    queryInput.placeholder = "Ne izlemek istiyorsun? (Örn: Okyanusta geçen romantik film öner veya From benzeri dizi...)";
+                    if (searchIcon) searchIcon.textContent = '✨';
+                    if (submitBtnText) submitBtnText.textContent = 'Öneri Getir';
+                    if (submitBtnIcon) submitBtnIcon.textContent = '✨';
+                }
+            });
+        });
+    }
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const q = queryInput.value.trim();
-        if (q) await submitSearch(q);
+        if (!q) return;
+
+        if (currentSearchMode === 'direct') {
+            await submitDirectSearch(q);
+        } else {
+            await submitSearch(q);
+        }
     });
+
+    async function submitDirectSearch(query) {
+        errorBox.classList.add('hidden');
+        showResultsSection();
+        resultsHeading.textContent = `"${query}" Arama Sonuçları (TMDB API)`;
+        loadingText.textContent = 'TMDB veritabanında arama yapılıyor...';
+        loadingEl.classList.remove('hidden');
+        submitBtn.disabled = true;
+
+        pageState = { mode: 'direct', page: 1, totalPages: 1, genreId: null, mediaType: null, label: query, sortBy: 'popularity_desc', shownCount: 0, hasMore: false, isLoading: false };
+        renderPaginationUI();
+
+        try {
+            const response = await fetch(`/api/search/direct?query=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            if (!response.ok || !data.ok) throw new Error(data.error || 'Sunucu ile iletişim kurulamadı.');
+
+            currentRawResults = data.results || [];
+            pageState.shownCount = Math.min(currentRawResults.length, AI_BATCH_SIZE);
+            pageState.hasMore = currentRawResults.length > pageState.shownCount;
+
+            const resultsCountBadge = document.getElementById('resultsCountBadge');
+            if (resultsCountBadge) resultsCountBadge.textContent = `🔍 ${currentRawResults.length} Sonuç Bulundu`;
+
+            renderCards(currentRawResults.slice(0, pageState.shownCount));
+            setupInfiniteScroll();
+        } catch (error) {
+            console.error('API Error:', error);
+            showError(`Bir hata oluştu: ${error.message}. Lütfen tekrar deneyin.`);
+        } finally {
+            loadingEl.classList.add('hidden');
+            submitBtn.disabled = false;
+        }
+    }
+
+    // ── Advanced Search Modal & Handler ─────────────────
+    const advSearchModal         = document.getElementById('advSearchModal');
+    const closeAdvSearchModalBtn = document.getElementById('closeAdvSearchModalBtn');
+    const advSearchForm          = document.getElementById('advSearchForm');
+    const advGenrePillsContainer = document.getElementById('advGenrePills');
+    const advResetBtn            = document.getElementById('advResetBtn');
+
+    let advSelectedType = 'movie';
+    let advSelectedGenres = [];
+
+    const TMDB_ALL_GENRES = [
+        { id: 28, name: 'Aksiyon' }, { id: 12, name: 'Macera' }, { id: 16, name: 'Animasyon' },
+        { id: 35, name: 'Komedi' }, { id: 80, name: 'Suç' }, { id: 99, name: 'Belgesel' },
+        { id: 18, name: 'Dram' }, { id: 10751, name: 'Aile' }, { id: 14, name: 'Fantastik' },
+        { id: 36, name: 'Tarih' }, { id: 27, name: 'Korku' }, { id: 10402, name: 'Müzik' },
+        { id: 9648, name: 'Gizem' }, { id: 10749, name: 'Romantik' }, { id: 878, name: 'Bilim Kurgu' },
+        { id: 53, name: 'Gerilim' }, { id: 10752, name: 'Savaş' }, { id: 37, name: 'Vahşi Batı' }
+    ];
+
+    function openAdvSearchModal() {
+        if (!advSearchModal) return;
+        renderAdvGenres();
+        advSearchModal.classList.remove('hidden');
+    }
+
+    if (closeAdvSearchModalBtn) {
+        closeAdvSearchModalBtn.addEventListener('click', () => {
+            advSearchModal.classList.add('hidden');
+        });
+    }
+
+    document.querySelectorAll('.adv-type-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            document.querySelectorAll('.adv-type-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            advSelectedType = pill.dataset.type;
+        });
+    });
+
+    function renderAdvGenres() {
+        if (!advGenrePillsContainer) return;
+        advGenrePillsContainer.innerHTML = '';
+        TMDB_ALL_GENRES.forEach(g => {
+            const chip = document.createElement('div');
+            chip.className = `adv-genre-chip ${advSelectedGenres.includes(g.id) ? 'selected' : ''}`;
+            chip.textContent = g.name;
+            chip.addEventListener('click', () => {
+                if (advSelectedGenres.includes(g.id)) {
+                    advSelectedGenres = advSelectedGenres.filter(id => id !== g.id);
+                    chip.classList.remove('selected');
+                } else {
+                    advSelectedGenres.push(g.id);
+                    chip.classList.add('selected');
+                }
+            });
+            advGenrePillsContainer.appendChild(chip);
+        });
+    }
+
+    if (advResetBtn) {
+        advResetBtn.addEventListener('click', () => {
+            advSelectedGenres = [];
+            document.getElementById('advYearMin').value = '';
+            document.getElementById('advYearMax').value = '';
+            document.getElementById('advMinScore').value = '7';
+            document.getElementById('advSortBy').value = 'popularity.desc';
+            renderAdvGenres();
+        });
+    }
+
+    if (advSearchForm) {
+        advSearchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            advSearchModal.classList.add('hidden');
+
+            const yearMin = document.getElementById('advYearMin').value;
+            const yearMax = document.getElementById('advYearMax').value;
+            const minVote = document.getElementById('advMinScore').value;
+            const sortBy = document.getElementById('advSortBy').value;
+            const genresStr = advSelectedGenres.join(',');
+
+            showResultsSection();
+            resultsHeading.textContent = `⚙️ Detaylı Filtreleme Sonuçları (${advSelectedType === 'movie' ? 'Filmler' : 'Diziler'})`;
+            loadingText.textContent = 'Detaylı kriterlerinize uygun yapımlar filtreleniyor...';
+            loadingEl.classList.remove('hidden');
+
+            pageState = { mode: 'advanced', page: 1, totalPages: 1, genreId: null, mediaType: advSelectedType, label: 'Detaylı Arama', sortBy: 'popularity_desc', shownCount: 0, hasMore: false, isLoading: false };
+            renderPaginationUI();
+
+            try {
+                const params = new URLSearchParams({
+                    type: advSelectedType,
+                    genres: genresStr,
+                    year_min: yearMin,
+                    year_max: yearMax,
+                    min_vote: minVote,
+                    sort_by: sortBy
+                });
+                const res = await fetch(`/api/search/advanced?${params.toString()}`);
+                const data = await res.json();
+                if (!res.ok || !data.ok) throw new Error(data.error);
+
+                currentRawResults = data.results || [];
+                pageState.shownCount = Math.min(currentRawResults.length, AI_BATCH_SIZE);
+                pageState.hasMore = currentRawResults.length > pageState.shownCount;
+
+                const resultsCountBadge = document.getElementById('resultsCountBadge');
+                if (resultsCountBadge) resultsCountBadge.textContent = `⚙️ ${currentRawResults.length} Filtrelenmiş Yapım`;
+
+                renderCards(currentRawResults.slice(0, pageState.shownCount));
+                setupInfiniteScroll();
+            } catch (err) {
+                showError(`Bir hata oluştu: ${err.message}`);
+            } finally {
+                loadingEl.classList.add('hidden');
+            }
+        });
+    }
 
     async function submitSearch(query) {
         errorBox.classList.add('hidden');

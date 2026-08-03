@@ -1322,6 +1322,144 @@ fastify.get('/api/genre', async (request, reply) => {
   }
 });
 
+// Direct TMDB Title Search (No AI Overhead)
+fastify.get('/api/search/direct', async (request, reply) => {
+  const { query, page = 1 } = request.query;
+  if (!query || !query.trim()) {
+    return reply.status(400).send({ ok: false, error: 'Arama terimi boş olamaz.' });
+  }
+
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const cacheKey = `direct_search_${toSearchText(query)}_p${pageNum}`;
+  const cached = getFromCache(cacheKey);
+  if (cached) return { ok: true, ...cached, cached: true };
+
+  try {
+    const url = new URL(`${TMDB_BASE_URL}/search/multi`);
+    url.searchParams.append('api_key', TMDB_API_KEY);
+    url.searchParams.append('language', TMDB_LANGUAGE);
+    url.searchParams.append('query', query.trim());
+    url.searchParams.append('page', pageNum);
+
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error(`TMDB Direct Search error: ${res.status}`);
+    const data = await res.json();
+    const rawItems = (data.results || []).filter(i => i.media_type === 'movie' || i.media_type === 'tv');
+
+    const results = await Promise.all(rawItems.map(async (item) => {
+      const type = item.media_type;
+      const title = type === 'movie' ? (item.title || item.original_title) : (item.name || item.original_name);
+      const releaseDate = type === 'movie' ? item.release_date : item.first_air_date;
+
+      let providers = [];
+      try {
+        const provRes = await fetch(`${TMDB_BASE_URL}/${type}/${item.id}/watch/providers?api_key=${TMDB_API_KEY}`);
+        if (provRes.ok) {
+          const provData = await provRes.json();
+          const trData = provData.results?.TR;
+          if (trData?.flatrate) {
+            providers = trData.flatrate.map(p => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path }));
+          }
+        }
+      } catch {}
+
+      return {
+        id: item.id,
+        title,
+        original_title: type === 'movie' ? item.original_title : item.original_name,
+        overview: item.overview || '',
+        poster: item.poster_path,
+        release_date: releaseDate,
+        vote_average: item.vote_average || 0,
+        type,
+        providers,
+        reason: `TMDB Doğrudan İsim Arama Sonucu`
+      };
+    }));
+
+    const payload = { results, page: pageNum, totalPages: data.total_pages || 1, hasNextPage: (data.total_pages || 1) > pageNum };
+    setCache(cacheKey, payload, 900);
+    return { ok: true, ...payload };
+  } catch (err) {
+    fastify.log.error(err);
+    return reply.status(500).send({ ok: false, error: err.message });
+  }
+});
+
+// Advanced TMDB Discover Search (Genres, Year, Min Rating, Sort)
+fastify.get('/api/search/advanced', async (request, reply) => {
+  const { type = 'movie', genres, year_min, year_max, min_vote, sort_by = 'popularity.desc', page = 1 } = request.query;
+  const mediaType = ['movie', 'tv'].includes(type) ? type : 'movie';
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+
+  const cacheKey = `adv_search_${mediaType}_g${genres}_y${year_min}-${year_max}_v${min_vote}_s${sort_by}_p${pageNum}`;
+  const cached = getFromCache(cacheKey);
+  if (cached) return { ok: true, ...cached, cached: true };
+
+  try {
+    const url = new URL(`${TMDB_BASE_URL}/discover/${mediaType}`);
+    url.searchParams.append('api_key', TMDB_API_KEY);
+    url.searchParams.append('language', TMDB_LANGUAGE);
+    url.searchParams.append('region', TMDB_REGION);
+    url.searchParams.append('sort_by', sort_by);
+    url.searchParams.append('page', pageNum);
+
+    if (genres) url.searchParams.append('with_genres', genres);
+    if (min_vote) url.searchParams.append('vote_average.gte', min_vote);
+    url.searchParams.append('vote_count.gte', 30);
+
+    if (year_min) {
+      if (mediaType === 'movie') url.searchParams.append('primary_release_date.gte', `${year_min}-01-01`);
+      else url.searchParams.append('first_air_date.gte', `${year_min}-01-01`);
+    }
+    if (year_max) {
+      if (mediaType === 'movie') url.searchParams.append('primary_release_date.lte', `${year_max}-12-31`);
+      else url.searchParams.append('first_air_date.lte', `${year_max}-12-31`);
+    }
+
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error(`TMDB Advanced Discover error: ${res.status}`);
+    const data = await res.json();
+
+    const results = await Promise.all((data.results || []).slice(0, 20).map(async (item) => {
+      const title = mediaType === 'movie' ? (item.title || item.original_title) : (item.name || item.original_name);
+      const releaseDate = mediaType === 'movie' ? item.release_date : item.first_air_date;
+
+      let providers = [];
+      try {
+        const provRes = await fetch(`${TMDB_BASE_URL}/${mediaType}/${item.id}/watch/providers?api_key=${TMDB_API_KEY}`);
+        if (provRes.ok) {
+          const provData = await provRes.json();
+          const trData = provData.results?.TR;
+          if (trData?.flatrate) {
+            providers = trData.flatrate.map(p => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path }));
+          }
+        }
+      } catch {}
+
+      return {
+        id: item.id,
+        title,
+        original_title: mediaType === 'movie' ? item.original_title : item.original_name,
+        overview: item.overview || '',
+        poster: item.poster_path,
+        release_date: releaseDate,
+        vote_average: item.vote_average || 0,
+        type: mediaType,
+        providers,
+        reason: `Detaylı Filtreleme Sonucu`
+      };
+    }));
+
+    const payload = { results, page: pageNum, totalPages: data.total_pages || 1, hasNextPage: (data.total_pages || 1) > pageNum };
+    setCache(cacheKey, payload, 900);
+    return { ok: true, ...payload };
+  } catch (err) {
+    fastify.log.error(err);
+    return reply.status(500).send({ ok: false, error: err.message });
+  }
+});
+
 // Update helpers
 async function getGitHubRepoPath() {
   const repoPath = process.env.GITHUB_REPO?.trim();
