@@ -466,6 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             applyClientSortingAndRender();
             renderPaginationUI();
+            updateSentinel();
         } catch (err) {
             showError(`Bir hata oluştu: ${err.message}`);
         } finally {
@@ -593,7 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateSentinel() {
-        if (!pageState.hasMore || pageState.mode === 'genre') scrollSentinel.classList.add('hidden');
+        if (!pageState.hasMore || pageState.mode !== 'ai') scrollSentinel.classList.add('hidden');
         else scrollSentinel.classList.remove('hidden');
     }
 
@@ -782,6 +783,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderCards(currentRawResults);
             renderPaginationUI();
+            updateSentinel();
         } catch (error) {
             console.error('API Error:', error);
             showError(`Bir hata oluştu: ${error.message}. Lütfen tekrar deneyin.`);
@@ -899,6 +901,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderCards(currentRawResults);
             renderPaginationUI();
+            updateSentinel();
         } catch (err) {
             showError(`Bir hata oluştu: ${err.message}`);
         } finally {
