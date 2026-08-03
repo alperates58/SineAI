@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,12 +19,73 @@ const TMDB_BASE_URL = process.env.TMDB_BASE_URL || 'https://api.themoviedb.org/3
 const TMDB_LANGUAGE = process.env.TMDB_LANGUAGE || 'tr-TR';
 const TMDB_REGION = process.env.TMDB_REGION || 'TR';
 
-// Cache Settings
+// Cache Settings & Bounded LRU Cache Implementation
 const CACHE_TTL_SECONDS = parseInt(process.env.CACHE_TTL_SECONDS || '900', 10);
-const cache = new Map();
 const AI_RESULT_LIMIT = parseInt(process.env.AI_RESULT_LIMIT || '40', 10);
 const AI_CANDIDATE_LIMIT = Math.max(AI_RESULT_LIMIT * 2, 80);
 const DISCOVER_PAGES_PER_STRATEGY = parseInt(process.env.DISCOVER_PAGES_PER_STRATEGY || '3', 10);
+
+class BoundedCache {
+  constructor(maxItems = 1000, defaultTTL = CACHE_TTL_SECONDS) {
+    this.maxItems = maxItems;
+    this.defaultTTL = defaultTTL;
+    this.cache = new Map();
+  }
+  get(key) {
+    const item = this.cache.get(key);
+    if (!item) return null;
+    if (item.expires <= Date.now()) {
+      this.cache.delete(key);
+      return null;
+    }
+    return item.data;
+  }
+  set(key, data, ttlSeconds = this.defaultTTL) {
+    if (this.cache.size >= this.maxItems) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey) this.cache.delete(firstKey);
+    }
+    this.cache.set(key, { data, expires: Date.now() + (ttlSeconds * 1000) });
+  }
+}
+
+const cache = new BoundedCache(1000, CACHE_TTL_SECONDS);
+const itemDetailCache = new BoundedCache(2000, 86400); // 24-hour TTL for TMDB movie/TV details
+
+function getFromCache(key) {
+  return cache.get(key);
+}
+
+function setCache(key, data, ttlSeconds = CACHE_TTL_SECONDS) {
+  cache.set(key, data, ttlSeconds);
+}
+
+// User Persistence Store
+const DATA_DIR = path.join(__dirname, 'data');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+
+if (!fs.existsSync(DATA_DIR)) {
+  try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) {}
+}
+
+function loadUsers() {
+  try {
+    if (fs.existsSync(USERS_FILE)) {
+      return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+    }
+  } catch (e) {
+    fastify.log.error('Users load error:', e);
+  }
+  return {};
+}
+
+function saveUsers(usersData) {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(usersData, null, 2), 'utf8');
+  } catch (e) {
+    fastify.log.error('Users save error:', e);
+  }
+}
 
 // Default Mock Fallback Normalize
 const FALLBACK_NORMALIZE = {
@@ -59,20 +121,11 @@ fastify.register(fastifyStatic, {
   prefix: '/', 
 });
 
-function getFromCache(key) {
-  const item = cache.get(key);
-  if (item && item.expires > Date.now()) return item.data;
-  cache.delete(key);
-  return null;
-}
+// Prompt Generation with Enhanced Niche / Setting Understanding
+const SYSTEM_PROMPT = `Sen SineAI sinema ve dizi öneri asistanısın. Kullanıcının isteğini derinlemesine analiz et ve sadece aşağıdaki JSON formatında çıktı ver.
 
-function setCache(key, data, ttlSeconds = CACHE_TTL_SECONDS) {
-  cache.set(key, { data, expires: Date.now() + (ttlSeconds * 1000) });
-}
-
-// Prompt Generation
-const SYSTEM_PROMPT = `Sen bir film ve dizi öneri asistanısın. Kullanıcının isteğini analiz et ve sadece aşağıdaki JSON formatında çıktı ver.
 Kurallar:
+- Kullanıcı mekan, mekan atmosferi (ör: "okyanus", "deniz", "gemi", "uzay", "ıssız ada", "dağ", "okul", "hapishane") belirttiğinde bunları must_have ve semantic_topics dizilerine ekle (ör: "ocean", "sea", "romance", "ship").
 - Kullanıcı "X benzeri", "X gibi", "X tarzı", "X'e benzeyen", "X ayarında" derse intent mutlaka "similar_to_title" olsun ve reference_title alanına X yaz.
 - "X oynadığı", "X'in filmleri", "X yönettiği" gibi isteklerde actors veya directors alanlarını doldur.
 - "az bilinen", "gizli cevher", "bağımsız" derse quality_profile "hidden_gems" olsun.
@@ -103,7 +156,6 @@ Kurallar:
   "runtime_max": null,
   "watch_provider": "",
   "country": "",
-  "quality_profile": "mainstream|hidden_gems|new|classic|family|any",
   "sort_by": "relevance|popularity|vote_average|release_date",
   "trailer_required": false
 }`;
@@ -1306,6 +1358,103 @@ fastify.post('/api/recommend', async (request, reply) => {
   const tmdbData = await fetchTMDB(normalized, query);
   const responseData = { ok: true, normalized, reference: tmdbData.reference, people: tmdbData.people, warnings: tmdbData.warnings, results: tmdbData.results };
   setCache(cacheKey, responseData);
+  return responseData;
+});
+
+// Auth & Profile Endpoints
+fastify.post('/api/auth/register', async (request, reply) => {
+  const { username, password, email } = request.body || {};
+  if (!username || !password) return reply.status(400).send({ ok: false, error: 'Kullanıcı adı ve şifre zorunludur.' });
+  const users = loadUsers();
+  const cleanUsername = username.trim().toLowerCase();
+  if (users[cleanUsername]) return reply.status(400).send({ ok: false, error: 'Bu kullanıcı adı zaten alınmış.' });
+  
+  users[cleanUsername] = {
+    username: cleanUsername,
+    displayName: username.trim(),
+    email: email ? email.trim() : '',
+    password,
+    favorites: [],
+    createdAt: new Date().toISOString()
+  };
+  saveUsers(users);
+  return { ok: true, username: cleanUsername, displayName: username.trim(), favorites: [] };
+});
+
+fastify.post('/api/auth/login', async (request, reply) => {
+  const { username, password } = request.body || {};
+  if (!username || !password) return reply.status(400).send({ ok: false, error: 'Kullanıcı adı ve şifre giriniz.' });
+  const users = loadUsers();
+  const cleanUsername = username.trim().toLowerCase();
+  const user = users[cleanUsername];
+  if (!user || user.password !== password) {
+    return reply.status(401).send({ ok: false, error: 'Kullanıcı adı veya şifre hatalı.' });
+  }
+  return { ok: true, username: user.username, displayName: user.displayName || user.username, favorites: user.favorites || [] };
+});
+
+fastify.get('/api/user/profile', async (request, reply) => {
+  const { username } = request.query || {};
+  if (!username) return reply.status(400).send({ ok: false, error: 'Username parametresi gereklidir.' });
+  const users = loadUsers();
+  const user = users[username.trim().toLowerCase()];
+  if (!user) return reply.status(404).send({ ok: false, error: 'Kullanıcı bulunamadı.' });
+  return { ok: true, username: user.username, displayName: user.displayName || user.username, favorites: user.favorites || [] };
+});
+
+fastify.post('/api/user/favorites', async (request, reply) => {
+  const { username, item, action } = request.body || {};
+  if (!username || !item || !item.id) return reply.status(400).send({ ok: false, error: 'Eksik veri.' });
+  const users = loadUsers();
+  const cleanUsername = username.trim().toLowerCase();
+  const user = users[cleanUsername];
+  if (!user) return reply.status(404).send({ ok: false, error: 'Kullanıcı oturumu bulunamadı.' });
+
+  if (!user.favorites) user.favorites = [];
+  const index = user.favorites.findIndex(f => f.id === item.id && f.type === item.type);
+
+  if (action === 'add' && index === -1) {
+    user.favorites.push(item);
+  } else if (action === 'remove' && index !== -1) {
+    user.favorites.splice(index, 1);
+  }
+  saveUsers(users);
+  return { ok: true, favorites: user.favorites };
+});
+
+// Profile Based AI Recommendation (Requires >= 10 favorites)
+fastify.post('/api/recommend/profile', async (request, reply) => {
+  const { username, favorites: clientFavorites } = request.body || {};
+  let favs = clientFavorites;
+  if (username) {
+    const users = loadUsers();
+    const user = users[username.trim().toLowerCase()];
+    if (user && user.favorites) favs = user.favorites;
+  }
+  if (!favs || !Array.isArray(favs) || favs.length < 10) {
+    return reply.status(400).send({
+      ok: false,
+      error: `Kişiselleştirilmiş AI önerileri alabilmek için en az 10 film/dizi favorilemelisiniz! (Mevcut favorileriniz: ${favs ? favs.length : 0}/10)`
+    });
+  }
+
+  const favTitles = favs.slice(0, 15).map(f => f.title).join(', ');
+  const profileQuery = `Benim en sevdiğim filmler ve diziler şunlardır: ${favTitles}. Bu yapımların ortak temalarını, atmosferlerini ve sinema zevkimi analiz ederek bana en uygun yeni öneriler getir.`;
+
+  const cacheKey = `profile_rec:${username || 'guest'}_${favs.length}`;
+  const cachedData = getFromCache(cacheKey);
+  if (cachedData) return { ok: true, ...cachedData, cached: true };
+
+  let normalized;
+  try { normalized = await normalizeQuery(profileQuery); }
+  catch (error) { normalized = { ...FALLBACK_NORMALIZE }; }
+
+  const tmdbData = await fetchTMDB(normalized, profileQuery);
+  const favIds = new Set(favs.map(f => `${f.type}_${f.id}`));
+  const filteredResults = (tmdbData.results || []).filter(item => !favIds.has(`${item.type}_${item.id}`));
+
+  const responseData = { ok: true, isProfileRecommendation: true, favCount: favs.length, normalized, reference: tmdbData.reference, people: tmdbData.people, warnings: tmdbData.warnings, results: filteredResults };
+  setCache(cacheKey, responseData, 600);
   return responseData;
 });
 

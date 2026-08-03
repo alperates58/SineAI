@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SineAI - Ne İzlesem?</title>
-    <meta name="description" content="Ne izlemek istediğini yaz, SineAI sana uygun film ve dizi önerileri getirsin.">
+    <title>SineAI - Yapay Zeka Destekli Film & Dizi Öneri Platformu</title>
+    <meta name="description" content="Ne izlemek istediğini yaz, SineAI senin için en uygun film ve dizi önerilerini çıkarsın.">
     <link rel="icon" type="image/png" href="/favicon.png">
     <link rel="shortcut icon" type="image/png" href="/favicon.png">
     <link rel="apple-touch-icon" href="/logo.png">
@@ -16,6 +16,19 @@
     <header class="app-header">
         <div class="hero-glow"></div>
         <div class="container">
+            <!-- Top Auth Navigation Bar -->
+            <div class="top-nav-bar">
+                <div class="brand-badge">✨ SineAI v3.0</div>
+                <div class="auth-nav-area">
+                    <button type="button" id="userAuthBtn" class="btn-nav-auth" tabindex="0">🔑 Giriş / Kayıt</button>
+                    <button type="button" id="userProfileBtn" class="btn-nav-profile hidden" tabindex="0">
+                        <span class="user-avatar-small">👤</span>
+                        <span id="navUsername">Profilim</span>
+                        <span id="navFavBadge" class="fav-count-badge">0/10</span>
+                    </button>
+                </div>
+            </div>
+
             <div class="logo-area">
                 <img src="/webiclogo.png" alt="SineAI" class="logo-image">
             </div>
@@ -25,20 +38,21 @@
             <div class="search-wrap">
                 <form id="recommendForm">
                     <textarea id="query" name="query" rows="2"
-                        placeholder="Örn: Karanlık atmosferli, zeka işi, 2020 sonrası bir dizi öner..."
+                        placeholder="Örn: Okyanusta geçen romantik film öner veya karanlık zeka işi bir dizi..."
                         required></textarea>
                     <div class="search-actions">
                         <button type="button" id="voiceBtn" class="btn-voice" tabindex="0">🎤 Ses</button>
+                        <button type="button" id="randomPickBtn" class="btn-random" tabindex="0">🎲 Şanslı Hissediyorum</button>
                         <button type="submit" id="submitBtn" class="btn-submit" tabindex="0">Öneri getir ✨</button>
                     </div>
                 </form>
             </div>
 
             <div class="mood-pills" id="moodPills">
+                <button class="pill" data-query="Okyanusta geçen aşk ve romantizm filmleri">🌊 Okyanusta Aşk</button>
                 <button class="pill" data-query="Gerilim ve korku filmleri öner">😨 Gerilim & Korku</button>
                 <button class="pill" data-query="Zeka gerektiren gizem dizileri öner">🤔 Zeka & Gizem</button>
                 <button class="pill" data-query="Komedi filmleri öner">😂 Komedi</button>
-                <button class="pill" data-query="Romantik filmler öner">❤️ Romantik</button>
                 <button class="pill" data-query="Bilim kurgu filmleri öner">🚀 Bilim Kurgu</button>
                 <button class="pill" data-query="Oscar ödüllü filmler öner">🏆 Ödüllü Yapımlar</button>
             </div>
@@ -104,13 +118,36 @@
 
     <!-- RESULTS (arama sonrası) -->
     <main class="container results-container hidden" id="resultsSection">
-        <div class="results-back">
+        <div class="results-header-bar">
             <button id="backToDiscoverBtn" class="back-btn">← Keşfete Dön</button>
+            <div class="results-title-area">
+                <h2 id="resultsHeading" class="results-heading">Yapay Zeka Önerileri</h2>
+                <div id="aiPowerBadge" class="ai-power-badge">✨ DeepSeek / Gemini Gücüyle</div>
+            </div>
         </div>
+
+        <!-- Quick Filters -->
+        <div id="quickFilterBar" class="quick-filter-bar">
+            <button class="filter-pill active" data-filter="all">Tümü</button>
+            <button class="filter-pill" data-filter="movie">🎬 Filmler</button>
+            <button class="filter-pill" data-filter="tv">📺 Diziler</button>
+            <button class="filter-pill" data-filter="netflix">🔴 Netflix</button>
+            <button class="filter-pill" data-filter="prime">📦 Prime Video</button>
+            <button class="filter-pill" data-filter="high_rating">⭐ 8.0+ IMDb</button>
+        </div>
+
         <div id="loading" class="loading hidden">
-            <div class="spinner"></div>
-            <p id="loadingText">Yükleniyor...</p>
+            <div class="skeleton-grid">
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+            </div>
+            <p id="loadingText" class="loading-text">SineAI isteğinizi analiz ediyor...</p>
         </div>
+
         <div id="resultsGrid" class="results-grid"></div>
         <div id="scrollSentinel" class="scroll-sentinel hidden"></div>
     </main>
@@ -127,6 +164,108 @@
         <div class="modal-content">
             <button id="closeModalBtn" class="close-btn" aria-label="Kapat" tabindex="0">✕ Kapat</button>
             <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- YouTube Video Trailer Modal -->
+    <div id="trailerModal" class="modal hidden" role="dialog" aria-modal="true" tabindex="-1">
+        <div class="modal-content video-modal-content">
+            <button id="closeTrailerModalBtn" class="close-btn" aria-label="Kapat" tabindex="0">✕ Fragmanı Kapat</button>
+            <h3 id="trailerTitle" class="trailer-modal-title">Fragman</h3>
+            <div class="video-container">
+                <iframe id="trailerIframe" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal (Kayıt / Giriş) -->
+    <div id="authModal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-content auth-modal-content">
+            <button id="closeAuthModalBtn" class="close-btn" aria-label="Kapat" tabindex="0">✕ Kapat</button>
+            
+            <div class="auth-tabs">
+                <button type="button" id="tabLogin" class="auth-tab active">Giriş Yap</button>
+                <button type="button" id="tabRegister" class="auth-tab">Kayıt Ol</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form">
+                <h2>Oturum Aç</h2>
+                <div class="form-group">
+                    <label for="loginUsername">Kullanıcı Adı</label>
+                    <input type="text" id="loginUsername" required placeholder="kullaniciadi">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Şifre</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••">
+                </div>
+                <div id="loginError" class="auth-error hidden"></div>
+                <button type="submit" class="btn-submit auth-submit-btn">Giriş Yap 🚀</button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" class="auth-form hidden">
+                <h2>Hesap Oluştur</h2>
+                <div class="form-group">
+                    <label for="regUsername">Kullanıcı Adı</label>
+                    <input type="text" id="regUsername" required placeholder="kullaniciadi">
+                </div>
+                <div class="form-group">
+                    <label for="regEmail">E-posta (Opsiyonel)</label>
+                    <input type="email" id="regEmail" placeholder="ornek@domain.com">
+                </div>
+                <div class="form-group">
+                    <label for="regPassword">Şifre</label>
+                    <input type="password" id="regPassword" required placeholder="••••••••">
+                </div>
+                <div id="regError" class="auth-error hidden"></div>
+                <button type="submit" class="btn-submit auth-submit-btn">Kayıt Ol ✨</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Profile & Favorites Modal -->
+    <div id="profileModal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-content profile-modal-content">
+            <button id="closeProfileModalBtn" class="close-btn" aria-label="Kapat" tabindex="0">✕ Kapat</button>
+            
+            <div class="profile-header">
+                <div class="profile-avatar">👤</div>
+                <div class="profile-meta">
+                    <h2 id="profileUsername">Kullanıcı Adı</h2>
+                    <p class="profile-subtext">Favorilerinizi yönetin ve kişiselleştirilmiş AI önerileri alın.</p>
+                </div>
+                <button id="logoutBtn" class="logout-btn">Çıkış Yap 🚪</button>
+            </div>
+
+            <!-- 10-Favorite Requirement & AI Recommendation Box -->
+            <div class="profile-ai-card">
+                <div class="profile-ai-head">
+                    <span class="ai-sparkle-icon">✨</span>
+                    <div>
+                        <h3>Profilinize Özel AI Öneri Motoru</h3>
+                        <p id="profileAiDesc">Favorilerinizdeki yapımların tarzı analiz edilir.</p>
+                    </div>
+                </div>
+
+                <div class="fav-progress-wrapper">
+                    <div class="fav-progress-bar-bg">
+                        <div id="favProgressBar" class="fav-progress-bar-fill" style="width: 0%;"></div>
+                    </div>
+                    <div id="favProgressText" class="fav-progress-text">0 / 10 Favori Eklediniz (Kişisel AI önerisi için en az 10 favori gerekli)</div>
+                </div>
+
+                <button type="button" id="profileRecommendBtn" class="btn-profile-rec" disabled>
+                    ✨ Profilime Göre Film/Dizi Öner
+                </button>
+            </div>
+
+            <div class="profile-fav-section">
+                <h3>Favorilerim (<span id="profileFavCount">0</span>)</h3>
+                <div id="profileFavGrid" class="profile-fav-grid">
+                    <p class="no-favs-msg">Henüz favori eklemediniz. Kartlardaki kalp ikonuna tıklayarak favorilerinizi oluşturabilirsiniz!</p>
+                </div>
+            </div>
         </div>
     </div>
 
