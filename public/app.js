@@ -594,8 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateSentinel() {
-        if (!pageState.hasMore || pageState.mode !== 'ai') scrollSentinel.classList.add('hidden');
-        else scrollSentinel.classList.remove('hidden');
+        if (scrollSentinel) scrollSentinel.classList.add('hidden');
     }
 
     function showResultsSection() {
@@ -938,14 +937,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok || !data.ok) throw new Error(data.error || 'Sunucu ile iletişim kurulamadı.');
 
             currentRawResults = data.results || [];
-            pageState.shownCount = Math.min(currentRawResults.length, AI_BATCH_SIZE);
-            pageState.hasMore = currentRawResults.length > pageState.shownCount;
+            pageState.shownCount = currentRawResults.length;
+            pageState.hasMore = false;
 
             const resultsCountBadge = document.getElementById('resultsCountBadge');
             if (resultsCountBadge) resultsCountBadge.textContent = `✨ ${currentRawResults.length} Yapım Hazır`;
 
-            renderCards(currentRawResults.slice(0, pageState.shownCount));
-            setupInfiniteScroll();
+            renderCards(currentRawResults);
+            updateSentinel();
         } catch (error) {
             console.error('API Error:', error);
             showError(`Bir hata oluştu: ${error.message}. Lütfen tekrar deneyin.`);
@@ -979,11 +978,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!data.ok) throw new Error(data.error);
 
                 currentRawResults = data.results || [];
-                pageState.shownCount = Math.min(currentRawResults.length, AI_BATCH_SIZE);
-                pageState.hasMore = currentRawResults.length > pageState.shownCount;
+                pageState.shownCount = currentRawResults.length;
+                pageState.hasMore = false;
 
-                renderCards(currentRawResults.slice(0, pageState.shownCount));
-                setupInfiniteScroll();
+                renderCards(currentRawResults);
+                updateSentinel();
                 showToast('✨ Zevkinize özel öneriler hazırlandı!');
             } catch (err) {
                 showError(`Profil öneri hatası: ${err.message}`);
