@@ -726,6 +726,85 @@ body.tv-nav-ready .results-grid .provider-badges {
     border-left: 3px solid #38bdf8;
 }
 
+/* ── NETFLIX ACTION BAR & REACTION CONTROLS ── */
+.netflix-actions-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-soft);
+}
+
+.netflix-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.netflix-btn:hover, .netflix-btn:focus, .netflix-btn:focus-visible {
+    transform: scale(1.06);
+    outline: 3px solid #e50914;
+    border-color: #ffffff;
+    box-shadow: 0 0 16px rgba(229, 9, 20, 0.6);
+}
+
+.btn-play-trailer {
+    background: #e50914;
+    color: #ffffff;
+}
+
+.btn-play-trailer:hover {
+    background: #b20710;
+}
+
+.btn-super.active {
+    background: rgba(236, 72, 153, 0.25);
+    border-color: #ec4899;
+    color: #f472b6;
+    box-shadow: 0 0 14px rgba(236, 72, 153, 0.5);
+}
+
+.btn-like.active {
+    background: rgba(16, 185, 129, 0.25);
+    border-color: #10b981;
+    color: #34d399;
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.5);
+}
+
+.btn-dislike.active {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: #ef4444;
+    color: #fca5a5;
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.5);
+}
+
+.super-fav-tag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #ec4899;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 6px;
+    z-index: 2;
+}
+
 .trailer-btn {
     background: #e50914;
     color: #fff;
@@ -1147,35 +1226,38 @@ body.tv-nav-ready .results-grid .provider-badges {
 
 .fav-btn {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    top: 12px;
+    right: 12px;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(6px);
+    border: 2px solid rgba(255, 255, 255, 0.25);
     color: #fff;
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s ease;
+    font-size: 20px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
-.fav-btn:hover {
-    transform: scale(1.15);
-    background: rgba(239, 68, 68, 0.3);
-    border-color: #ef4444;
+.fav-btn:hover, .fav-btn:focus, .fav-btn:focus-visible {
+    transform: scale(1.2);
+    background: rgba(229, 9, 20, 0.9);
+    border-color: #fff;
+    outline: 3px solid #e50914;
+    box-shadow: 0 0 16px rgba(229, 9, 20, 0.8);
 }
 
 .fav-btn.active {
-    background: #ef4444;
-    border-color: #ef4444;
+    background: #e50914;
+    border-color: #ffffff;
     color: #fff;
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    box-shadow: 0 0 16px rgba(229, 9, 20, 0.7);
 }
 
 /* ── RANDOM PICK BUTTON ─────────────────────── */

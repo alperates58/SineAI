@@ -88,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // App & User State
     let currentUser = null;
     let userFavorites = [];
+    let userReactions = {}; // { "movie_123": "super" | "like" | "dislike" }
     let currentRawResults = [];
     let activeFilter = 'all';
 
@@ -105,6 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Auth & Local Storage Init ──────────────────────
     function initUser() {
+        const savedReactions = localStorage.getItem('sineai_reactions');
+        if (savedReactions) {
+            try { userReactions = JSON.parse(savedReactions); } catch (e) {}
+        }
+
         const saved = localStorage.getItem('sineai_user');
         if (saved) {
             try {
@@ -122,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateAuthUI();
         }
 
-        // Init discover page section components
+        // Init discover page components
         buildGenreGrid('movieGenreGrid', MOVIE_GENRES, 'movie');
         buildGenreGrid('tvGenreGrid', TV_GENRES, 'tv');
         loadPopular('movie', 'popularMoviesRow');
@@ -162,23 +168,69 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {}
     }
 
+    function getItemKey(item) {
+        return `${item.type}_${item.id}`;
+    }
+
+    function getReaction(item) {
+        const key = getItemKey(item);
+        if (userReactions[key]) return userReactions[key];
+        if (isFavorited(item)) return 'like';
+        return null;
+    }
+
+    function setReaction(item, reactionType) {
+        const key = getItemKey(item);
+        const currentRec = userReactions[key];
+
+        if (currentRec === reactionType) {
+            // Reset reaction
+            delete userReactions[key];
+            removeFromFavorites(item);
+            showToast('Tepkiniz sıfırlandı ⚪');
+        } else {
+            userReactions[key] = reactionType;
+
+            if (reactionType === 'super') {
+                addToFavorites({ ...item, super: true });
+                showToast('💖 Çok Beğendim! Favorilerine eklendi.');
+            } else if (reactionType === 'like') {
+                addToFavorites(item);
+                showToast('👍 Beğendim! Favorilerine eklendi.');
+            } else if (reactionType === 'dislike') {
+                removeFromFavorites(item);
+                showToast('👎 Beğenmedim. Benzer yapımlar azaltılacak.');
+            }
+        }
+
+        localStorage.setItem('sineai_reactions', JSON.stringify(userReactions));
+        updateAuthUI();
+    }
+
     function isFavorited(item) {
         return userFavorites.some(f => f.id === item.id && f.type === item.type);
     }
 
-    async function toggleFavorite(item, cardFavBtn = null) {
+    function addToFavorites(item) {
         const index = userFavorites.findIndex(f => f.id === item.id && f.type === item.type);
-        let action = 'add';
+        if (index === -1) {
+            userFavorites.push(item);
+            syncFavChange(item, 'add');
+        } else {
+            userFavorites[index] = item;
+            syncFavChange(item, 'add');
+        }
+    }
+
+    function removeFromFavorites(item) {
+        const index = userFavorites.findIndex(f => f.id === item.id && f.type === item.type);
         if (index !== -1) {
             userFavorites.splice(index, 1);
-            action = 'remove';
-            showToast('🤍 Favorilerden çıkarıldı');
-        } else {
-            userFavorites.push(item);
-            action = 'add';
-            showToast('❤️ Favorilere eklendi!');
+            syncFavChange(item, 'remove');
         }
+    }
 
+    function syncFavChange(item, action) {
         if (currentUser) {
             localStorage.setItem('sineai_user', JSON.stringify({ username: currentUser, favorites: userFavorites }));
             fetch('/api/user/favorites', {
@@ -189,13 +241,16 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             localStorage.setItem('sineai_guest_favs', JSON.stringify(userFavorites));
         }
+    }
 
-        if (cardFavBtn) {
-            if (action === 'add') cardFavBtn.classList.add('active');
-            else cardFavBtn.classList.remove('active');
+    function toggleFavorite(item, cardFavBtn = null) {
+        if (isFavorited(item)) {
+            setReaction(item, 'dislike');
+            if (cardFavBtn) cardFavBtn.classList.remove('active');
+        } else {
+            setReaction(item, 'like');
+            if (cardFavBtn) cardFavBtn.classList.add('active');
         }
-
-        updateAuthUI();
     }
 
     function updateProfileModalUI() {
@@ -216,11 +271,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (userFavorites.length === 0) {
-            profileFavGrid.innerHTML = `<p class="no-favs-msg">Henüz favori eklemediniz. Kartlardaki kalp ikonuna tıklayarak favorilerinizi oluşturabilirsiniz!</p>`;
+            profileFavGrid.innerHTML = `<p class="no-favs-msg">Henüz favori eklemediniz. Yapımları değerlendirerek listenizi oluşturabilirsiniz!</p>`;
         } else {
             profileFavGrid.innerHTML = userFavorites.map(item => `
                 <div class="profile-fav-item">
-                    <button class="btn-remove-fav" data-id="${item.id}" data-type="${item.type}" title="Favorilerden Çıkar">✕</button>
+                    <button class="btn-remove-fav" data-id="${item.id}" data-type="${item.type}" title="Çıkar">✕</button>
+                    ${item.super ? `<span class="super-fav-tag">💖 Süper</span>` : ''}
                     ${item.poster ? `<img src="https://image.tmdb.org/t/p/w185${item.poster}" alt="${item.title}">` : `<div class="no-poster">Afiş Yok</div>`}
                     <div class="profile-fav-title">${item.title}</div>
                 </div>
@@ -232,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const id = parseInt(btn.dataset.id, 10);
                     const type = btn.dataset.type;
                     const item = userFavorites.find(f => f.id === id && f.type === type);
-                    if (item) toggleFavorite(item);
+                    if (item) setReaction(item, getReaction(item));
                 });
             });
         }
@@ -281,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.innerHTML = `
                     <div class="poster-container">
                         ${posterHTML}
-                        <button class="fav-btn ${favActive}" title="Favorilere Ekle">❤️</button>
+                        <button class="fav-btn ${favActive}" title="Favorilere Ekle" tabindex="0">❤️</button>
                         <div class="card-type-badge">${typeStr}</div>
                         <div class="card-score-badge">⭐ ${rating}</div>
                     </div>
@@ -431,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.innerHTML = `
                 <div class="poster-container">
                     ${posterHTML}
-                    <button class="fav-btn ${favActive}" title="Favorilere Ekle/Çıkar">❤️</button>
+                    <button class="fav-btn ${favActive}" title="Favorilere Ekle/Çıkar" tabindex="0">❤️</button>
                     <div class="card-type-badge">${typeStr}</div>
                     <div class="card-score-badge">⭐ ${rating}</div>
                 </div>
@@ -592,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Detail Modal & Embedded YouTube Player ───────────
+    // ── Netflix-Style Detail Modal & Control Bar ─────────
     function showModal(item, year, typeStr, rating, badgesHTML) {
         const posterUrl  = item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : null;
         const posterHTML = posterUrl
@@ -612,44 +668,65 @@ document.addEventListener('DOMContentLoaded', () => {
         const directorHTML = item.director
             ? `<div class="modal-director"><strong>${item.type === 'movie' ? 'Yönetmen' : 'Yaratıcı'}:</strong> ${item.director}</div>` : '';
 
-        const trailerHTML = item.trailer_url
-            ? `<button type="button" class="trailer-btn inline-trailer-btn" tabindex="0">📺 Fragmanı Oynat (Dahili Oyuncu)</button>` : '';
+        const currentRec = getReaction(item);
 
-        const favActive = isFavorited(item) ? 'active' : '';
+        const trailerHTML = item.trailer_url
+            ? `<button type="button" class="netflix-btn btn-play-trailer" tabindex="0">▶️ Fragmanı Oynat</button>` : '';
 
         modalBody.innerHTML = `
             <div class="modal-layout">
                 <div class="modal-poster">${posterHTML}</div>
                 <div class="modal-info">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <h2>${item.title}</h2>
-                        <button class="fav-btn modal-fav-btn ${favActive}" style="position:static;" title="Favorilere Ekle">❤️</button>
-                    </div>
+                    <h2>${item.title}</h2>
                     ${originalTitleHTML}
                     <div class="meta">
-                        <span>${year}</span><span>•</span><span>${typeStr}</span>
-                        <span>•</span><span>⭐ ${rating}</span>
+                        <span class="meta-badge-year">${year}</span>
+                        <span>•</span><span class="meta-badge-type">${typeStr}</span>
+                        <span>•</span><span class="meta-badge-score">⭐ ${rating}</span>
                         ${runtimeStr ? `<span>•</span><span>${runtimeStr}</span>` : ''}
                     </div>
                     ${genresHTML}
                     ${directorHTML}
                     ${item.reason ? `<div class="card-reason modal-reason">${item.reason}</div>` : ''}
                     <div class="overview">${item.overview || 'Bu yapım için detaylı bir açıklama bulunmuyor.'}</div>
+                    
                     <div class="providers">
                         <h3>İzlenebilecek Platformlar (TR)</h3>
-                        <div style="margin-top:10px;">${badgesHTML}</div>
+                        <div style="margin-top:8px;">${badgesHTML}</div>
                     </div>
-                    ${trailerHTML}
+
+                    <!-- Netflix-Style Control Actions Bar -->
+                    <div class="netflix-actions-bar">
+                        ${trailerHTML}
+                        <button type="button" class="netflix-btn btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''}" data-type="super" tabindex="0">
+                            <span class="btn-icon">💖</span>
+                            <span class="btn-label">Çok Beğendim</span>
+                        </button>
+                        <button type="button" class="netflix-btn btn-reaction btn-like ${currentRec === 'like' ? 'active' : ''}" data-type="like" tabindex="0">
+                            <span class="btn-icon">👍</span>
+                            <span class="btn-label">Beğendim</span>
+                        </button>
+                        <button type="button" class="netflix-btn btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''}" data-type="dislike" tabindex="0">
+                            <span class="btn-icon">👎</span>
+                            <span class="btn-label">Beğenmedim</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
 
-        const modalFavBtn = modalBody.querySelector('.modal-fav-btn');
-        modalFavBtn.addEventListener('click', () => toggleFavorite(item, modalFavBtn));
+        // Handle reactions in modal
+        modalBody.querySelectorAll('.btn-reaction').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const reactionType = btn.dataset.type;
+                setReaction(item, reactionType);
+                showModal(item, year, typeStr, rating, badgesHTML); // refresh modal UI
+            });
+        });
 
-        const inlineTrailerBtn = modalBody.querySelector('.inline-trailer-btn');
-        if (inlineTrailerBtn && item.trailer_url) {
-            inlineTrailerBtn.addEventListener('click', () => {
+        const playTrailerBtn = modalBody.querySelector('.btn-play-trailer');
+        if (playTrailerBtn && item.trailer_url) {
+            playTrailerBtn.addEventListener('click', () => {
                 openYouTubeModal(item.title, item.trailer_url);
             });
         }
@@ -761,7 +838,9 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', () => {
         currentUser = null;
         userFavorites = [];
+        userReactions = {};
         localStorage.removeItem('sineai_user');
+        localStorage.removeItem('sineai_reactions');
         updateAuthUI();
         profileModal.classList.add('hidden');
         showToast('Oturum kapatıldı.');
