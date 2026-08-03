@@ -125,8 +125,9 @@ fastify.register(fastifyStatic, {
 const SYSTEM_PROMPT = `Sen SineAI sinema ve dizi öneri asistanısın. Kullanıcının isteğini derinlemesine analiz et ve sadece aşağıdaki JSON formatında çıktı ver.
 
 Kurallar:
-- Kullanıcı bir film veya dizi belirttiğinde (ör: "The Room benzeri", "Inception gibi", "True Detective tarzı"), o yapımın kültürel mirasını, sinematik tonunu ve spesifik temasını iyi kavra.
-- "recommended_titles" dizisine istek ile GERÇEKTEN birebir tematik/sinematik uyum sağlayan en az 5 adet spesifik yapım adı (title) ve kısa Türkçe öneri nedeni (reason) ekle. Örneğin "The Room" istendiyse "The Disaster Artist", "Troll 2", "Plan 9 from Outer Space", "Room (2015)" gibi kült/absürt veya mekansal benzerlik gösteren yapımları öner; genel romantik filmler önerme.
+- Kullanıcı bir film veya dizi belirttiğinde (ör: "Kurtlar Vadisi benzeri", "The Room benzeri", "Inception gibi", "True Detective tarzı"), o yapımın kültürel mirasını, tonunu ve spesifik temasını MÜKEMMEL kavra.
+- "Kurtlar Vadisi" istendiyse Ezel, Sıfır Bir, Çukur, The Sopranos, Peaky Blinders, Gomorrah, Behzat Ç., Poyraz Karayel gibi kült mafya/aksiyon/derin devlet yapımlarını öner. Çizgi film (Uğur Böceği vb.) veya medikal drama (Grey's Anatomy vb.) KESİNLİKLE ÖNERME.
+- "recommended_titles" dizisine istek ile GERÇEKTEN birebir tematik/sinematik uyum sağlayan en az 6-8 adet spesifik yapım adı (title) ve kısa Türkçe öneri nedeni (reason) ekle.
 - Kullanıcı mekan, mekan atmosferi (ör: "okyanus", "deniz", "gemi", "uzay", "ıssız ada", "dağ", "okul", "hapishane") belirttiğinde bunları must_have ve semantic_topics dizilerine ekle (ör: "ocean", "sea", "romance", "ship").
 - Kullanıcı "X benzeri", "X gibi", "X tarzı", "X'e benzeyen", "X ayarında" derse intent mutlaka "similar_to_title" olsun ve reference_title alanına X yaz.
 - "X oynadığı", "X'in filmleri", "X yönettiği" gibi isteklerde actors veya directors alanlarını doldur.
@@ -184,7 +185,21 @@ async function callMockAI(query) {
       { title: 'Exam', reason: "Kapalı tek mekanda geçen akıl oyunları ve gerilim" },
       { title: '10 Cloverfield Lane', reason: "Yeraltı sığınağında geçen klostrofobik ve gizemli gerilim" }
     ];
-  } else if (q.includes('kurtlar vadisi benzeri') || q.includes('kurtlar vadisi gibi')) { normalized.intent = 'similar_to_title'; normalized.reference_title = 'Kurtlar Vadisi'; normalized.type = 'tv'; }
+  } else if (q.includes('kurtlar vadisi')) {
+    normalized.intent = 'similar_to_title';
+    normalized.reference_title = 'Kurtlar Vadisi';
+    normalized.type = 'tv';
+    normalized.recommended_titles = [
+      { title: 'Ezel', reason: "İntikam, mafya ve derin devlet hesaplaşmalarını anlatan efsanevi Türk draması" },
+      { title: 'Sıfır Bir', reason: "Sokak mafyası ve çete çatışmalarını gerçeğe yakın tonda işleyen aksiyon dizisi" },
+      { title: 'Çukur', reason: "Mahalle, aile ve mafya ilişkilerini aksiyonla birleştiren kült yapım" },
+      { title: 'The Sopranos', reason: "Mafya dünyasını ve organize suç ailesini sarsıcı biçimde işleyen başyapıt" },
+      { title: 'Peaky Blinders', reason: "Organize suç çetelerinin yükselişini ve liderlik savaşlarını konu alan sürükleyici dizi" },
+      { title: 'Poyraz Karayel', reason: "Mafyanın içine sızan eski bir polisin aksiyon ve mafya dolu mücadelesi" },
+      { title: 'Gomorrah', reason: "İtalyan mafyası ve karanlık suç dünyasını tüm gerçekçiliğiyle anlatan efsane dizi" },
+      { title: 'Behzat Ç.', reason: "Ankara polisiye dünyası ve derin suç ilişkilerini konu alan kült yapım" }
+    ];
+  }
   else if (similarMatch) {
     // Generic fallback: benzeri kalÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±pÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± bulundu, intent'i similar_to_title yap
     const titlePart = similarMatch[1].trim();
@@ -867,7 +882,7 @@ async function fetchTMDB(normalized, originalQuery) {
 
   if (normalized.intent === 'similar_to_title' && normalized.reference_title) {
     reference = await searchTMDB(normalized.reference_title, normalized.type || 'any');
-    if (reference && reference.vote_count >= 150) {
+    if (reference) {
       rawResults = await fetchSimilarTMDB(reference, normalized);
       rawResults.push(...await fetchReferenceDiscoverTMDB(reference, normalized));
 
