@@ -183,88 +183,131 @@ body.tv-focus-active .tv-row-active {
     margin-bottom: 32px;
 }
 
-/* ── SEARCH ───────────────────────────────── */
-.search-wrap {
+/* ── SAAS GRADE AI SEARCH CARD ────────────── */
+.saas-search-box {
     width: 100%;
-    max-width: 700px;
+    max-width: 780px;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1.5px solid rgba(167, 139, 250, 0.25);
+    border-radius: 20px;
+    padding: 16px 20px;
+    margin: 0 auto 24px;
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    margin-bottom: 20px;
 }
 
-.search-wrap form {
-    position: relative;
+.saas-search-box:focus-within {
+    border-color: rgba(167, 139, 250, 0.65);
+    box-shadow: 0 12px 50px -10px rgba(139, 92, 246, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.search-input-area {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.search-sparkle-icon {
+    font-size: 20px;
+    margin-top: 4px;
+    color: var(--primary);
 }
 
 textarea#query {
     width: 100%;
-    padding: 18px 180px 18px 20px;
-    background: var(--bg-input);
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-lg);
-    color: var(--text);
-    font-size: 15px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #f8fafc;
     font-family: inherit;
-    resize: none;
+    font-size: 15px;
     line-height: 1.5;
-    transition: var(--trans);
-    backdrop-filter: blur(10px);
+    resize: none;
+    padding: 2px 0;
 }
 
 textarea#query:focus {
     outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(167,139,250,0.2);
-    background: rgba(255,255,255,0.08);
+    box-shadow: none;
+    background: transparent;
 }
 
-textarea#query::placeholder { color: var(--muted); }
+textarea#query::placeholder {
+    color: #94a3b8;
+}
 
-.search-actions {
-    position: absolute;
-    right: 12px;
-    bottom: 12px;
+.search-bottom-bar {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.search-quick-actions {
+    display: flex;
+    align-items: center;
     gap: 8px;
 }
 
-.btn-voice {
-    background: rgba(255,255,255,0.07);
-    border: 1px solid var(--border-soft);
-    border-radius: 10px;
-    padding: 9px 14px;
-    color: var(--muted);
+.saas-pill-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+    padding: 8px 14px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    font-weight: 600;
     cursor: pointer;
-    font-size: 13px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-family: inherit;
-    transition: var(--trans);
-    white-space: nowrap;
 }
 
-.btn-voice:hover { background: rgba(255,255,255,0.12); color: var(--text); }
-
-.btn-voice.listening {
-    background: rgba(248,113,113,0.2);
-    border-color: var(--error);
-    color: var(--error);
-    animation: pulse 1.5s infinite;
+.saas-pill-btn:hover, .saas-pill-btn:focus, .saas-pill-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(167, 139, 250, 0.4);
+    color: #ffffff;
+    outline: 2px solid var(--primary);
 }
 
-.btn-submit {
-    background: linear-gradient(135deg, #7c3aed, #a855f7);
+.saas-submit-btn {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    color: #ffffff;
     border: none;
-    border-radius: 10px;
-    padding: 9px 20px;
-    color: #fff;
+    padding: 10px 22px;
+    border-radius: 12px;
     font-size: 14px;
     font-weight: 700;
     font-family: inherit;
     cursor: pointer;
-    transition: var(--trans);
-    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
 }
 
-.btn-submit:hover { opacity: 0.88; transform: translateY(-1px); }
-.btn-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.saas-submit-btn:hover, .saas-submit-btn:focus, .saas-submit-btn:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 22px rgba(139, 92, 246, 0.6);
+    outline: 2px solid #ffffff;
+}
+
+.btn-voice.listening {
+    background: rgba(248, 113, 113, 0.2);
+    border-color: var(--error);
+    color: var(--error);
+    animation: pulse 1.5s infinite;
+}
 
 /* ── MOOD PILLS ───────────────────────────── */
 .mood-pills {

@@ -35,15 +35,24 @@
             <h1 class="sr-only">SineAI</h1>
             <p class="tagline">Ne izlemek istediğini yaz, yapay zeka senin için en iyisini bulsun</p>
 
-            <div class="search-wrap">
+            <!-- SaaS Grade AI Search Card -->
+            <div class="saas-search-box">
                 <form id="recommendForm">
-                    <textarea id="query" name="query" rows="2"
-                        placeholder="Örn: Okyanusta geçen romantik film öner veya karanlık zeka işi bir dizi..."
-                        required></textarea>
-                    <div class="search-actions">
-                        <button type="button" id="voiceBtn" class="btn-voice" tabindex="0">🎤 Ses</button>
-                        <button type="button" id="randomPickBtn" class="btn-random" tabindex="0">🎲 Şanslı Hissediyorum</button>
-                        <button type="submit" id="submitBtn" class="btn-submit" tabindex="0">Öneri getir ✨</button>
+                    <div class="search-input-area">
+                        <span class="search-sparkle-icon">✨</span>
+                        <textarea id="query" name="query" rows="2"
+                            placeholder="Ne izlemek istiyorsun? (Örn: Okyanusta geçen romantik film öner veya From benzeri dizi...)"
+                            required></textarea>
+                    </div>
+                    <div class="search-bottom-bar">
+                        <div class="search-quick-actions">
+                            <button type="button" id="voiceBtn" class="saas-pill-btn btn-voice" tabindex="0">🎤 Sesli Arama</button>
+                            <button type="button" id="randomPickBtn" class="saas-pill-btn btn-random" tabindex="0">🎲 Şanslı Hissediyorum</button>
+                        </div>
+                        <button type="submit" id="submitBtn" class="saas-submit-btn" tabindex="0">
+                            <span>Öneri Getir</span>
+                            <span class="btn-arrow">✨</span>
+                        </button>
                     </div>
                 </form>
             </div>
@@ -58,8 +67,6 @@
             </div>
 
             <div id="errorBox" class="error-box hidden"></div>
-
-            <button type="button" id="checkUpdateBtn" class="update-check-btn" tabindex="0">🔄 Güncellemeyi Kontrol Et</button>
         </div>
     </header>
 
@@ -122,7 +129,6 @@
             <button id="backToDiscoverBtn" class="back-btn">← Keşfete Dön</button>
             <div class="results-title-area">
                 <h2 id="resultsHeading" class="results-heading">Yapay Zeka Önerileri</h2>
-                <div id="aiPowerBadge" class="ai-power-badge">✨ DeepSeek / Gemini Gücüyle</div>
             </div>
         </div>
 
@@ -263,21 +269,8 @@
             <div class="profile-fav-section">
                 <h3>Favorilerim (<span id="profileFavCount">0</span>)</h3>
                 <div id="profileFavGrid" class="profile-fav-grid">
-                    <p class="no-favs-msg">Henüz favori eklemediniz. Kartlardaki kalp ikonuna tıklayarak favorilerinizi oluşturabilirsiniz!</p>
+                    <p class="no-favs-msg">Henüz favori eklemediniz. Yapımları değerlendirerek listenizi oluşturabilirsiniz!</p>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Update Modal -->
-    <div id="updateModal" class="update-modal hidden" role="dialog" aria-modal="true">
-        <div class="update-modal-content">
-            <h2 id="updateModalTitle"></h2>
-            <p id="updateModalMsg"></p>
-            <div id="updateModalCommits" class="update-commits hidden"></div>
-            <div class="update-modal-actions">
-                <button type="button" id="doUpdateBtn" class="update-confirm-btn hidden" tabindex="0">⬆️ Güncelle</button>
-                <button type="button" id="closeUpdateModalBtn" class="update-cancel-btn" tabindex="0">Kapat</button>
             </div>
         </div>
     </div>
