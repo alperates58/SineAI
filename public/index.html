@@ -12,7 +12,7 @@
 </head>
 <body>
 
-    <!-- HERO -->
+    <!-- HERO HEADER -->
     <header class="app-header">
         <div class="hero-glow"></div>
         <div class="container">
@@ -72,7 +72,6 @@
 
     <!-- DISCOVER (başlangıç ekranı) -->
     <div id="discoverSection">
-
         <!-- Popüler Filmler -->
         <section class="row-section container">
             <div class="section-head">
@@ -120,7 +119,6 @@
             </div>
             <div class="genre-grid" id="tvGenreGrid"></div>
         </section>
-
     </div>
 
     <!-- RESULTS (arama sonrası) -->
@@ -156,6 +154,74 @@
 
         <div id="resultsGrid" class="results-grid"></div>
         <div id="scrollSentinel" class="scroll-sentinel hidden"></div>
+    </main>
+
+    <!-- USER PROFILE FULL PAGE SECTION -->
+    <main id="profileSection" class="container profile-page-container hidden">
+        <div class="profile-page-header">
+            <button id="profileBackBtn" class="back-btn">← Ana Sayfaya Dön</button>
+            <div class="profile-page-title">
+                <h2>Kullanıcı Profili & Koleksiyonu</h2>
+            </div>
+            <button id="logoutBtn" class="logout-btn">Çıkış Yap 🚪</button>
+        </div>
+
+        <div class="profile-dashboard-grid">
+            <!-- Left Info Card -->
+            <div class="profile-user-card">
+                <div class="profile-avatar-large">👤</div>
+                <h2 id="profileUsername">Kullanıcı Adı</h2>
+                <div class="profile-badge-tier">SineAI v3.0 Üyesi</div>
+                
+                <div class="profile-stats-row">
+                    <div class="stat-box">
+                        <span id="profileFavCount" class="stat-num">0</span>
+                        <span class="stat-label">Favori Yapım</span>
+                    </div>
+                    <div class="stat-box">
+                        <span id="profileSuperCount" class="stat-num">0</span>
+                        <span class="stat-label">Süper Beğeni</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Hero AI Engine Banner -->
+            <div class="profile-ai-hero-card">
+                <div class="ai-hero-head">
+                    <span class="ai-hero-icon">✨</span>
+                    <div>
+                        <h3>Profilinize Özel Yapay Zeka Öneri Motoru</h3>
+                        <p id="profileAiDesc">Favorilerinizdeki sinema zevkiniz analiz edilir ve beğeneceğiniz nokta atışı yapımlar önerilir.</p>
+                    </div>
+                </div>
+
+                <div class="fav-progress-wrapper">
+                    <div class="fav-progress-bar-bg">
+                        <div id="favProgressBar" class="fav-progress-bar-fill" style="width: 0%;"></div>
+                    </div>
+                    <div id="favProgressText" class="fav-progress-text">0 / 10 Favori Eklediniz (Kişisel AI önerisi için en az 10 favori gerekli)</div>
+                </div>
+
+                <div class="profile-ai-actions">
+                    <button type="button" id="profileRecommendBtn" class="btn-profile-rec" disabled>
+                        ✨ Profilime Göre Film/Dizi Öner
+                    </button>
+                    <button type="button" id="goToDiscoverBtn" class="btn-discover-more">
+                        🎬 Keşfet'ten Film/Dizi Ekle
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Favorites Gallery Section -->
+        <div class="profile-gallery-section">
+            <div class="gallery-head">
+                <h3>Favori Listem</h3>
+            </div>
+            <div id="profileFavGrid" class="results-grid profile-full-grid">
+                <p class="no-favs-msg">Henüz favori eklemediniz. Yapımları değerlendirerek listenizi oluşturabilirsiniz!</p>
+            </div>
+        </div>
     </main>
 
     <footer class="app-footer">
@@ -227,51 +293,6 @@
                 <div id="regError" class="auth-error hidden"></div>
                 <button type="submit" class="btn-submit auth-submit-btn">Kayıt Ol ✨</button>
             </form>
-        </div>
-    </div>
-
-    <!-- User Profile & Favorites Modal -->
-    <div id="profileModal" class="modal hidden" role="dialog" aria-modal="true">
-        <div class="modal-content profile-modal-content">
-            <button id="closeProfileModalBtn" class="close-btn" aria-label="Kapat" tabindex="0">✕ Kapat</button>
-            
-            <div class="profile-header">
-                <div class="profile-avatar">👤</div>
-                <div class="profile-meta">
-                    <h2 id="profileUsername">Kullanıcı Adı</h2>
-                    <p class="profile-subtext">Favorilerinizi yönetin ve kişiselleştirilmiş AI önerileri alın.</p>
-                </div>
-                <button id="logoutBtn" class="logout-btn">Çıkış Yap 🚪</button>
-            </div>
-
-            <!-- 10-Favorite Requirement & AI Recommendation Box -->
-            <div class="profile-ai-card">
-                <div class="profile-ai-head">
-                    <span class="ai-sparkle-icon">✨</span>
-                    <div>
-                        <h3>Profilinize Özel AI Öneri Motoru</h3>
-                        <p id="profileAiDesc">Favorilerinizdeki yapımların tarzı analiz edilir.</p>
-                    </div>
-                </div>
-
-                <div class="fav-progress-wrapper">
-                    <div class="fav-progress-bar-bg">
-                        <div id="favProgressBar" class="fav-progress-bar-fill" style="width: 0%;"></div>
-                    </div>
-                    <div id="favProgressText" class="fav-progress-text">0 / 10 Favori Eklediniz (Kişisel AI önerisi için en az 10 favori gerekli)</div>
-                </div>
-
-                <button type="button" id="profileRecommendBtn" class="btn-profile-rec" disabled>
-                    ✨ Profilime Göre Film/Dizi Öner
-                </button>
-            </div>
-
-            <div class="profile-fav-section">
-                <h3>Favorilerim (<span id="profileFavCount">0</span>)</h3>
-                <div id="profileFavGrid" class="profile-fav-grid">
-                    <p class="no-favs-msg">Henüz favori eklemediniz. Yapımları değerlendirerek listenizi oluşturabilirsiniz!</p>
-                </div>
-            </div>
         </div>
     </div>
 

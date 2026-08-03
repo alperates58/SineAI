@@ -11,7 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsGrid     = document.getElementById('resultsGrid');
     const discoverSection = document.getElementById('discoverSection');
     const resultsSection  = document.getElementById('resultsSection');
+    const profileSection  = document.getElementById('profileSection');
     const backBtn         = document.getElementById('backToDiscoverBtn');
+    const profileBackBtn  = document.getElementById('profileBackBtn');
+    const goToDiscoverBtn = document.getElementById('goToDiscoverBtn');
     const scrollSentinel  = document.getElementById('scrollSentinel');
     const resultsHeading  = document.getElementById('resultsHeading');
     const quickFilterBar  = document.getElementById('quickFilterBar');
@@ -40,14 +43,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginError           = document.getElementById('loginError');
     const regError             = document.getElementById('regError');
 
-    const profileModal         = document.getElementById('profileModal');
-    const closeProfileModalBtn = document.getElementById('closeProfileModalBtn');
     const profileUsername      = document.getElementById('profileUsername');
     const logoutBtn            = document.getElementById('logoutBtn');
     const favProgressBar       = document.getElementById('favProgressBar');
     const favProgressText      = document.getElementById('favProgressText');
     const profileRecommendBtn  = document.getElementById('profileRecommendBtn');
     const profileFavCount      = document.getElementById('profileFavCount');
+    const profileSuperCount    = document.getElementById('profileSuperCount');
     const profileFavGrid       = document.getElementById('profileFavGrid');
 
     const toast                = document.getElementById('toast');
@@ -88,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // App & User State
     let currentUser = null;
     let userFavorites = [];
-    let userReactions = {}; // { "movie_123": "super" | "like" | "dislike" }
+    let userReactions = {};
     let currentRawResults = [];
     let activeFilter = 'all';
 
@@ -152,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
             userProfileBtn.classList.add('hidden');
         }
         navFavBadge.textContent = `${userFavorites.length}/10`;
-        updateProfileModalUI();
+        updateProfilePageUI();
     }
 
     async function syncFavoritesWithServer() {
@@ -183,17 +185,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const key = getItemKey(item);
         const currentRec = userReactions[key];
 
-        if (currentRec === reactionType) {
-            // Reset reaction
+        if (currentRec === reactionType && reactionType !== 'fav') {
             delete userReactions[key];
             removeFromFavorites(item);
             showToast('Tepkiniz sıfırlandı ⚪');
+        } else if (reactionType === 'fav') {
+            if (isFavorited(item)) {
+                delete userReactions[key];
+                removeFromFavorites(item);
+                showToast('🤍 Favorilerden çıkarıldı');
+            } else {
+                userReactions[key] = 'like';
+                addToFavorites(item);
+                showToast('❤️ Favorilerime eklendi!');
+            }
         } else {
             userReactions[key] = reactionType;
 
             if (reactionType === 'super') {
                 addToFavorites({ ...item, super: true });
-                showToast('💖 Çok Beğendim! Favorilerine eklendi.');
+                showToast('💖 Çok Beğendim! Profiline eklendi.');
             } else if (reactionType === 'like') {
                 addToFavorites(item);
                 showToast('👍 Beğendim! Favorilerine eklendi.');
@@ -244,19 +255,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function toggleFavorite(item, cardFavBtn = null) {
-        if (isFavorited(item)) {
-            setReaction(item, 'dislike');
-            if (cardFavBtn) cardFavBtn.classList.remove('active');
-        } else {
-            setReaction(item, 'like');
-            if (cardFavBtn) cardFavBtn.classList.add('active');
+        setReaction(item, 'fav');
+        if (cardFavBtn) {
+            if (isFavorited(item)) cardFavBtn.classList.add('active');
+            else cardFavBtn.classList.remove('active');
         }
     }
 
-    function updateProfileModalUI() {
-        if (!profileModal || profileModal.classList.contains('hidden')) return;
+    // ── Full Page Profile UI Handler ───────────────────
+    function updateProfilePageUI() {
+        if (!profileSection || profileSection.classList.contains('hidden')) return;
         profileUsername.textContent = currentUser ? currentUser : 'Misafir Kullanıcı';
         profileFavCount.textContent = userFavorites.length;
+
+        const superCount = userFavorites.filter(f => f.super).length;
+        if (profileSuperCount) profileSuperCount.textContent = superCount;
 
         const count = userFavorites.length;
         const progressPct = Math.min(100, (count / 10) * 100);
@@ -271,28 +284,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (userFavorites.length === 0) {
-            profileFavGrid.innerHTML = `<p class="no-favs-msg">Henüz favori eklemediniz. Yapımları değerlendirerek listenizi oluşturabilirsiniz!</p>`;
+            profileFavGrid.innerHTML = `<p class="no-favs-msg">Henüz favori eklemediniz. Film ve dizi kartlarındaki kalp butonuna veya detay ekranındaki 'Favorilerime Ekle' butonuna tıklayarak koleksiyonunuzu oluşturun!</p>`;
         } else {
-            profileFavGrid.innerHTML = userFavorites.map(item => `
-                <div class="profile-fav-item">
-                    <button class="btn-remove-fav" data-id="${item.id}" data-type="${item.type}" title="Çıkar">✕</button>
-                    ${item.super ? `<span class="super-fav-tag">💖 Süper</span>` : ''}
-                    ${item.poster ? `<img src="https://image.tmdb.org/t/p/w185${item.poster}" alt="${item.title}">` : `<div class="no-poster">Afiş Yok</div>`}
-                    <div class="profile-fav-title">${item.title}</div>
-                </div>
-            `).join('');
-
-            profileFavGrid.querySelectorAll('.btn-remove-fav').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const id = parseInt(btn.dataset.id, 10);
-                    const type = btn.dataset.type;
-                    const item = userFavorites.find(f => f.id === id && f.type === type);
-                    if (item) setReaction(item, getReaction(item));
-                });
-            });
+            renderCardsInContainer(userFavorites, profileFavGrid);
         }
     }
+
+    function showProfilePage() {
+        discoverSection.classList.add('hidden');
+        resultsSection.classList.add('hidden');
+        profileSection.classList.remove('hidden');
+        updateProfilePageUI();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showDiscoverPage() {
+        profileSection.classList.add('hidden');
+        resultsSection.classList.add('hidden');
+        discoverSection.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    userProfileBtn.addEventListener('click', showProfilePage);
+    if (profileBackBtn) profileBackBtn.addEventListener('click', showDiscoverPage);
+    if (goToDiscoverBtn) goToDiscoverBtn.addEventListener('click', showDiscoverPage);
 
     // ── Toast Notification ─────────────────────────────
     function showToast(message) {
@@ -337,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.innerHTML = `
                     <div class="poster-container">
                         ${posterHTML}
-                        <button class="fav-btn ${favActive}" title="Favorilere Ekle" tabindex="0">❤️</button>
+                        <button class="fav-btn ${favActive}" title="Favorilere Ekle/Çıkar" tabindex="0">❤️</button>
                         <div class="card-type-badge">${typeStr}</div>
                         <div class="card-score-badge">⭐ ${rating}</div>
                     </div>
@@ -438,23 +453,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showResultsSection() {
         discoverSection.classList.add('hidden');
+        profileSection.classList.add('hidden');
         resultsSection.classList.remove('hidden');
         resultsGrid.innerHTML = '';
         scrollSentinel.classList.add('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    backBtn.addEventListener('click', () => {
-        resultsSection.classList.add('hidden');
-        discoverSection.classList.remove('hidden');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    backBtn.addEventListener('click', showDiscoverPage);
 
     // ── Card Rendering Engine ───────────────────────────
-    function renderCards(items, append = false) {
-        if (!append) resultsGrid.innerHTML = '';
+    function renderCardsInContainer(items, containerEl) {
+        containerEl.innerHTML = '';
         if (!items || items.length === 0) {
-            if (!append) resultsGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:48px 20px;">Kriterlere uygun sonuç bulunamadı.</div>';
+            containerEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:48px 20px;">Kriterlere uygun sonuç bulunamadı.</div>';
             return;
         }
 
@@ -512,7 +524,12 @@ document.addEventListener('DOMContentLoaded', () => {
             fragment.appendChild(card);
         });
 
-        resultsGrid.appendChild(fragment);
+        containerEl.appendChild(fragment);
+    }
+
+    function renderCards(items, append = false) {
+        if (!append) resultsGrid.innerHTML = '';
+        renderCardsInContainer(items, resultsGrid);
         updateSentinel();
     }
 
@@ -598,7 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            profileModal.classList.add('hidden');
+            profileSection.classList.add('hidden');
             showResultsSection();
             resultsHeading.textContent = '✨ Profilinize Özel Yapay Zeka Önerileri';
             loadingText.textContent = 'Favorilerinizdeki sinema zevkiniz analiz ediliyor...';
@@ -648,7 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Netflix-Style Detail Modal & Control Bar ─────────
+    // ── Netflix-Style Detail Modal & Explicit Favorites Bar ─────────
     function showModal(item, year, typeStr, rating, badgesHTML) {
         const posterUrl  = item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : null;
         const posterHTML = posterUrl
@@ -669,6 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ? `<div class="modal-director"><strong>${item.type === 'movie' ? 'Yönetmen' : 'Yaratıcı'}:</strong> ${item.director}</div>` : '';
 
         const currentRec = getReaction(item);
+        const isFav = isFavorited(item);
 
         const trailerHTML = item.trailer_url
             ? `<button type="button" class="netflix-btn btn-play-trailer" tabindex="0">▶️ Fragmanı Oynat</button>` : '';
@@ -695,9 +713,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="margin-top:8px;">${badgesHTML}</div>
                     </div>
 
-                    <!-- Netflix-Style Control Actions Bar -->
+                    <!-- Netflix-Style Control Actions Bar (Including Explicit Favorites Button) -->
                     <div class="netflix-actions-bar">
                         ${trailerHTML}
+                        <button type="button" class="netflix-btn btn-reaction btn-fav ${isFav ? 'active' : ''}" data-type="fav" tabindex="0">
+                            <span class="btn-icon">${isFav ? '❤️' : '🤍'}</span>
+                            <span class="btn-label">${isFav ? 'Favorilerimde' : 'Favorilerime Ekle'}</span>
+                        </button>
                         <button type="button" class="netflix-btn btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''}" data-type="super" tabindex="0">
                             <span class="btn-icon">💖</span>
                             <span class="btn-label">Çok Beğendim</span>
@@ -827,14 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ── Profile Modal Logic ─────────────────────────────
-    userProfileBtn.addEventListener('click', () => {
-        updateProfileModalUI();
-        profileModal.classList.remove('hidden');
-    });
-
-    closeProfileModalBtn.addEventListener('click', () => profileModal.classList.add('hidden'));
-
+    // ── Logout ──────────────────────────────────────────
     logoutBtn.addEventListener('click', () => {
         currentUser = null;
         userFavorites = [];
@@ -842,7 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('sineai_user');
         localStorage.removeItem('sineai_reactions');
         updateAuthUI();
-        profileModal.classList.add('hidden');
+        showDiscoverPage();
         showToast('Oturum kapatıldı.');
     });
 
