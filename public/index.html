@@ -123,15 +123,23 @@
 
     <!-- RESULTS (arama sonrası) -->
     <main class="container results-container hidden" id="resultsSection">
-        <div class="results-header-bar">
-            <button id="backToDiscoverBtn" class="back-btn">← Keşfete Dön</button>
-            <div class="results-title-area">
-                <h2 id="resultsHeading" class="results-heading">Yapay Zeka Önerileri</h2>
+        <!-- SaaS AI Results Hero Header -->
+        <div class="results-hero-header">
+            <button id="backToDiscoverBtn" class="saas-back-btn" tabindex="0">
+                <span class="btn-icon">←</span>
+                <span>Keşfete Dön</span>
+            </button>
+            
+            <div class="results-title-group">
+                <div class="results-tag">✨ SİNEAI ANALİZİ</div>
+                <h2 id="resultsHeading" class="results-main-heading">Yapay Zeka Önerileri</h2>
             </div>
+
+            <div id="resultsCountBadge" class="results-count-badge">✨ Öneriler</div>
         </div>
 
-        <!-- Quick Filters & Sort Toolbar -->
-        <div class="results-toolbar-wrapper">
+        <!-- Unified Glassmorphic Control Toolbar -->
+        <div class="saas-results-toolbar">
             <div id="quickFilterBar" class="quick-filter-bar">
                 <button class="filter-pill active" data-filter="all">Tümü</button>
                 <button class="filter-pill" data-filter="movie">🎬 Filmler</button>

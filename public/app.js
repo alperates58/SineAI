@@ -724,6 +724,9 @@ document.addEventListener('DOMContentLoaded', () => {
             pageState.shownCount = Math.min(currentRawResults.length, AI_BATCH_SIZE);
             pageState.hasMore = currentRawResults.length > pageState.shownCount;
 
+            const resultsCountBadge = document.getElementById('resultsCountBadge');
+            if (resultsCountBadge) resultsCountBadge.textContent = `✨ ${currentRawResults.length} Yapım Hazır`;
+
             renderCards(currentRawResults.slice(0, pageState.shownCount));
             setupInfiniteScroll();
         } catch (error) {
