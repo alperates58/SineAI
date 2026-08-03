@@ -51,21 +51,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const profileFavGrid       = document.getElementById('profileFavGrid');
 
     const toast                = document.getElementById('toast');
-    const checkUpdateBtn       = document.getElementById('checkUpdateBtn');
-    const updateModal          = document.getElementById('updateModal');
-    const closeUpdateModalBtn  = document.getElementById('closeUpdateModalBtn');
-
     let toastTimer = null;
     const AI_BATCH_SIZE = 10;
 
-    // ── App & User State ───────────────────────────────
+    // Genre Constants
+    const MOVIE_GENRES = [
+        { id: 28,    name: 'Aksiyon',     icon: '💥' },
+        { id: 35,    name: 'Komedi',      icon: '😂' },
+        { id: 18,    name: 'Drama',       icon: '🎭' },
+        { id: 27,    name: 'Korku',       icon: '😱' },
+        { id: 878,   name: 'Bilim Kurgu', icon: '🚀' },
+        { id: 53,    name: 'Gerilim',     icon: '🔪' },
+        { id: 10749, name: 'Romantik',    icon: '❤️' },
+        { id: 16,    name: 'Animasyon',   icon: '🎨' },
+        { id: 99,    name: 'Belgesel',    icon: '🎥' },
+        { id: 14,    name: 'Fantastik',   icon: '🧙' },
+        { id: 9648,  name: 'Gizem',       icon: '🔍' },
+        { id: 10752, name: 'Savaş',       icon: '⚔️' }
+    ];
+
+    const TV_GENRES = [
+        { id: 10759, name: 'Aksiyon & Macera', icon: '🌊' },
+        { id: 35,    name: 'Komedi',           icon: '😂' },
+        { id: 18,    name: 'Drama',            icon: '🎭' },
+        { id: 9648,  name: 'Gizem',            icon: '🔍' },
+        { id: 80,    name: 'Suç',              icon: '🕵️' },
+        { id: 10765, name: 'Bilim Kurgu',      icon: '🚀' },
+        { id: 10768, name: 'Savaş & Politika', icon: '⚔️' },
+        { id: 10762, name: 'Çocuklar',         icon: '🧒' },
+        { id: 99,    name: 'Belgesel',         icon: '📽️' },
+        { id: 10766, name: 'Pembe Dizi',       icon: '💕' },
+        { id: 10764, name: 'Reality',          icon: '📺' },
+        { id: 37,    name: 'Western',          icon: '🤠' }
+    ];
+
+    // App & User State
     let currentUser = null;
     let userFavorites = [];
-    let currentRawResults = []; // full current dataset for client-side quick filtering
+    let currentRawResults = [];
     let activeFilter = 'all';
 
     let pageState = {
-        mode: 'ai', // 'ai' | 'genre' | 'popular' | 'profile'
+        mode: 'ai',
         page: 1,
         genreId: null,
         mediaType: null,
@@ -75,8 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
         hasMore: false,
         isLoading: false,
     };
-
-    let modalReturnFocus = null;
 
     // ── Auth & Local Storage Init ──────────────────────
     function initUser() {
@@ -90,13 +115,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 syncFavoritesWithServer();
             } catch (e) {}
         } else {
-            // guest favorites storage
             const guestFavs = localStorage.getItem('sineai_guest_favs');
             if (guestFavs) {
                 try { userFavorites = JSON.parse(guestFavs); } catch (e) {}
             }
             updateAuthUI();
         }
+
+        // Init discover page section components
+        buildGenreGrid('movieGenreGrid', MOVIE_GENRES, 'movie');
+        buildGenreGrid('tvGenreGrid', TV_GENRES, 'tv');
+        loadPopular('movie', 'popularMoviesRow');
+        loadPopular('tv', 'popularTvRow');
     }
 
     function saveUserSession(user) {
@@ -185,7 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
             profileRecommendBtn.disabled = true;
         }
 
-        // Render Profile Favorites Grid
         if (userFavorites.length === 0) {
             profileFavGrid.innerHTML = `<p class="no-favs-msg">Henüz favori eklemediniz. Kartlardaki kalp ikonuna tıklayarak favorilerinizi oluşturabilirsiniz!</p>`;
         } else {
@@ -217,51 +246,109 @@ document.addEventListener('DOMContentLoaded', () => {
         toastTimer = setTimeout(() => { toast.classList.add('hidden'); }, 3000);
     }
 
-    // ── TV Remote Focus Engine ─────────────────────────
-    const TVNav = (() => {
-        const focusSelector = [
-            'textarea#query',
-            'button:not([disabled])',
-            'a[href]',
-            '.movie-card',
-            '.genre-chip',
-            '.pill',
-            '.see-all',
-            '[tabindex="0"]:not([disabled])'
-        ].join(',');
-
-        function isVisible(el) {
-            if (!(el instanceof HTMLElement)) return false;
-            if (el.closest('.hidden')) return false;
-            const style = window.getComputedStyle(el);
-            if (style.display === 'none' || style.visibility === 'hidden') return false;
-            const rect = el.getBoundingClientRect();
-            return rect.width > 0 && rect.height > 0;
-        }
-
-        function activeScope() {
-            if (!detailModal.classList.contains('hidden')) return detailModal;
-            if (!trailerModal.classList.contains('hidden')) return trailerModal;
-            if (!authModal.classList.contains('hidden')) return authModal;
-            if (!profileModal.classList.contains('hidden')) return profileModal;
-            if (!resultsSection.classList.contains('hidden')) return resultsSection;
-            return document;
-        }
-
-        function focusables(scope = activeScope()) {
-            return Array.from(scope.querySelectorAll(focusSelector)).filter(isVisible);
-        }
-
-        function focusElement(el) {
-            if (el && isVisible(el)) {
-                el.focus();
-                return true;
+    // ── Discover Section Loading (Popular & Genres) ─────
+    async function loadPopular(type, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        try {
+            const res = await fetch(`/api/popular?type=${type}&page=1`);
+            const data = await res.json();
+            if (!data.ok || !data.results || data.results.length === 0) {
+                container.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 0;">Yüklenemedi.</div>';
+                return;
             }
-            return false;
-        }
+            container.innerHTML = '';
+            data.results.forEach(item => {
+                const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
+                const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
+                const typeStr = type === 'tv' ? 'Dizi' : 'Film';
+                const posterUrl = item.poster ? `https://image.tmdb.org/t/p/w342${item.poster}` : null;
+                const posterHTML = posterUrl
+                    ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="lazy">`
+                    : `<div class="no-poster">Afiş Yok</div>`;
 
-        return { focusElement, refresh: () => {} };
-    })();
+                let badgesHTML = '';
+                if (item.providers && item.providers.length > 0) {
+                    const ps = item.providers.slice(0, 2);
+                    badgesHTML = `<div class="provider-badges">${ps.map(p => `<div class="badge"><img src="https://image.tmdb.org/t/p/original${p.logo_path}" alt="${p.provider_name}">${p.provider_name}</div>`).join('')}</div>`;
+                }
+
+                const favActive = isFavorited(item) ? 'active' : '';
+
+                const card = document.createElement('div');
+                card.className = 'movie-card';
+                card.tabIndex = 0;
+                card.innerHTML = `
+                    <div class="poster-container">
+                        ${posterHTML}
+                        <button class="fav-btn ${favActive}" title="Favorilere Ekle">❤️</button>
+                        <div class="card-type-badge">${typeStr}</div>
+                        <div class="card-score-badge">⭐ ${rating}</div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-title">${item.title}</h3>
+                        <div class="card-meta"><span>${year}</span></div>
+                        ${badgesHTML}
+                    </div>
+                `;
+
+                const favBtn = card.querySelector('.fav-btn');
+                favBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleFavorite(item, favBtn);
+                });
+
+                card.addEventListener('click', () => showModal(item, year, typeStr, rating, badgesHTML));
+                card.addEventListener('keydown', (e) => { if (e.key === 'Enter') showModal(item, year, typeStr, rating, badgesHTML); });
+                container.appendChild(card);
+            });
+        } catch (err) {
+            container.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 0;">Yüklenemedi.</div>';
+            console.error('Popular load error:', err);
+        }
+    }
+
+    function buildGenreGrid(containerId, genres, mediaType) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+        genres.forEach(g => {
+            const chip = document.createElement('div');
+            chip.className = 'genre-chip';
+            chip.tabIndex = 0;
+            chip.innerHTML = `<div class="genre-chip-icon">${g.icon}</div><div class="genre-chip-name">${g.name}</div>`;
+            const run = () => submitGenre(mediaType, g.id, g.name);
+            chip.addEventListener('click', run);
+            chip.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
+            container.appendChild(chip);
+        });
+    }
+
+    async function submitGenre(mediaType, genreId, genreName) {
+        errorBox.classList.add('hidden');
+        showResultsSection();
+        resultsHeading.textContent = `${genreName} ${mediaType === 'tv' ? 'Dizileri' : 'Filmleri'}`;
+        loadingText.textContent = 'Yükleniyor...';
+        loadingEl.classList.remove('hidden');
+
+        pageState = { mode: 'genre', page: 1, genreId, mediaType, label: genreName, aiItems: [], shownCount: 0, hasMore: false, isLoading: false };
+
+        try {
+            const res = await fetch(`/api/genre?type=${mediaType}&genre_id=${genreId}&page=1`);
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error);
+
+            currentRawResults = data.results || [];
+            pageState.shownCount = Math.min(currentRawResults.length, AI_BATCH_SIZE);
+            pageState.hasMore = data.hasNextPage || false;
+            renderCards(currentRawResults.slice(0, pageState.shownCount));
+            setupInfiniteScroll();
+        } catch (err) {
+            showError(`Bir hata oluştu: ${err.message}`);
+        } finally {
+            loadingEl.classList.add('hidden');
+        }
+    }
 
     // ── Infinite Scroll & Results Navigation ────────────
     function setupInfiniteScroll() {
@@ -507,7 +594,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Detail Modal & Embedded YouTube Player ───────────
     function showModal(item, year, typeStr, rating, badgesHTML) {
-        modalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         const posterUrl  = item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : null;
         const posterHTML = posterUrl
             ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="lazy">`
