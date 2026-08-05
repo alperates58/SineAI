@@ -21,6 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const aiAnalysisSummary = document.getElementById('aiAnalysisSummary');
     const aiAnalysisText  = document.getElementById('aiAnalysisText');
     const aiAnalysisSource = document.getElementById('aiAnalysisSource');
+    const tvFeaturedBackdrop = document.getElementById('tvFeaturedBackdrop');
+    const tvFeaturedTitle    = document.getElementById('tvFeaturedTitle');
+    const tvFeaturedMeta     = document.getElementById('tvFeaturedMeta');
+    const tvFeaturedOverview = document.getElementById('tvFeaturedOverview');
+    const tvFeaturedOpen     = document.getElementById('tvFeaturedOpen');
 
     // Sort & Pagination References
     const sortSelect           = document.getElementById('sortSelect');
@@ -104,6 +109,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let userReactions = {};
     let currentRawResults = [];
     let activeFilter = 'all';
+
+    function setViewState(view) {
+        document.body.dataset.view = view;
+        window.dispatchEvent(new CustomEvent('sineai:viewchange', { detail: { view } }));
+        window.requestAnimationFrame(() => window.SineAITV?.refresh());
+    }
 
     let pageState = {
         mode: 'ai', // 'ai' | 'genre' | 'popular'
@@ -310,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
         discoverSection.classList.add('hidden');
         resultsSection.classList.add('hidden');
         profileSection.classList.remove('hidden');
+        setViewState('profile');
         updateProfilePageUI();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -319,6 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
         profileSection.classList.add('hidden');
         resultsSection.classList.add('hidden');
         discoverSection.classList.remove('hidden');
+        setViewState('discover');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -327,6 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
         discoverSection.classList.add('hidden');
         profileSection.classList.add('hidden');
         resultsSection.classList.remove('hidden');
+        setViewState('results');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -355,6 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             container.innerHTML = '';
+            if (type === 'movie') renderTvFeatured(data.results[0]);
             data.results.forEach(item => {
                 const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
                 const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
@@ -375,6 +390,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const card = document.createElement('div');
                 card.className = 'movie-card';
                 card.tabIndex = 0;
+                card.setAttribute('role', 'button');
+                card.setAttribute('aria-label', `${item.title}, ${year || 'yıl bilinmiyor'}, ${typeStr}, ${rating} puan`);
                 card.innerHTML = `
                     <div class="poster-container">
                         ${posterHTML}
@@ -401,10 +418,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.addEventListener('keydown', (e) => { if (e.key === 'Enter') showModal(item, year, typeStr, rating, badgesHTML); });
                 container.appendChild(card);
             });
+            window.SineAITV?.refresh();
         } catch (err) {
             container.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 0;">Yüklenemedi.</div>';
             console.error('Popular load error:', err);
         }
+    }
+
+    function renderTvFeatured(item) {
+        if (!item || !tvFeaturedOpen) return;
+
+        const year = item.release_date ? new Date(item.release_date).getFullYear() : 'Yıl bilinmiyor';
+        const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
+        const backdrop = item.backdrop || item.poster;
+        if (tvFeaturedBackdrop && backdrop) {
+            const size = item.backdrop ? 'original' : 'w780';
+            tvFeaturedBackdrop.style.backgroundImage = `url("https://image.tmdb.org/t/p/${size}${backdrop}")`;
+        }
+        if (tvFeaturedTitle) tvFeaturedTitle.textContent = item.title;
+        if (tvFeaturedMeta) tvFeaturedMeta.textContent = `${year}   •   ⭐ ${rating}   •   Film`;
+        if (tvFeaturedOverview) tvFeaturedOverview.textContent = item.overview || 'Bu yapım için açıklama bulunmuyor.';
+        tvFeaturedOpen.setAttribute('aria-label', `${item.title} detaylarını gör`);
+        tvFeaturedOpen.onclick = () => {
+            const providers = item.providers || [];
+            const badgesHTML = providers.length
+                ? `<div class="provider-badges">${providers.slice(0, 3).map(provider => `<div class="badge"><img src="https://image.tmdb.org/t/p/original${provider.logo_path}" alt="${provider.provider_name}">${provider.provider_name}</div>`).join('')}</div>`
+                : '<div class="provider-badges"><div class="badge">Platform bilgisi yok</div></div>';
+            showModal(item, year, 'Film', rating, badgesHTML);
+        };
     }
 
     function buildGenreGrid(containerId, genres, mediaType) {
@@ -415,6 +456,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const chip = document.createElement('div');
             chip.className = 'genre-chip';
             chip.tabIndex = 0;
+            chip.setAttribute('role', 'button');
+            chip.setAttribute('aria-label', `${g.name} ${mediaType === 'tv' ? 'dizilerini' : 'filmlerini'} göster`);
             chip.innerHTML = `<div class="genre-chip-icon">${g.icon}</div><div class="genre-chip-name">${g.name}</div>`;
             const run = () => submitGenre(mediaType, g.id, g.name, 1);
             chip.addEventListener('click', run);
@@ -620,9 +663,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showResultsSection() {
+        if (heroSearchArea) heroSearchArea.classList.remove('hidden');
         discoverSection.classList.add('hidden');
         profileSection.classList.add('hidden');
         resultsSection.classList.remove('hidden');
+        setViewState('results');
         resultsGrid.innerHTML = '';
         scrollSentinel.classList.add('hidden');
         if (aiAnalysisSummary) aiAnalysisSummary.classList.add('hidden');
@@ -675,6 +720,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'movie-card';
             card.tabIndex  = 0;
+            card.setAttribute('role', 'button');
+            card.setAttribute('aria-label', `${item.title}, ${year}, ${typeStr}, ${rating} puan`);
             card.innerHTML = `
                 <div class="poster-container">
                     ${posterHTML}
@@ -706,12 +753,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         containerEl.appendChild(fragment);
+        window.SineAITV?.refresh();
     }
 
     function renderCards(items, append = false) {
         if (!append) resultsGrid.innerHTML = '';
         renderCardsInContainer(items, resultsGrid);
         updateSentinel();
+        window.SineAITV?.refresh('#resultsGrid .movie-card');
     }
 
     // ── Quick Filter Logic ──────────────────────────────
@@ -1128,6 +1177,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         detailModal.classList.remove('hidden');
+        window.setTimeout(() => {
+            window.SineAITV?.refresh('.modal:not(.hidden) .btn-play-trailer, .modal:not(.hidden) .btn-fav, .modal:not(.hidden) .close-btn');
+        }, 80);
     }
 
     function openYouTubeModal(title, youtubeUrl) {
@@ -1265,6 +1317,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 showError('Popüler yapımlar yüklenemedi.');
             } finally {
                 loadingEl.classList.add('hidden');
+            }
+        });
+        btn.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                btn.click();
             }
         });
     });

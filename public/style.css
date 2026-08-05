@@ -164,17 +164,17 @@ body.tv-focus-active .tv-row-active {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 14px;
+    margin-bottom: 18px;
 }
 
 .logo-image {
     display: block;
-    width: min(320px, 78vw);
-    height: 108px;
-    object-fit: cover;
+    width: clamp(190px, 15vw, 230px);
+    height: auto;
+    object-fit: contain;
     object-position: center;
-    border-radius: 14px;
-    box-shadow: 0 18px 50px rgba(0,0,0,0.28);
+    border-radius: 0;
+    filter: drop-shadow(0 16px 32px rgba(32, 20, 90, 0.34));
 }
 
 .tagline {
@@ -855,8 +855,8 @@ body.tv-nav-ready .app-header {
 }
 
 body.tv-nav-ready .logo-image {
-    width: 260px;
-    height: 86px;
+    width: 220px;
+    height: auto;
 }
 
 body.tv-nav-ready .results-container {
@@ -1433,7 +1433,7 @@ body.tv-nav-ready .results-grid .provider-badges {
 @media (max-width: 480px) {
     .results-grid { grid-template-columns: repeat(2, 1fr); }
     .genre-grid { grid-template-columns: repeat(2, 1fr); }
-    .logo-image { width: min(260px, 88vw); height: 88px; }
+    .logo-image { width: min(180px, 64vw); height: auto; }
 }
 
 /* ── TOP NAV AUTH BAR ───────────────────────── */

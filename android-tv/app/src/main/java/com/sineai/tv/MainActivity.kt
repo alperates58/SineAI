@@ -99,13 +99,14 @@ class MainActivity : Activity() {
             textZoom                       = 100
             setSupportMultipleWindows(false)
             javaScriptCanOpenWindowsAutomatically = false
+            userAgentString = "${userAgentString} SineAITV/1.3"
             // TV'de büyük ekran önceliği
             @Suppress("DEPRECATION")
             setRenderPriority(WebSettings.RenderPriority.HIGH)
         }
 
         wv.addJavascriptInterface(AndroidBridge(), "SineAIAndroid")
-        wv.setBackgroundColor(Color.parseColor("#0d0d1a"))
+        wv.setBackgroundColor(Color.parseColor("#050507"))
         wv.overScrollMode = View.OVER_SCROLL_NEVER
         wv.isScrollbarFadingEnabled = true
         wv.isHorizontalScrollBarEnabled = false
@@ -331,6 +332,13 @@ class MainActivity : Activity() {
             KeyEvent.KEYCODE_DPAD_DOWN  -> return sendTvDirection("down")
             KeyEvent.KEYCODE_DPAD_LEFT  -> return sendTvDirection("left")
             KeyEvent.KEYCODE_DPAD_RIGHT -> return sendTvDirection("right")
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER,
+            KeyEvent.KEYCODE_BUTTON_A -> {
+                if ((event?.repeatCount ?: 0) > 0) return true
+                if (sendTvDirection("select")) return true
+            }
         }
 
         if (keyCode == KeyEvent.KEYCODE_BACK) {

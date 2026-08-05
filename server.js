@@ -21,9 +21,10 @@ const TMDB_REGION = process.env.TMDB_REGION || 'TR';
 
 // Cache Settings & Bounded LRU Cache Implementation
 const CACHE_TTL_SECONDS = parseInt(process.env.CACHE_TTL_SECONDS || '900', 10);
-const AI_RESULT_LIMIT = parseInt(process.env.AI_RESULT_LIMIT || '40', 10);
-const AI_CANDIDATE_LIMIT = Math.max(AI_RESULT_LIMIT * 2, 80);
-const DISCOVER_PAGES_PER_STRATEGY = parseInt(process.env.DISCOVER_PAGES_PER_STRATEGY || '3', 10);
+const AI_RESULT_LIMIT = parseInt(process.env.AI_RESULT_LIMIT || '10', 10);
+const AI_ENRICH_LIMIT = parseInt(process.env.AI_ENRICH_LIMIT || String(Math.max(AI_RESULT_LIMIT * 2, 20)), 10);
+const AI_CANDIDATE_LIMIT = parseInt(process.env.AI_CANDIDATE_LIMIT || String(Math.max(AI_RESULT_LIMIT * 4, 40)), 10);
+const DISCOVER_PAGES_PER_STRATEGY = parseInt(process.env.DISCOVER_PAGES_PER_STRATEGY || '2', 10);
 
 class BoundedCache {
   constructor(maxItems = 1000, defaultTTL = CACHE_TTL_SECONDS) {
@@ -109,8 +110,14 @@ const FALLBACK_NORMALIZE = {
   min_vote_count: null,
   runtime_min: null,
   runtime_max: null,
+  min_seasons: null,
+  max_seasons: null,
+  episode_count_min: null,
+  episode_count_max: null,
   watch_provider: "",
   country: "",
+  required_location: "",
+  safety_level: "none",
   quality_profile: "mainstream",
   sort_by: "popularity",
   trailer_required: false
@@ -123,7 +130,7 @@ fastify.register(fastifyStatic, {
 });
 
 // Turkish intent analysis + concrete title generation.
-const SYSTEM_PROMPT = `Sen SineAI'nin film ve dizi seçim motorusun. Kullanıcının gündelik Türkçe ile yazdığı isteği doğru yorumla; yazım hatalarını, argo ifadeleri ve örtük tercihleri hesaba kat. Yalnızca geçerli JSON döndür.
+const LEGACY_SYSTEM_PROMPT = `Sen SineAI'nin film ve dizi seçim motorusun. Kullanıcının gündelik Türkçe ile yazdığı isteği doğru yorumla; yazım hatalarını, argo ifadeleri ve örtük tercihleri hesaba kat. Yalnızca geçerli JSON döndür.
 
 ÖNCELİK SIRASI
 1. Açık kısıtlar: film/dizi, dönem, ülke/dil, oyuncu/yönetmen, platform, süre ve hariç tutulanlar.
@@ -185,6 +192,29 @@ JSON ŞEMASI
   "sort_by": "relevance|popularity|vote_average|release_date",
   "trailer_required": false
 }`;
+
+const SYSTEM_PROMPT = `Sen SineAI film/dizi seçim motorusun. Argo, yazım hatası ve saçma görünen gündelik Türkçe dahil kullanıcının gerçek niyetini çöz. Yalnızca geçerli JSON döndür.
+
+Öncelik: açık kısıtlar (film/dizi, hariç tutulanlar, kişi, ülke/dil, yıl, platform, süre, sezon/bölüm, içerik uygunluğu) > tema/atmosfer/tempo > kalite. Olumsuz koşulları asla ters yorumlama.
+
+Kurallar:
+- request_summary_tr: ikinci tekil şahısla, doğal ve net tek Türkçe cümle.
+- "X gibi/benzeri/tarzı" => intent=similar_to_title, reference_title=X; X'i önerme. Tema, atmosfer, anlatı, tempo ve karakter dinamiğini koru.
+- "beyin/kafa yakan, ters köşe" sıradan gerilim değildir; paradoks, güvenilmez algı, kimlik bilmecesi veya güçlü anlatısal ters köşe ister.
+- Kullanıcı dizi/sezon/bölüm demediyse varsayılan type=movie; film ve diziyi aynı listede karıştırma.
+- Kişi sorgusunda actors/directors; mekân/tema koşullarında must_have ve semantic_topics kullan.
+- Açıkça istenen şehir/ülke/mekân zorunludur; yapım gerçekten orada geçmiyorsa sırf benzer türde diye ekleme.
+- language ISO 639-1 (tr, ko, en), country ISO 3166-1 alpha-2 (TR, KR, US); kısıt yoksa any/boş.
+- "8 sezon olmasın" => max_seasons=7. "16 bölüm civarı/falan" => episode_count_min=14, episode_count_max=18.
+- "kısa sürede bitsin/çok uzamasın" dizi için => max_seasons=2, episode_count_max=30.
+- "+18 olmasın" => safety_level=no_adult; "ailece/çocukla" => family; "kan/vahşet olmasın" => low_violence.
+- Olumsuz tür/tema/kişi/başlığı exclude'a koy; aynı değeri genres veya must_have'a koyma.
+- İçerik güvenliği hakkında doğrulanmamış "küfür yok/temiz/şiddetsiz" iddiası yazma.
+- recommended_titles: en güçlü eşleşmeden başlayan en fazla 10 gerçek yapım. Her zorunlu koşulu doğrulayamadığın başlığı ekleme; listeyi doldurmak için zayıf öneri verme, 0-10 sonuç olabilir. Özgün başlık, mümkünse yıl ve movie/tv yaz. 80 altı eşleşme ekleme.
+- reason yapım özelinde, spoilersız, en fazla 16 kelimelik Türkçe cümle; match_tags 2-4 kısa İngilizce kavram.
+
+Şema:
+{"request_summary_tr":"","intent":"discover|similar_to_title|person_search","reference_title":"","recommended_titles":[{"title":"","year":2010,"type":"movie|tv","relevance_score":95,"reason":"","match_tags":[]}],"type":"movie|tv|any","genres":[],"mood":"","year_min":null,"year_max":null,"language":"any","country":"","keywords":[],"semantic_topics":[],"must_have":[],"nice_to_have":[],"exclude":[],"actors":[],"directors":[],"min_vote_average":null,"min_vote_count":null,"runtime_min":null,"runtime_max":null,"min_seasons":null,"max_seasons":null,"episode_count_min":null,"episode_count_max":null,"watch_provider":"","safety_level":"none|family|no_adult|low_violence","quality_profile":"mainstream|hidden_gems|new|classic|family","sort_by":"relevance|popularity|vote_average|release_date","trailer_required":false}`;
 
 async function callMockAI(query) {
   const q = query.toLowerCase();
@@ -289,7 +319,7 @@ async function throwProviderError(provider, response) {
 function getConfiguredAIModel() {
   if (AI_PROVIDER === 'gemini') return process.env.GEMINI_MODEL || 'gemini-3.6-flash';
   if (AI_PROVIDER === 'openai') return process.env.OPENAI_MODEL || 'gpt-4o-mini';
-  if (AI_PROVIDER === 'deepseek') return process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+  if (AI_PROVIDER === 'deepseek') return process.env.DEEPSEEK_MODEL || 'deepseek-v4-flash';
   return 'deterministic-fallback';
 }
 
@@ -297,11 +327,18 @@ async function callDeepSeek(query) {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) throw new Error('DeepSeek API anahtarı yapılandırılmamış');
   const baseUrl = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com';
-  const model = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+  const model = process.env.DEEPSEEK_MODEL || 'deepseek-v4-flash';
   const response = await fetch(`${baseUrl}/v1/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, temperature: 0.15, messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: query }], response_format: { type: "json_object" } })
+    body: JSON.stringify({
+      model,
+      temperature: 0.15,
+      max_tokens: 1300,
+      thinking: { type: 'disabled' },
+      messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: query }],
+      response_format: { type: 'json_object' }
+    })
   });
   if (!response.ok) await throwProviderError('DeepSeek', response);
   const data = await response.json();
@@ -417,14 +454,15 @@ const KEYWORD_ALIASES = {
 
 function normalizeTitle(title) {
   if (!title) return '';
-  return title.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").replace(/\s{2,}/g, " ");
+  return toSearchText(title).trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").replace(/\s{2,}/g, " ");
 }
 
 function toSearchText(value) {
   return (value || '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ı/g, 'i');
 }
 
 function addUniqueStrings(target, values) {
@@ -454,6 +492,16 @@ function sanitizeNormalizedInput(input) {
       ? normalized[field].map(value => String(value).trim()).filter(Boolean).slice(0, 12)
       : [];
   }
+  const genreAliases = {
+    'sci fi': 'science fiction',
+    'sci-fi': 'science fiction',
+    'science_fiction': 'science fiction',
+    'bilim kurgu': 'science fiction'
+  };
+  normalized.genres = Array.from(new Set(normalized.genres.map(genre => {
+    const value = toSearchText(genre).trim();
+    return genreAliases[value] || value;
+  }).filter(Boolean)));
 
   normalized.type = ['movie', 'tv', 'any'].includes(normalized.type) ? normalized.type : 'any';
   normalized.intent = ['discover', 'similar_to_title', 'person_search'].includes(normalized.intent) ? normalized.intent : 'discover';
@@ -464,6 +512,41 @@ function sanitizeNormalizedInput(input) {
     ? normalized.sort_by
     : 'relevance';
   normalized.request_summary_tr = String(normalized.request_summary_tr || '').trim().substring(0, 280);
+  normalized.reference_title = String(normalized.reference_title || '').trim().substring(0, 160);
+  normalized.watch_provider = String(normalized.watch_provider || '').trim().substring(0, 80);
+  normalized.language = String(normalized.language || 'any').trim().toLowerCase();
+  if (!/^(any|[a-z]{2,3})$/.test(normalized.language)) normalized.language = 'any';
+  normalized.country = String(normalized.country || '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(normalized.country)) normalized.country = '';
+  normalized.required_location = toSearchText(normalized.required_location || '').trim().substring(0, 80);
+  normalized.safety_level = ['none', 'family', 'no_adult', 'low_violence'].includes(normalized.safety_level)
+    ? normalized.safety_level
+    : 'none';
+  normalized.trailer_required = Boolean(normalized.trailer_required);
+
+  const numericFields = [
+    'year_min', 'year_max', 'min_vote_average', 'min_vote_count',
+    'runtime_min', 'runtime_max', 'min_seasons', 'max_seasons',
+    'episode_count_min', 'episode_count_max'
+  ];
+  for (const field of numericFields) {
+    if (normalized[field] === null || normalized[field] === '' || normalized[field] === undefined) {
+      normalized[field] = null;
+      continue;
+    }
+    const value = Number(normalized[field]);
+    normalized[field] = Number.isFinite(value) && value >= 0 ? value : null;
+  }
+
+  const orderedPairs = [
+    ['year_min', 'year_max'], ['runtime_min', 'runtime_max'],
+    ['min_seasons', 'max_seasons'], ['episode_count_min', 'episode_count_max']
+  ];
+  for (const [minField, maxField] of orderedPairs) {
+    if (normalized[minField] !== null && normalized[maxField] !== null && normalized[minField] > normalized[maxField]) {
+      [normalized[minField], normalized[maxField]] = [normalized[maxField], normalized[minField]];
+    }
+  }
 
   const rawRecommendations = Array.isArray(normalized.recommended_titles) ? normalized.recommended_titles : [];
   normalized.recommended_titles = rawRecommendations.map((item, index) => {
@@ -477,7 +560,7 @@ function sanitizeNormalizedInput(input) {
       reason: String(source.reason || '').trim().substring(0, 320),
       match_tags: Array.isArray(source.match_tags) ? source.match_tags.map(tag => String(tag).trim()).filter(Boolean).slice(0, 5) : []
     };
-  }).filter(item => item.title && item.relevance_score >= 80).slice(0, 15);
+  }).filter(item => item.title && item.relevance_score >= 80).slice(0, 10);
 
   return normalized;
 }
@@ -562,7 +645,8 @@ function inferGenresFromQuery(query) {
   if (/\bdram\b/.test(q)) push('drama');
   if (/bilim kurgu|sci fi|science fiction/.test(q)) push('science fiction');
   if (/\baksiyon\b/.test(q)) push('action');
-  if (/\bsuc\b|\bmafya\b/.test(q)) push('crime');
+  if (/\bsuc\b|\bmafya\b|polisiye/.test(q)) push('crime');
+  if (/polisiye/.test(q)) push('mystery');
   if (/gerilim|thriller/.test(q)) push('thriller');
   if (/korku|horror/.test(q)) push('horror');
   if (/gizem|mystery|dedektif/.test(q)) push('mystery');
@@ -581,6 +665,84 @@ function applyQueryHeuristics(normalizedInput, query) {
   const inferredGenres = inferGenresFromQuery(query);
 
   normalized.genres = addUniqueStrings(normalized.genres, inferredGenres);
+  normalized.explicit_genres = [...inferredGenres];
+
+  const locationAliases = [
+    ['ankara', 'ankara'], ['istanbul', 'istanbul'], ['izmir', 'izmir'], ['adana', 'adana'],
+    ['antalya', 'antalya'], ['trabzon', 'trabzon'], ['londra', 'london'], ['london', 'london'],
+    ['paris', 'paris'], ['new york', 'new york'], ['tokyo', 'tokyo'], ['seul', 'seoul'], ['seoul', 'seoul']
+  ];
+  if (/gecen|gecsin|mekan|sehrinde|kentinde|set in/.test(q)) {
+    const location = locationAliases.find(([alias]) => q.includes(alias));
+    if (location) normalized.required_location = location[1];
+  }
+
+  const negativeGenreRules = [
+    { genre: 'romance', pattern: /(ask mesk|romantik|romance).{0,24}(olmasin|istemem|istemiyorum|olmadan|yok)/ },
+    { genre: 'horror', pattern: /(korku|horror).{0,24}(olmasin|istemem|istemiyorum|olmadan|yok)/ },
+    { genre: 'comedy', pattern: /(komedi|komik).{0,24}(olmasin|istemem|istemiyorum|olmadan|yok)/ },
+    { genre: 'action', pattern: /(aksiyon).{0,24}(olmasin|istemem|istemiyorum|olmadan|yok)/ }
+  ];
+  for (const rule of negativeGenreRules) {
+    if (!rule.pattern.test(q)) continue;
+    normalized.genres = normalized.genres.filter(genre => String(genre).toLowerCase() !== rule.genre);
+    normalized.explicit_genres = normalized.explicit_genres.filter(genre => String(genre).toLowerCase() !== rule.genre);
+    normalized.must_have = normalized.must_have.filter(value => String(value).toLowerCase() !== rule.genre);
+    normalized.exclude = addUniqueStrings(normalized.exclude, [rule.genre]);
+  }
+
+  const maxRuntimeMatch = q.match(/(en fazla|maksimum|max)\s*(\d{2,3})\s*(dakika|dk)/)
+    || q.match(/(\d{2,3})\s*(dakika|dk).{0,24}(gecmesin|asmasin|altinda)/);
+  if (maxRuntimeMatch) {
+    const value = maxRuntimeMatch.slice(1).map(Number).find(Number.isFinite);
+    if (Number.isFinite(value)) normalized.runtime_max = value;
+  }
+
+  const seasonExclusion = q.match(/(\d{1,2})\s*sezon.{0,20}(olmasin|istemem|istemiyorum|fazla)/);
+  if (seasonExclusion) {
+    normalized.type = 'tv';
+    normalized.max_seasons = Math.max(1, Number(seasonExclusion[1]) - 1);
+  }
+  const maxSeasonMatch = q.match(/(en fazla|maksimum|max)\s*(\d{1,2})\s*sezon/);
+  if (maxSeasonMatch) {
+    normalized.type = 'tv';
+    normalized.max_seasons = Number(maxSeasonMatch[2]);
+  }
+
+  const episodeAroundMatch = q.match(/(\d{1,4})\s*bolum.{0,16}(falan|civari|civarinda|gibi)/);
+  if (episodeAroundMatch) {
+    const target = Number(episodeAroundMatch[1]);
+    normalized.type = 'tv';
+    normalized.episode_count_min = Math.max(1, target - 2);
+    normalized.episode_count_max = target + 2;
+  }
+  if (/kisa surede bitsin|cok uzamasin|hemen bitsin/.test(q)) {
+    normalized.type = 'tv';
+    normalized.max_seasons = Math.min(normalized.max_seasons ?? 2, 2);
+    normalized.episode_count_max = Math.min(normalized.episode_count_max ?? 30, 30);
+  }
+
+  if (/(\+18|18\+|yetiskin).{0,20}(olmasin|istemem|istemiyorum|olmadan)/.test(q)) {
+    normalized.safety_level = 'no_adult';
+  }
+  if (/(kan|vahset|gore|splatter).{0,24}(olmasin|istemem|istemiyorum|olmadan|yok)/.test(q)) {
+    normalized.safety_level = 'low_violence';
+    normalized.exclude = addUniqueStrings(normalized.exclude, ['gore', 'splatter', 'graphic violence']);
+  }
+  if (/ailece|cocuklarla|cocukla/.test(q)) {
+    normalized.safety_level = 'family';
+    normalized.quality_profile = 'family';
+  }
+
+  if (/kore|k-drama|kdrama/.test(q)) {
+    normalized.country = 'KR';
+    normalized.language = 'ko';
+    if (/dizi/.test(q)) normalized.type = 'tv';
+  }
+  if (/turk yapimi|turk filmi|turk dizisi|ankara/.test(q)) {
+    normalized.country = 'TR';
+    normalized.language = 'tr';
+  }
 
   if (/\bkomedi\b|\bkomik\b|eglenceli/.test(q)) {
     normalized.must_have = addUniqueStrings(normalized.must_have, ['comedy']);
@@ -601,13 +763,24 @@ function applyQueryHeuristics(normalizedInput, query) {
     normalized.min_vote_average = Math.max(normalized.min_vote_average || 0, 7);
     normalized.min_vote_count = Math.max(normalized.min_vote_count || 0, 500);
   }
+  if (!/(imdb|puan|rating|\d+\s*oy|oscar)/.test(q)) {
+    normalized.min_vote_average = null;
+    normalized.min_vote_count = null;
+  }
 
   if (/tek mekan|tek mekanda|tek ortam|single location|single setting/.test(q)) {
     normalized.must_have = addUniqueStrings(normalized.must_have, ['single location']);
     normalized.semantic_topics = addUniqueStrings(normalized.semantic_topics, ['single setting', 'claustrophobic']);
-    if (/gerilim|thriller/.test(q) && normalized.type !== 'tv' && normalized.recommended_titles.length === 0) {
+    if (/gerilim|thriller/.test(q) && normalized.type !== 'tv') {
       normalized.type = 'movie';
-      normalized.recommended_titles = SINGLE_LOCATION_THRILLER_FALLBACK.map(item => ({ ...item }));
+      const combined = [...SINGLE_LOCATION_THRILLER_FALLBACK, ...normalized.recommended_titles];
+      const seenTitles = new Set();
+      normalized.recommended_titles = combined.filter(item => {
+        const key = normalizeTitle(item.title);
+        if (!key || seenTitles.has(key)) return false;
+        seenTitles.add(key);
+        return true;
+      }).slice(0, 10).map(item => ({ ...item }));
     }
   }
 
@@ -651,6 +824,11 @@ function applyQueryHeuristics(normalizedInput, query) {
 
   if (/ailece|cocuklarla/.test(q)) normalized.quality_profile = 'family';
   if (/yeni cikan/.test(q)) normalized.quality_profile = 'new';
+
+  if (normalized.type === 'any' && !/dizi|sezon|bolum|series|show/.test(q)) {
+    normalized.type = 'movie';
+    normalized.recommended_titles = normalized.recommended_titles.filter(item => item.type !== 'tv');
+  }
 
   normalized.request_summary_tr = normalized.request_summary_tr || buildRequestSummaryTr(query, normalized);
 
@@ -725,14 +903,12 @@ async function getKeywordIds(keywords) {
   const resolvedNames = [];
   if (!keywords || !Array.isArray(keywords)) return { ids, resolvedNames };
 
-  for (let kw of keywords) {
+  const lookups = await Promise.all(keywords.map(async (kw) => {
     const original = kw.toLowerCase().trim();
     const query = KEYWORD_ALIASES[original] || original;
 
     if (keywordCache.has(query)) {
-      ids.push(keywordCache.get(query));
-      resolvedNames.push(original);
-      continue;
+      return { id: keywordCache.get(query), original };
     }
 
     try {
@@ -744,11 +920,16 @@ async function getKeywordIds(keywords) {
         if (!best && data.results.length > 0) best = data.results[0];
         if (best) {
           keywordCache.set(query, best.id);
-          ids.push(best.id);
-          resolvedNames.push(original);
+          return { id: best.id, original };
         }
       }
     } catch (e) {}
+    return null;
+  }));
+
+  for (const result of lookups.filter(Boolean)) {
+    ids.push(result.id);
+    resolvedNames.push(result.original);
   }
   return { ids, resolvedNames };
 }
@@ -776,98 +957,100 @@ async function searchTMDB(title, type, expectedYear = null) {
   let bestScore = -1;
   const queryNorm = normalizeTitle(title);
 
-  // Hem yerel dil hem en-US aran    ayn    film farkl    dilde daha y     skor alabilir (     "Exit 8" tr-TR'de "              8")
-  // Her film i     diller aras    MAX skor tutulur
-  for (const t of typesToSearch) {
-    const candidateMap = new Map(); // id -> {score, matchData}
-
-    const langs = [TMDB_LANGUAGE, 'en-US'];
-    for (const lang of langs) {
-      try {
-        const url = new URL(`${TMDB_BASE_URL}/search/${t}?api_key=${TMDB_API_KEY}&language=${lang}&query=${encodeURIComponent(title)}`);
-        const res = await fetch(url.toString());
-        if (res.ok) {
-          const data = await res.json();
-          for (const match of (data.results || [])) {
-            let score = 0;
-            const matchTitle = t === 'movie' ? match.title : match.name;
-            const matchOriginalTitle = t === 'movie' ? match.original_title : match.original_name;
-
-            const tNorm = normalizeTitle(matchTitle);
-            const otNorm = normalizeTitle(matchOriginalTitle);
-
-            if (tNorm.includes('making of') || tNorm.includes('behind the scenes') || tNorm.includes('interview') || tNorm.includes('special')) continue;
-
-            if (tNorm === queryNorm) score += 1000000;
-            else if (otNorm === queryNorm) score += 900000;
-            // startsWith yaln    tam kelime s          ge    : "exit 8 something"     , "exit 8a"     
-            else if (tNorm.startsWith(queryNorm) && (tNorm.length === queryNorm.length || tNorm[queryNorm.length] === ' ')) score += 5000;
-            else if (otNorm.startsWith(queryNorm) && (otNorm.length === queryNorm.length || otNorm[queryNorm.length] === ' ')) score += 4000;
-            else if (tNorm.includes(queryNorm)) score += 1000;
-            else if (otNorm.includes(queryNorm)) score += 800;
-
-            const matchYear = parseReleaseYear(match.release_date || match.first_air_date);
-            if (expectedYear) {
-              if (matchYear) {
-                const yearDistance = Math.abs(Number(expectedYear) - matchYear);
-                if (yearDistance === 0) score += 200000;
-                else if (yearDistance === 1) score += 150000;
-                else if (yearDistance === 2) score += 80000;
-                else score -= yearDistance * 20000;
-              } else {
-                score -= 100000;
-              }
-            }
-
-            score += Math.log10((match.popularity || 0) + 1) * 20;
-            score += Math.log10((match.vote_count || 0) + 1) * 30;
-
-            if (match.genre_ids && match.genre_ids.includes(99)) score -= 10000;
-
-            const existing = candidateMap.get(match.id);
-            // Ayn    film i     en y     skoru ve o skora kar          gelen ba             sakla
-            if (!existing || score > existing.score) {
-              candidateMap.set(match.id, {
-                score,
-                data: {
-                  id: match.id,
-                  type: t,
-                  title: matchTitle,
-                  release_date: match.release_date || match.first_air_date || null,
-                  genre_ids: match.genre_ids || [],
-                  vote_count: match.vote_count || 0,
-                  popularity: match.popularity || 0
-                }
-              });
-            }
-          }
-        }
-      } catch (err) {}
+  const languages = Array.from(new Set([TMDB_LANGUAGE, 'en-US']));
+  const searches = await Promise.all(typesToSearch.flatMap(t => languages.map(async lang => {
+    try {
+      const url = new URL(`${TMDB_BASE_URL}/search/${t}`);
+      url.searchParams.append('api_key', TMDB_API_KEY);
+      url.searchParams.append('language', lang);
+      url.searchParams.append('query', title);
+      const res = await fetch(url.toString());
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.results || []).map(match => ({ match, type: t }));
+    } catch (err) {
+      return [];
     }
+  })));
 
-    // Bu t     i     en iyi aday    global bestMatch ile kar            
-    for (const { score, data } of candidateMap.values()) {
-      if (score > bestScore) {
-        bestScore = score;
-        bestMatch = data;
+  const candidateMap = new Map();
+  for (const { match, type: candidateType } of searches.flat()) {
+    const matchTitle = candidateType === 'movie' ? match.title : match.name;
+    const matchOriginalTitle = candidateType === 'movie' ? match.original_title : match.original_name;
+    const titleNorm = normalizeTitle(matchTitle);
+    const originalNorm = normalizeTitle(matchOriginalTitle);
+    if (/making of|behind the scenes|interview|special/.test(titleNorm)) continue;
+
+    let score = 0;
+    if (titleNorm === queryNorm) score += 1000000;
+    else if (originalNorm === queryNorm) score += 900000;
+    else if (titleNorm.startsWith(queryNorm) && (titleNorm.length === queryNorm.length || titleNorm[queryNorm.length] === ' ')) score += 5000;
+    else if (originalNorm.startsWith(queryNorm) && (originalNorm.length === queryNorm.length || originalNorm[queryNorm.length] === ' ')) score += 4000;
+    else if (titleNorm.includes(queryNorm)) score += 1000;
+    else if (originalNorm.includes(queryNorm)) score += 800;
+
+    const matchYear = parseReleaseYear(match.release_date || match.first_air_date);
+    if (expectedYear) {
+      if (!matchYear) score -= 100000;
+      else {
+        const distance = Math.abs(Number(expectedYear) - matchYear);
+        if (distance === 0) score += 200000;
+        else if (distance === 1) score += 150000;
+        else if (distance === 2) score += 80000;
+        else score -= distance * 20000;
       }
     }
+    score += Math.log10((match.popularity || 0) + 1) * 20;
+    score += Math.log10((match.vote_count || 0) + 1) * 30;
+    if ((match.genre_ids || []).includes(99)) score -= 10000;
+
+    const key = `${candidateType}_${match.id}`;
+    const existing = candidateMap.get(key);
+    if (!existing || score > existing.score) {
+      candidateMap.set(key, {
+        score,
+        data: {
+          ...match,
+          id: match.id,
+          type: candidateType,
+          title: matchTitle || matchOriginalTitle,
+          original_title: matchOriginalTitle || matchTitle,
+          release_date: match.release_date || match.first_air_date || null,
+          genre_ids: match.genre_ids || [],
+          vote_count: match.vote_count || 0,
+          popularity: match.popularity || 0
+        }
+      });
+    }
   }
+
+  for (const { score, data } of candidateMap.values()) {
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = data;
+    }
+  }
+
+  if (bestScore < 750) return null;
 
   if (bestMatch) {
     try {
       const res = await fetch(`${TMDB_BASE_URL}/${bestMatch.type}/${bestMatch.id}?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}`);
       if (res.ok) {
         const dData = await res.json();
-        bestMatch.title = bestMatch.type === 'movie' ? dData.title : dData.name;
+        bestMatch.title = bestMatch.type === 'movie' ? (dData.title || dData.original_title) : (dData.name || dData.original_name);
+        bestMatch.original_title = bestMatch.type === 'movie' ? dData.original_title : dData.original_name;
         bestMatch.overview = dData.overview || '';
         bestMatch.poster_path = dData.poster_path || null;
+        bestMatch.backdrop_path = dData.backdrop_path || null;
         bestMatch.release_date = bestMatch.type === 'movie' ? dData.release_date : dData.first_air_date;
         bestMatch.vote_average = dData.vote_average || 0;
         bestMatch.vote_count = dData.vote_count || bestMatch.vote_count || 0;
         bestMatch.popularity = dData.popularity || bestMatch.popularity || 0;
         bestMatch.genre_ids = (dData.genres || []).map(g => g.id);
         bestMatch.original_language = dData.original_language || null;
+        bestMatch.origin_country = dData.origin_country || (dData.production_countries || []).map(country => country.iso_3166_1);
+        bestMatch.adult = Boolean(dData.adult);
       }
     } catch(err) {}
   }
@@ -876,21 +1059,27 @@ async function searchTMDB(title, type, expectedYear = null) {
 
 // Complex Final Scoring and Enrichment Pipeline
 async function fetchSimilarTMDB(reference, normalized) {
-  const results = [];
   const endpoints = ['recommendations', 'similar'];
-  for (const ep of endpoints) {
-    for (let page = 1; page <= 2; page++) {
-      try {
-        const url = new URL(`${TMDB_BASE_URL}/${reference.type}/${reference.id}/${ep}?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}&page=${page}`);
-        const res = await fetch(url.toString());
-        if (res.ok) {
-          const data = await res.json();
-          results.push(...(data.results || []).map(i => ({ ...i, type: reference.type, strategy: page === 1 ? 'strict' : 'relaxed' })));
-        }
-      } catch (err) {}
+  const pages = [1, 2];
+  const batches = await Promise.all(endpoints.flatMap(endpoint => pages.map(async page => {
+    try {
+      const url = new URL(`${TMDB_BASE_URL}/${reference.type}/${reference.id}/${endpoint}`);
+      url.searchParams.append('api_key', TMDB_API_KEY);
+      url.searchParams.append('language', TMDB_LANGUAGE);
+      url.searchParams.append('page', page);
+      const res = await fetch(url.toString());
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.results || []).map(item => ({
+        ...item,
+        type: reference.type,
+        strategy: page === 1 ? 'strict' : 'relaxed'
+      }));
+    } catch (err) {
+      return [];
     }
-  }
-  return results;
+  })));
+  return batches.flat();
 }
 
 async function fetchReferenceDiscoverTMDB(reference, normalized, providerId = null) {
@@ -899,7 +1088,7 @@ async function fetchReferenceDiscoverTMDB(reference, normalized, providerId = nu
   const genreSeed = (reference.genre_ids || []).slice(0, 3);
   const keywordSeed = referenceKeywordIds.slice(0, 4);
 
-  for (let page = 1; page <= 2; page++) {
+  const batches = await Promise.all([1, 2].map(async page => {
     try {
       const url = new URL(`${TMDB_BASE_URL}/discover/${reference.type}`);
       url.searchParams.append('api_key', TMDB_API_KEY);
@@ -919,15 +1108,76 @@ async function fetchReferenceDiscoverTMDB(reference, normalized, providerId = nu
       if (reference.original_language && reference.original_language !== 'en') {
         url.searchParams.append('with_original_language', reference.original_language);
       }
+      if (normalized.language && normalized.language !== 'any') {
+        url.searchParams.set('with_original_language', normalized.language);
+      }
+      if (normalized.country) url.searchParams.append('with_origin_country', normalized.country);
 
       const res = await fetch(url.toString());
       if (res.ok) {
         const data = await res.json();
-        results.push(...(data.results || []).map(i => ({ ...i, type: reference.type, strategy: 'reference_discover' })));
+        return (data.results || []).map(i => ({ ...i, type: reference.type, strategy: 'reference_discover' }));
       }
     } catch (err) {}
-  }
+    return [];
+  }));
+  results.push(...batches.flat());
   return results;
+}
+
+function pickCertification(details, type) {
+  if (type === 'movie') {
+    const countries = details.release_dates?.results || [];
+    for (const countryCode of ['TR', 'US', 'GB']) {
+      const releases = countries.find(entry => entry.iso_3166_1 === countryCode)?.release_dates || [];
+      const rated = releases
+        .filter(entry => String(entry.certification || '').trim())
+        .sort((a, b) => (a.type === 3 ? -1 : 0) - (b.type === 3 ? -1 : 0));
+      if (rated[0]) return String(rated[0].certification).trim();
+    }
+    return '';
+  }
+
+  const ratings = details.content_ratings?.results || [];
+  for (const countryCode of ['TR', 'US', 'GB']) {
+    const rating = ratings.find(entry => entry.iso_3166_1 === countryCode)?.rating;
+    if (rating) return String(rating).trim();
+  }
+  return '';
+}
+
+function certificationRank(certification) {
+  const value = String(certification || '').toUpperCase().replace(/[\s-]/g, '');
+  if (!value || value === 'NR' || value === 'UNRATED') return null;
+  if (['G', 'U', 'TVY', 'TVY7', 'TVG', '0+', '6+'].includes(value)) return 0;
+  if (['PG', 'TVPG', '7+', '9+', '10+', '12'].includes(value)) return 1;
+  if (['PG13', 'TV14', '12+', '13+', '14+', '15'].includes(value)) return 2;
+  if (['R', 'TVMA', '15+', '16', '16+'].includes(value)) return 3;
+  if (['NC17', '18', '18+', 'X'].includes(value)) return 4;
+  const numeric = Number(value.replace('+', ''));
+  if (Number.isFinite(numeric)) {
+    if (numeric <= 7) return 0;
+    if (numeric <= 12) return 1;
+    if (numeric <= 15) return 2;
+    if (numeric <= 17) return 3;
+    return 4;
+  }
+  return null;
+}
+
+function passesSafetyFilter(item, safetyLevel) {
+  if (!safetyLevel || safetyLevel === 'none') return true;
+  if (item.adult) return false;
+  const rank = certificationRank(item.certification);
+  if (rank === null) return false;
+  if (safetyLevel === 'family' && rank > 1) return false;
+  if (['no_adult', 'low_violence'].includes(safetyLevel) && rank > 2) return false;
+  if (safetyLevel === 'low_violence') {
+    const unsafeKeywords = /gore|splatter|graphic violence|torture|serial killer|slasher|zombie/;
+    if ((item.keyword_names || []).some(keyword => unsafeKeywords.test(toSearchText(keyword)))) return false;
+    if ((item.genre_ids || []).includes(27)) return false;
+  }
+  return true;
 }
 
 async function enrichResults(results, normalized, reference) {
@@ -982,14 +1232,27 @@ async function enrichResults(results, normalized, reference) {
     item.runtime = null;
     item.director = null;
     item.number_of_seasons = null;
+    item.number_of_episodes = null;
+    item.certification = '';
+    item.keyword_names = [];
+    item.cast_names = [];
     
     try {
-      const url = new URL(`${TMDB_BASE_URL}/${item.type}/${item.id}?api_key=${TMDB_API_KEY}&language=tr-TR&append_to_response=watch/providers,videos,credits`);
+      const url = new URL(`${TMDB_BASE_URL}/${item.type}/${item.id}?api_key=${TMDB_API_KEY}&language=tr-TR&append_to_response=watch/providers,videos,credits,release_dates,content_ratings,keywords`);
       const res = await fetch(url.toString());
       if (res.ok) {
         const d = await res.json();
         item.original_title = item.type === 'movie' ? d.original_title : d.original_name;
         item.genres = (d.genres || []).map(g => g.name);
+        item.title = item.type === 'movie' ? (d.title || d.original_title || item.title) : (d.name || d.original_name || item.title);
+        item.poster = d.poster_path || item.poster;
+        item.backdrop = d.backdrop_path || item.backdrop;
+        item.original_language = d.original_language || item.original_language || null;
+        item.origin_country = d.origin_country || (d.production_countries || []).map(country => country.iso_3166_1);
+        item.adult = Boolean(d.adult);
+        item.certification = pickCertification(d, item.type);
+        item.keyword_names = (d.keywords?.keywords || d.keywords?.results || []).map(keyword => keyword.name).filter(Boolean);
+        item.cast_names = (d.credits?.cast || []).map(person => person.name).filter(Boolean);
         
         if (item.type === 'movie') {
            item.runtime = d.runtime;
@@ -998,6 +1261,7 @@ async function enrichResults(results, normalized, reference) {
         } else {
            item.runtime = d.episode_run_time && d.episode_run_time.length > 0 ? d.episode_run_time[0] : null;
            item.number_of_seasons = d.number_of_seasons || null;
+           item.number_of_episodes = d.number_of_episodes || null;
            const creator = (d.created_by && d.created_by.length > 0) ? d.created_by[0].name : null;
            if (creator) item.director = creator;
            else {
@@ -1045,6 +1309,14 @@ async function enrichResults(results, normalized, reference) {
         }
       } catch (err) {}
     }
+    if (normalized.safety_level && normalized.safety_level !== 'none' && item.certification) {
+      const safetyLabel = normalized.safety_level === 'family'
+        ? 'ailece izleme'
+        : normalized.safety_level === 'low_violence'
+          ? 'düşük şiddet'
+          : '+18 olmayan içerik';
+      item.reason = `TMDB ${item.certification} yaş derecelendirmesiyle ${safetyLabel} ön elemesinden geçti.`;
+    }
     return item;
   });
   
@@ -1086,7 +1358,7 @@ async function fetchTMDB(normalized, originalQuery) {
 
   // Process direct AI title recommendations
   if (normalized.recommended_titles && Array.isArray(normalized.recommended_titles) && normalized.recommended_titles.length > 0) {
-    for (const [recIndex, recItem] of normalized.recommended_titles.entries()) {
+    const directMatches = await Promise.all(normalized.recommended_titles.map(async (recItem, recIndex) => {
       const recTitle = typeof recItem === 'string' ? recItem : recItem.title;
       const recReason = typeof recItem === 'object' ? recItem.reason : null;
       const recYear = typeof recItem === 'object' ? recItem.year : null;
@@ -1100,20 +1372,24 @@ async function fetchTMDB(normalized, originalQuery) {
             match.ai_rank = recIndex;
             match.ai_match_tags = Array.isArray(recItem.match_tags) ? recItem.match_tags : [];
             match.strategy = 'ai_direct_recommendation';
-            rawResults.push(match);
+            return match;
           }
         } catch (err) {}
       }
-    }
+      return null;
+    }));
+    rawResults.push(...directMatches.filter(Boolean));
   }
+  const directRecommendationCount = rawResults.filter(item => item.strategy === 'ai_direct_recommendation').length;
 
   if (normalized.intent === 'similar_to_title' && normalized.reference_title) {
     reference = await searchTMDB(normalized.reference_title, normalized.type || 'any');
     if (reference) {
-      rawResults = await fetchSimilarTMDB(reference, normalized);
-      rawResults.push(...await fetchReferenceDiscoverTMDB(reference, normalized));
+      if (directRecommendationCount < 3) {
+        rawResults.push(...await fetchSimilarTMDB(reference, normalized));
+      }
 
-      if (reference.original_language && reference.original_language !== 'en') {
+      if (directRecommendationCount < 3 && reference.original_language && reference.original_language !== 'en') {
         try {
           const suppUrl = new URL(`${TMDB_BASE_URL}/discover/${reference.type}`);
           suppUrl.searchParams.append('api_key', TMDB_API_KEY);
@@ -1145,7 +1421,7 @@ async function fetchTMDB(normalized, originalQuery) {
     if (!providerId) warnings.push(`'${normalized.watch_provider}' platformu bulunamad\u0131.`);
   }
 
-  if (reference && normalized.intent === 'similar_to_title') {
+  if (reference && normalized.intent === 'similar_to_title' && directRecommendationCount < 3) {
     rawResults.push(...await fetchReferenceDiscoverTMDB(reference, normalized, providerId));
   }
 
@@ -1178,12 +1454,20 @@ async function fetchTMDB(normalized, originalQuery) {
     }
   }
 
-  const shouldRunDiscover = !personId && normalized.intent === 'discover' && rawResults.length < 10;
+  const hasHardDetailConstraints = [
+    normalized.runtime_min, normalized.runtime_max, normalized.min_seasons, normalized.max_seasons,
+    normalized.episode_count_min, normalized.episode_count_max
+  ].some(value => value !== null) || normalized.safety_level !== 'none';
+  const shouldRunDiscover = !personId
+    && normalized.intent === 'discover'
+    && (rawResults.length < 10 || (hasHardDetailConstraints && rawResults.length < AI_ENRICH_LIMIT));
 
   if (shouldRunDiscover) {
-    const kwMustHave = await getKeywordIds(normalized.must_have);
-    const kwSemantic = await getKeywordIds(normalized.semantic_topics);
-    const kwLegacy = await getKeywordIds(normalized.keywords);
+    const [kwMustHave, kwSemantic, kwLegacy] = await Promise.all([
+      getKeywordIds(normalized.must_have),
+      getKeywordIds(normalized.semantic_topics),
+      getKeywordIds(normalized.keywords)
+    ]);
 
     normalized.resolved_must_have = kwMustHave.resolvedNames;
     normalized.resolved_semantic = kwSemantic.resolvedNames;
@@ -1193,7 +1477,7 @@ async function fetchTMDB(normalized, originalQuery) {
 
     for (const type of types) {
       const fetchDiscover = async (keywordIds, strategy) => {
-        for (let page = 1; page <= DISCOVER_PAGES_PER_STRATEGY; page++) {
+        const batches = await Promise.all(Array.from({ length: DISCOVER_PAGES_PER_STRATEGY }, (_, index) => index + 1).map(async page => {
           const url = new URL(`${TMDB_BASE_URL}/discover/${type}`);
           url.searchParams.append('api_key', TMDB_API_KEY);
           url.searchParams.append('language', TMDB_LANGUAGE);
@@ -1217,6 +1501,14 @@ async function fetchTMDB(normalized, originalQuery) {
             url.searchParams.append('with_watch_providers', providerId);
             url.searchParams.append('watch_region', 'TR');
           }
+
+          if (normalized.language && normalized.language !== 'any') {
+            url.searchParams.append('with_original_language', normalized.language);
+          }
+          if (normalized.country) url.searchParams.append('with_origin_country', normalized.country);
+
+          if (normalized.runtime_min !== null) url.searchParams.append('with_runtime.gte', normalized.runtime_min);
+          if (normalized.runtime_max !== null) url.searchParams.append('with_runtime.lte', normalized.runtime_max);
 
           if (queryGenresByType[type].length > 0) {
             url.searchParams.append('with_genres', queryGenresByType[type].join(','));
@@ -1250,10 +1542,14 @@ async function fetchTMDB(normalized, originalQuery) {
             const res = await fetch(url.toString());
             if (res.ok) {
               const data = await res.json();
-              rawResults.push(...(data.results || []).map(i => ({ ...i, type, strategy })));
+              return (data.results || []).map(i => ({ ...i, type, strategy }));
             }
           } catch (err) {}
-        }
+          return [];
+        }));
+        const found = batches.flat();
+        rawResults.push(...found);
+        return found;
       };
 
       const promises = [];
@@ -1276,8 +1572,14 @@ async function fetchTMDB(normalized, originalQuery) {
     if (uniqueMap.has(uniqueKey)) continue;
 
     const year = parseReleaseYear(item.release_date || item.first_air_date);
-    if (normalized.year_min && year && year < normalized.year_min) continue;
-    if (normalized.year_max && year && year > normalized.year_max) continue;
+    if (normalized.year_min && (!year || year < normalized.year_min)) continue;
+    if (normalized.year_max && (!year || year > normalized.year_max)) continue;
+
+    if (normalized.language && normalized.language !== 'any' && item.original_language !== normalized.language) continue;
+    if (normalized.country) {
+      const countries = item.origin_country || [];
+      if (!countries.includes(normalized.country)) continue;
+    }
 
     if (normalized.quality_profile === 'family') {
       if (item.adult) continue;
@@ -1295,14 +1597,21 @@ async function fetchTMDB(normalized, originalQuery) {
     uniqueMap.set(uniqueKey, {
       id: item.id,
       type: item.type,
-      title: item.type === 'movie' ? item.title : item.name,
+      title: item.type === 'movie'
+        ? (item.title || item.original_title)
+        : (item.name || item.title || item.original_name || item.original_title),
+      original_title: item.type === 'movie' ? item.original_title : (item.original_name || item.original_title),
       overview: item.overview,
-      poster: item.poster_path,
-      release_date: item.type === 'movie' ? item.release_date : item.first_air_date,
+      poster: item.poster_path || item.poster,
+      backdrop: item.backdrop_path || item.backdrop,
+      release_date: item.release_date || item.first_air_date || null,
       vote_average: item.vote_average || 0,
       vote_count: item.vote_count || 0,
       popularity: item.popularity || 0,
       genre_ids: item.genre_ids || [],
+      original_language: item.original_language || null,
+      origin_country: item.origin_country || [],
+      adult: Boolean(item.adult),
       strategy: item.strategy,
       custom_reason: item.custom_reason,
       ai_relevance_score: item.ai_relevance_score,
@@ -1312,9 +1621,13 @@ async function fetchTMDB(normalized, originalQuery) {
   }
 
   let finalArray = Array.from(uniqueMap.values());
-  const refKeywordIds = reference ? await getItemKeywords(reference.id, reference.type) : [];
-  const kwMustHaveIds = (await getKeywordIds(normalized.must_have)).ids;
-  const kwSemanticIds = (await getKeywordIds(normalized.semantic_topics)).ids;
+  const [refKeywordIds, mustHaveLookup, semanticLookup] = await Promise.all([
+    reference ? getItemKeywords(reference.id, reference.type) : Promise.resolve([]),
+    getKeywordIds(normalized.must_have),
+    getKeywordIds(normalized.semantic_topics)
+  ]);
+  const kwMustHaveIds = mustHaveLookup.ids;
+  const kwSemanticIds = semanticLookup.ids;
   const verifyIds = kwMustHaveIds.length > 0 ? kwMustHaveIds : kwSemanticIds;
 
   for (const item of finalArray) {
@@ -1408,10 +1721,18 @@ async function fetchTMDB(normalized, originalQuery) {
     rankedCandidates = [...stronglySimilarCandidates, ...topCandidates.filter(item => (item.ref_keyword_overlap || 0) === 0)];
   }
 
-  const itemsToEnrich = rankedCandidates.slice(0, AI_RESULT_LIMIT);
+  const hasSeriesLengthConstraint = [
+    normalized.min_seasons, normalized.max_seasons,
+    normalized.episode_count_min, normalized.episode_count_max
+  ].some(value => value !== null);
+  const enrichLimit = normalized.safety_level !== 'none' || hasSeriesLengthConstraint
+    ? Math.max(AI_ENRICH_LIMIT, 30)
+    : AI_ENRICH_LIMIT;
+  const itemsToEnrich = rankedCandidates.slice(0, enrichLimit);
   let enriched = await enrichResults(itemsToEnrich, normalized, reference);
 
   enriched = enriched.filter(item => {
+    if (!item.title) return false;
     if (normalized.trailer_required && !item.trailer_url) return false;
     if (normalized.watch_provider) {
       const nameNorm = normalized.watch_provider.toLowerCase().replace(/\s+/g, '');
@@ -1420,10 +1741,65 @@ async function fetchTMDB(normalized, originalQuery) {
     }
     if ((normalized.must_have || []).includes('miniseries')) {
       if (item.type !== 'tv') return false;
-      if (item.number_of_seasons && item.number_of_seasons > 2) return false;
+      if (!item.number_of_seasons || item.number_of_seasons > 2) return false;
+    }
+    if (normalized.runtime_min !== null && (!Number.isFinite(item.runtime) || item.runtime < normalized.runtime_min)) return false;
+    if (normalized.runtime_max !== null && (!Number.isFinite(item.runtime) || item.runtime > normalized.runtime_max)) return false;
+    if (normalized.min_seasons !== null && (item.type !== 'tv' || !Number.isFinite(item.number_of_seasons) || item.number_of_seasons < normalized.min_seasons)) return false;
+    if (normalized.max_seasons !== null && (item.type !== 'tv' || !Number.isFinite(item.number_of_seasons) || item.number_of_seasons > normalized.max_seasons)) return false;
+    if (normalized.episode_count_min !== null && (item.type !== 'tv' || !Number.isFinite(item.number_of_episodes) || item.number_of_episodes < normalized.episode_count_min)) return false;
+    if (normalized.episode_count_max !== null && (item.type !== 'tv' || !Number.isFinite(item.number_of_episodes) || item.number_of_episodes > normalized.episode_count_max)) return false;
+    if (normalized.min_vote_average !== null && item.vote_average < normalized.min_vote_average) return false;
+    if (normalized.min_vote_count !== null && item.vote_count < normalized.min_vote_count) return false;
+    if (normalized.language !== 'any' && item.original_language !== normalized.language) return false;
+    if (normalized.country && !(item.origin_country || []).includes(normalized.country)) return false;
+    if (!passesSafetyFilter(item, normalized.safety_level)) return false;
+    const explicitGenreIds = (normalized.explicit_genres || [])
+      .map(genre => (item.type === 'movie' ? MOVIE_GENRES : TV_GENRES)[String(genre).toLowerCase()])
+      .filter(id => id !== undefined);
+    if (explicitGenreIds.length > 0 && !item.genre_ids.some(id => explicitGenreIds.includes(id))) return false;
+    if ((normalized.actors || []).length > 0) {
+      const cast = (item.cast_names || []).map(name => toSearchText(name));
+      if (!normalized.actors.every(actor => cast.includes(toSearchText(actor)))) return false;
+    }
+    if ((normalized.directors || []).length > 0) {
+      const director = toSearchText(item.director || '');
+      if (!normalized.directors.every(name => director.includes(toSearchText(name)))) return false;
+    }
+    if (normalized.required_location) {
+      const locationText = toSearchText(`${item.title || ''} ${item.original_title || ''} ${item.overview || ''}`);
+      if (!locationText.includes(normalized.required_location)) return false;
+    }
+
+    const titleText = toSearchText(`${item.title || ''} ${item.original_title || ''}`);
+    const directorText = toSearchText(item.director || '');
+    const excludedByName = (normalized.exclude || []).some(value => {
+      const excluded = toSearchText(value);
+      return excluded.length >= 3 && (titleText.includes(excluded) || directorText.includes(excluded));
+    });
+    if (excludedByName) return false;
+
+    const contentText = toSearchText(`${item.title || ''} ${item.original_title || ''} ${item.overview || ''}`);
+    const semanticExclusions = {
+      romance: /\bask\b|romantik|romance|love story|iliski/,
+      horror: /korku|dehset|horror|lanet|iblis|zombi|vampir/
+    };
+    for (const [excludedGenre, pattern] of Object.entries(semanticExclusions)) {
+      const isExcluded = (normalized.exclude || []).some(value => String(value).toLowerCase() === excludedGenre);
+      if (isExcluded && pattern.test(contentText)) return false;
     }
     return true;
   });
+
+  if (normalized.safety_level && normalized.safety_level !== 'none') {
+    warnings.push('İçerik uygunluğu TMDB yaş derecelendirmeleriyle ön elemeden geçirildi; kişisel hassasiyetler için ebeveyn rehberini ayrıca kontrol edin.');
+  }
+  if (normalized.required_location) {
+    warnings.push(`Mekân koşulu "${normalized.required_location}" TMDB başlık ve özet bilgisi üzerinden doğrulandı; doğrulanamayan yapımlar gösterilmedi.`);
+  }
+  if (enriched.length < AI_RESULT_LIMIT && itemsToEnrich.length >= AI_RESULT_LIMIT) {
+    warnings.push(`Kesin koşulları ihlal etmemek için ${enriched.length} doğrulanmış sonuç gösteriliyor.`);
+  }
 
   return { reference, people, warnings, results: enriched.slice(0, AI_RESULT_LIMIT) };
 }
@@ -1494,7 +1870,7 @@ fastify.get('/api/popular', async (request, reply) => {
 
       return {
         id: item.id, title, original_title: origTitle,
-        overview: item.overview || '', poster: item.poster_path,
+        overview: item.overview || '', poster: item.poster_path, backdrop: item.backdrop_path,
         release_date: releaseDate, vote_average: item.vote_average,
         type, genres, runtime, number_of_seasons, providers, trailer_url,
       };
@@ -1773,20 +2149,25 @@ fastify.post('/api/update', async (request, reply) => {
 });
 
 fastify.post('/api/recommend', async (request, reply) => {
+  const requestStartedAt = Date.now();
   const { query } = request.body;
   if (!query || typeof query !== 'string') return reply.status(400).send({ ok: false, error: 'Query required' });
-  const cacheKey = `recommend_v3.2:${query.trim().toLowerCase()}`;
+  const cacheKey = `recommend_v3.4:${query.trim().toLowerCase()}`;
   const cachedData = getFromCache(cacheKey);
   if (cachedData) return { ok: true, ...cachedData, cached: true };
 
+  const aiStartedAt = Date.now();
   let normalized;
   try { normalized = await normalizeQuery(query); }
   catch (error) { normalized = { ...FALLBACK_NORMALIZE }; }
+  const aiMs = Date.now() - aiStartedAt;
 
   const analysisMeta = normalized._analysis || { provider: AI_PROVIDER, model: getConfiguredAIModel(), fallback: true };
   delete normalized._analysis;
 
+  const tmdbStartedAt = Date.now();
   const tmdbData = await fetchTMDB(normalized, query);
+  const tmdbMs = Date.now() - tmdbStartedAt;
   const warnings = [...(tmdbData.warnings || [])];
   if (analysisMeta.fallback) warnings.unshift(`${analysisMeta.provider} şu anda yanıt vermedi; güvenli yerel analiz kullanıldı.`);
   const responseData = {
@@ -1801,8 +2182,20 @@ fastify.post('/api/recommend', async (request, reply) => {
     reference: tmdbData.reference,
     people: tmdbData.people,
     warnings,
-    results: tmdbData.results
+    results: tmdbData.results,
+    timing: {
+      ai_ms: aiMs,
+      tmdb_ms: tmdbMs,
+      total_ms: Date.now() - requestStartedAt
+    }
   };
+  fastify.log.info({
+    query: query.substring(0, 120),
+    model: analysisMeta.model,
+    fallback: Boolean(analysisMeta.fallback),
+    result_count: responseData.results.length,
+    ...responseData.timing
+  }, 'Recommendation completed');
   if (!analysisMeta.fallback) setCache(cacheKey, responseData);
   return responseData;
 });

@@ -9,8 +9,9 @@
     <link rel="shortcut icon" type="image/png" href="/favicon.png">
     <link rel="apple-touch-icon" href="/logo.png">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="tv.css">
 </head>
-<body>
+<body data-view="discover">
 
     <!-- HERO HEADER -->
     <header class="app-header">
@@ -31,7 +32,7 @@
 
             <div id="heroSearchArea" class="hero-search-area">
                 <div class="logo-area" id="brandLogoBtn" style="cursor:pointer;" title="Ana Sayfaya Dön">
-                    <img src="/webiclogo.png" alt="SineAI" class="logo-image">
+                    <img src="/sineai-logo-v2.png?v=2" alt="SineAI" class="logo-image">
                 </div>
                 <h1 class="sr-only">SineAI</h1>
                 <p class="tagline">Ne izlemek istediğini yaz, yapay zeka senin için en iyisini bulsun</p>
@@ -81,11 +82,24 @@
 
     <!-- DISCOVER (başlangıç ekranı) -->
     <div id="discoverSection">
+        <!-- Android TV: Netflix-style featured title -->
+        <section id="tvFeatured" class="tv-featured" aria-label="Öne çıkan yapım">
+            <div class="tv-featured-backdrop" id="tvFeaturedBackdrop"></div>
+            <div class="tv-featured-shade"></div>
+            <div class="tv-featured-content">
+                <div class="tv-featured-kicker">SİNEAI'DA BUGÜN</div>
+                <h2 id="tvFeaturedTitle">Sana özel yapımlar</h2>
+                <div id="tvFeaturedMeta" class="tv-featured-meta"></div>
+                <p id="tvFeaturedOverview">Popüler filmler yükleniyor...</p>
+                <button type="button" id="tvFeaturedOpen" class="tv-featured-button" tabindex="0">▶ Detayları Gör</button>
+            </div>
+        </section>
+
         <!-- Popüler Filmler -->
         <section class="row-section container">
             <div class="section-head">
                 <div class="section-title"><span class="section-dot"></span>Popüler Filmler</div>
-                <div class="see-all" data-type="movie">Tümünü gör →</div>
+                <div class="see-all" data-type="movie" role="button" tabindex="0">Tümünü gör →</div>
             </div>
             <div class="cards-row" id="popularMoviesRow">
                 <div class="skeleton-card"></div>
@@ -101,7 +115,7 @@
         <section class="row-section container">
             <div class="section-head">
                 <div class="section-title"><span class="section-dot"></span>Popüler Diziler</div>
-                <div class="see-all" data-type="tv">Tümünü gör →</div>
+                <div class="see-all" data-type="tv" role="button" tabindex="0">Tümünü gör →</div>
             </div>
             <div class="cards-row" id="popularTvRow">
                 <div class="skeleton-card"></div>
@@ -283,8 +297,8 @@
     <!-- Detail Modal -->
     <div id="detailModal" class="modal hidden" role="dialog" aria-modal="true" tabindex="-1">
         <div class="modal-content">
-            <button id="closeModalBtn" class="close-btn" aria-label="Kapat" tabindex="0">✕ Kapat</button>
             <div class="modal-body" id="modalBody"></div>
+            <button id="closeModalBtn" class="close-btn" aria-label="Kapat" tabindex="0">✕ Kapat</button>
         </div>
     </div>
 
@@ -418,5 +432,6 @@
     <div id="toast" class="toast hidden"></div>
 
     <script src="app.js"></script>
+    <script src="tv-navigation.js"></script>
 </body>
 </html>
