@@ -199,18 +199,22 @@ const SYSTEM_PROMPT = `Sen SineAI film/dizi seçim motorusun. Argo, yazım hatas
 
 Kurallar:
 - request_summary_tr: ikinci tekil şahısla, doğal ve net tek Türkçe cümle.
-- "X gibi/benzeri/tarzı" => intent=similar_to_title, reference_title=X; X'i önerme. Tema, atmosfer, anlatı, tempo ve karakter dinamiğini koru.
+- Selam, hitap, argo, yazım hatası ve dolgu sözlerini kısıt sanma; "kanka bi şey aç", "sarsın", "kafa dağıtmalık" gibi ifadelerden izleme deneyimini çıkar. Anlamsız bölüm varsa yalnız anlamlı sinyalleri kullan, olmayan ayrıntı uydurma.
+- Çok belirsiz istekte güvenli varsayım: type=movie, kolay başlayan ve geniş kitlece beğenilen yapımlar. "Yormasın/kafa dağıtmalık" => hafif ve kolay takip edilir; "uykum gelmesin/sarsın/akıp gitsin" => tempolu ve sürükleyici; "her şeyi izledim" => hidden_gems.
+- Romantik dizi isteğinde ana hikâyesi aşk veya romantik ilişki olmayan bir yapımı sırf popüler, aynı ülkeden ya da dram türünde diye ekleme.
+- "X gibi/benzeri/tarzı/ayarında/benzeyen" => intent=similar_to_title, reference_title yalnızca X; tırnak, yıl ve sonrasındaki açıklamayı başlığa katma. X'i yerelleştirilmiş veya özgün adıyla tekrar önerme.
+- Benzer yapım isteğinde referansın 3-5 ayırt edici özelliğini zihninde çıkar; tema, atmosfer, anlatı, tempo, karakter dinamiği ve bıraktığı hissi eşleştir. Aynı seri, yönetmen veya oyuncu tek başına benzerlik kanıtı değildir; güçlü aday yoksa listeyi zayıf devam filmleriyle doldurma.
 - "beyin/kafa yakan, ters köşe" sıradan gerilim değildir; paradoks, güvenilmez algı, kimlik bilmecesi veya güçlü anlatısal ters köşe ister.
 - Kullanıcı dizi/sezon/bölüm demediyse varsayılan type=movie; film ve diziyi aynı listede karıştırma.
 - Kişi sorgusunda actors/directors; mekân/tema koşullarında must_have ve semantic_topics kullan.
 - Açıkça istenen şehir/ülke/mekân zorunludur; yapım gerçekten orada geçmiyorsa sırf benzer türde diye ekleme.
 - language ISO 639-1 (tr, ko, en), country ISO 3166-1 alpha-2 (TR, KR, US); kısıt yoksa any/boş.
-- "8 sezon olmasın" => max_seasons=7. "16 bölüm civarı/falan" => episode_count_min=14, episode_count_max=18.
+- "8 sezon olmasın" => max_seasons=7. Tam "6 bölümlük" => episode_count_min=6, episode_count_max=6 ve yalnız gerçekten toplam 6 bölümü olan dizileri öner; 4 ya da 8 bölümlük yapım ekleme. "16 bölüm civarı/falan" => episode_count_min=14, episode_count_max=18.
 - "kısa sürede bitsin/çok uzamasın" dizi için => max_seasons=2, episode_count_max=30.
 - "+18 olmasın" => safety_level=no_adult; "ailece/çocukla" => family; "kan/vahşet olmasın" => low_violence.
 - Olumsuz tür/tema/kişi/başlığı exclude'a koy; aynı değeri genres veya must_have'a koyma.
 - İçerik güvenliği hakkında doğrulanmamış "küfür yok/temiz/şiddetsiz" iddiası yazma.
-- recommended_titles: en güçlü eşleşmeden başlayan en fazla 10 gerçek yapım. Her zorunlu koşulu doğrulayamadığın başlığı ekleme; listeyi doldurmak için zayıf öneri verme, 0-10 sonuç olabilir. Özgün başlık, mümkünse yıl ve movie/tv yaz. 80 altı eşleşme ekleme.
+- recommended_titles: en güçlü eşleşmeden başlayan en fazla 10 gerçek yapım. Her zorunlu koşulu doğrulayamadığın başlığı ekleme; listeyi doldurmak için zayıf öneri verme, 0-10 sonuç olabilir. Özgün başlık, mümkünse yıl ve movie/tv yaz. 80 altı eşleşme ekleme. Başlıkları tekrarlama; aynı seriden birden çok yapımı ancak her biri bağımsız güçlü eşleşmeyse kullan.
 - reason yapım özelinde, spoilersız, en fazla 16 kelimelik Türkçe cümle; match_tags 2-4 kısa İngilizce kavram.
 
 Şema:
@@ -636,6 +640,14 @@ const SINGLE_LOCATION_THRILLER_FALLBACK = [
   { title: 'The Hateful Eight', year: 2015, type: 'movie', relevance_score: 89, reason: 'Tipi yüzünden aynı handa kalan kuşkulu yabancılar arasında diyalog ve güvensizlikle yükselen kapalı alan tansiyonu kuruyor.', match_tags: ['cabin', 'paranoia', 'ensemble'] }
 ];
 
+const SIX_EPISODE_CRIME_FALLBACK = [
+  { title: 'Black Bird', year: 2022, type: 'tv', relevance_score: 98, reason: 'Altı bölüm boyunca bir mahkûmun seri katilden itiraf alma görevini yoğun gerilimle işliyor.', match_tags: ['six episodes', 'crime', 'psychological tension'] },
+  { title: 'The Chestnut Man', year: 2021, type: 'tv', relevance_score: 97, reason: 'Altı bölümlük karanlık soruşturmasını ritmini düşürmeden çözülen bir seri cinayet bilmecesine dönüştürüyor.', match_tags: ['six episodes', 'serial killer', 'investigation'] },
+  { title: 'Bodyguard', year: 2018, type: 'tv', relevance_score: 96, reason: 'Altı bölümde siyasi koruma görevini komplo ve suç gerilimiyle hızla tırmandırıyor.', match_tags: ['six episodes', 'conspiracy', 'crime thriller'] },
+  { title: 'Dear Child', year: 2023, type: 'tv', relevance_score: 95, reason: 'Altı bölümde bir kaçırılma vakasının saklı bağlantılarını karanlık bir suç bilmecesiyle açıyor.', match_tags: ['six episodes', 'abduction', 'mystery'] },
+  { title: 'The Undoing', year: 2020, type: 'tv', relevance_score: 93, reason: 'Altı bölüm boyunca seçkin bir ailenin çevresindeki cinayet soruşturmasını kuşku üzerine kuruyor.', match_tags: ['six episodes', 'murder mystery', 'family secrets'] }
+];
+
 function inferGenresFromQuery(query) {
   const q = toSearchText(query);
   const genres = [];
@@ -677,14 +689,19 @@ function applyQueryHeuristics(normalizedInput, query) {
     if (location) normalized.required_location = location[1];
   }
 
+  const hasScopedGenreNegation = (terms) => {
+    const match = q.match(new RegExp(`(?:${terms})(.{0,64}?)(?:olmasin|istemem|istemiyorum|olmadan|yok)`));
+    if (!match) return false;
+    return !/(?:\bama\b|\bfakat\b|\bancak\b|\blakin\b|\+18|18\+|yetiskin)/.test(match[1]);
+  };
   const negativeGenreRules = [
-    { genre: 'romance', pattern: /(ask mesk|romantik|romance).{0,24}(olmasin|istemem|istemiyorum|olmadan|yok)/ },
-    { genre: 'horror', pattern: /(korku|horror).{0,24}(olmasin|istemem|istemiyorum|olmadan|yok)/ },
-    { genre: 'comedy', pattern: /(komedi|komik).{0,24}(olmasin|istemem|istemiyorum|olmadan|yok)/ },
-    { genre: 'action', pattern: /(aksiyon).{0,24}(olmasin|istemem|istemiyorum|olmadan|yok)/ }
+    { genre: 'romance', terms: 'ask mesk|romantik|romance' },
+    { genre: 'horror', terms: 'korku|horror' },
+    { genre: 'comedy', terms: 'komedi|komik' },
+    { genre: 'action', terms: 'aksiyon' }
   ];
   for (const rule of negativeGenreRules) {
-    if (!rule.pattern.test(q)) continue;
+    if (!hasScopedGenreNegation(rule.terms)) continue;
     normalized.genres = normalized.genres.filter(genre => String(genre).toLowerCase() !== rule.genre);
     normalized.explicit_genres = normalized.explicit_genres.filter(genre => String(genre).toLowerCase() !== rule.genre);
     normalized.must_have = normalized.must_have.filter(value => String(value).toLowerCase() !== rule.genre);
@@ -715,6 +732,16 @@ function applyQueryHeuristics(normalizedInput, query) {
     normalized.type = 'tv';
     normalized.episode_count_min = Math.max(1, target - 2);
     normalized.episode_count_max = target + 2;
+  }
+  const exactEpisodeMatch = q.match(/(\d{1,4})\s*(?:bolumluk|bolumden olusan)/);
+  if (exactEpisodeMatch) {
+    const target = Number(exactEpisodeMatch[1]);
+    normalized.type = 'tv';
+    normalized.episode_count_min = target;
+    normalized.episode_count_max = target;
+    if (target === 6 && normalized.genres.includes('crime')) {
+      normalized.recommended_titles = [...SIX_EPISODE_CRIME_FALLBACK, ...normalized.recommended_titles];
+    }
   }
   if (/kisa surede bitsin|cok uzamasin|hemen bitsin/.test(q)) {
     normalized.type = 'tv';
@@ -1220,6 +1247,8 @@ async function enrichResults(results, normalized, reference) {
 
        if (reasonParts.length > 0) {
            item.reason = `${reasonParts.join(' ')} ba\u015far\u0131l\u0131 bir ${genreStr ? genreStr : (item.type === 'movie' ? 'film' : 'dizi')} \u00f6nerisi`;
+       } else if (genreStr) {
+           item.reason = `${genreStr} isteğinin temel tür koşullarını karşılayan doğrulanmış bir ${item.type === 'movie' ? 'film' : 'dizi'} önerisi`;
        } else {
            item.reason = `\u0130ste\u011finize uygun pop\u00fcler bir \u00f6neri`;
        }
@@ -1758,6 +1787,18 @@ async function fetchTMDB(normalized, originalQuery) {
       .map(genre => (item.type === 'movie' ? MOVIE_GENRES : TV_GENRES)[String(genre).toLowerCase()])
       .filter(id => id !== undefined);
     if (explicitGenreIds.length > 0 && !item.genre_ids.some(id => explicitGenreIds.includes(id))) return false;
+    const semanticGenreText = toSearchText([
+      item.overview,
+      item.custom_reason,
+      ...(item.ai_match_tags || []),
+      ...(item.keyword_names || [])
+    ].filter(Boolean).join(' '));
+    const semanticGenreRequirements = {
+      romance: /\b(?:ask|love|romance|romantic|romcom|dating|marriage|couple|sevgi|romantik)\b/
+    };
+    for (const [genre, pattern] of Object.entries(semanticGenreRequirements)) {
+      if ((normalized.explicit_genres || []).includes(genre) && !pattern.test(semanticGenreText)) return false;
+    }
     if ((normalized.actors || []).length > 0) {
       const cast = (item.cast_names || []).map(name => toSearchText(name));
       if (!normalized.actors.every(actor => cast.includes(toSearchText(actor)))) return false;

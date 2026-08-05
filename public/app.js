@@ -20,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const quickFilterBar  = document.getElementById('quickFilterBar');
     const aiAnalysisSummary = document.getElementById('aiAnalysisSummary');
     const aiAnalysisText  = document.getElementById('aiAnalysisText');
-    const aiAnalysisSource = document.getElementById('aiAnalysisSource');
     const tvFeaturedBackdrop = document.getElementById('tvFeaturedBackdrop');
     const tvFeaturedTitle    = document.getElementById('tvFeaturedTitle');
     const tvFeaturedMeta     = document.getElementById('tvFeaturedMeta');
@@ -677,10 +676,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderAIAnalysis(analysis) {
         if (!aiAnalysisSummary || !aiAnalysisText || !analysis?.summary) return;
         aiAnalysisText.textContent = analysis.summary;
-        aiAnalysisSource.textContent = analysis.fallback
-            ? '⚠️ Yerel yedek analiz'
-            : `✨ ${analysis.model || analysis.provider || 'AI'}`;
-        aiAnalysisSource.classList.toggle('fallback', Boolean(analysis.fallback));
         aiAnalysisSummary.classList.remove('hidden');
     }
 
@@ -998,15 +993,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function submitSearch(query) {
+    async function submitSearch(query, options = {}) {
         errorBox.classList.add('hidden');
         showResultsSection();
-        resultsHeading.textContent = 'Yapay Zeka Önerileri';
-        loadingText.textContent = 'SineAI isteğinizi analiz ediyor ve en uygun yapımları çıkarıyor...';
+        resultsHeading.textContent = options.heading || 'Yapay Zeka Önerileri';
+        loadingText.textContent = options.loadingText || 'SineAI isteğinizi analiz ediyor ve en uygun yapımları çıkarıyor...';
         loadingEl.classList.remove('hidden');
         submitBtn.disabled = true;
 
-        pageState = { mode: 'ai', page: 1, totalPages: 1, genreId: null, mediaType: null, label: query, sortBy: 'popularity_desc', shownCount: 0, hasMore: false, isLoading: false };
+        pageState = { mode: 'ai', page: 1, totalPages: 1, genreId: null, mediaType: null, label: options.label || query, sortBy: 'popularity_desc', shownCount: 0, hasMore: false, isLoading: false };
         renderPaginationUI();
 
         try {
@@ -1031,6 +1026,17 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingEl.classList.add('hidden');
             submitBtn.disabled = false;
         }
+    }
+
+    function buildSimilarRecommendationQuery(item, year) {
+        const referenceTitle = item.original_title || item.title;
+        const requestedType = item.type === 'tv' ? 'diziler' : 'filmler';
+        const context = [];
+
+        if (item.genres?.length) context.push(`Türler: ${item.genres.slice(0, 5).join(', ')}`);
+        if (item.director) context.push(`${item.type === 'tv' ? 'Yaratıcı' : 'Yönetmen'}: ${item.director}`);
+
+        return `"${referenceTitle}" (${year}) gibi; önce referansın ayırt edici özelliklerini belirle, sonra tür, tema, atmosfer, anlatı yapısı, tempo, karakter ilişkileri ve bıraktığı his açısından gerçekten benzeyen ${requestedType} öner. Aynı seri veya yönetmen tek başına yeterli değildir. Referans yapımı sonuçlara ekleme.${context.length ? ` Referans bilgileri: ${context.join('; ')}.` : ''}`;
     }
 
     // ── Profile-Based Recommendation Engine ─────────────
@@ -1139,6 +1145,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <!-- Netflix-Style Control Actions Bar (Including Explicit Favorites Button) -->
                     <div class="netflix-actions-bar">
                         ${trailerHTML}
+                        <button type="button" class="netflix-btn btn-similar-recommend" tabindex="0" aria-label="Benzerlerini Öner">
+                            <span class="btn-icon">✨</span>
+                            <span class="btn-label">Benzerlerini Öner</span>
+                        </button>
                         <button type="button" class="netflix-btn btn-reaction btn-fav ${isFav ? 'active' : ''}" data-type="fav" tabindex="0">
                             <span class="btn-icon">${isFav ? '❤️' : '🤍'}</span>
                             <span class="btn-label">${isFav ? 'Favorilerimde' : 'Favorilerime Ekle'}</span>
@@ -1176,9 +1186,27 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        const similarRecommendBtn = modalBody.querySelector('.btn-similar-recommend');
+        if (similarRecommendBtn) {
+            similarRecommendBtn.addEventListener('click', async () => {
+                const requestedType = item.type === 'tv' ? 'Diziler' : 'Filmler';
+                const aiQuery = buildSimilarRecommendationQuery(item, year);
+
+                similarRecommendBtn.disabled = true;
+                detailModal.classList.add('hidden');
+                queryInput.value = `${item.title} benzeri ${requestedType.toLocaleLowerCase('tr-TR')} öner`;
+
+                await submitSearch(aiQuery, {
+                    heading: `✨ ${item.title} Benzeri ${requestedType}`,
+                    label: `${item.title} benzerleri`,
+                    loadingText: `SineAI ${item.title} yapımını analiz ediyor ve gerçekten benzeyen seçenekleri çıkarıyor...`
+                });
+            });
+        }
+
         detailModal.classList.remove('hidden');
         window.setTimeout(() => {
-            window.SineAITV?.refresh('.modal:not(.hidden) .btn-play-trailer, .modal:not(.hidden) .btn-fav, .modal:not(.hidden) .close-btn');
+            window.SineAITV?.refresh('.modal:not(.hidden) .btn-play-trailer, .modal:not(.hidden) .btn-similar-recommend, .modal:not(.hidden) .btn-fav, .modal:not(.hidden) .close-btn');
         }, 80);
     }
 

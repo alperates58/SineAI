@@ -133,6 +133,7 @@
         if (modal) {
             const modalPreferred = [
                 '.btn-play-trailer',
+                '.btn-similar-recommend',
                 '.btn-fav',
                 '.netflix-btn',
                 '.auth-tab.active',
