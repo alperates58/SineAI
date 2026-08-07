@@ -64,6 +64,10 @@
     let cacheRoot = null;
     let candidateCache = [];
     let rowItemsCache = new Map();
+    let laneItemsCache = new Map();
+    let laneOrderCache = [];
+    let activeSection = null;
+    const sectionLastFocus = new WeakMap();
 
     function activeModal() {
         const modals = document.querySelectorAll('.modal:not(.hidden), .update-modal:not(.hidden)');
@@ -74,8 +78,95 @@
         return activeModal() || document.body;
     }
 
+    function markTvSection(element, name, preferredSelector) {
+        if (!element) return;
+        element.dataset.tvSection = name;
+        element.classList.add('tv-page-section');
+        if (preferredSelector) element.dataset.tvPreferred = preferredSelector;
+    }
+
+    function prepareTvLayout() {
+        const discover = document.getElementById('discoverSection');
+        const featured = document.getElementById('tvFeatured');
+        const header = document.querySelector('.app-header');
+        const topNav = document.querySelector('.top-nav-bar');
+        const searchArea = document.getElementById('heroSearchArea');
+
+        if (discover && featured && header && header.parentElement !== discover) {
+            featured.insertAdjacentElement('afterend', header);
+        }
+        if (featured && topNav && topNav.parentElement !== featured) {
+            topNav.classList.add('tv-hero-nav');
+            featured.prepend(topNav);
+        }
+        if (searchArea && !searchArea.querySelector('.tv-search-intro')) {
+            const intro = document.createElement('div');
+            intro.className = 'tv-search-intro';
+            intro.innerHTML = `
+                <div class="tv-eyebrow">SINEAI KEŞİF</div>
+                <h2>Bu gece ne izlemek istersin?</h2>
+                <p>Bir tür, ruh hâli veya sevdiğin bir yapımı söyle. Sana uygun seçkiyi saniyeler içinde hazırlayalım.</p>
+            `;
+            searchArea.prepend(intro);
+        }
+
+        markTvSection(featured, 'featured', '#tvFeaturedOpen');
+        markTvSection(header, 'search', '.mode-tab.active');
+        discover?.querySelectorAll('.row-section').forEach((section, index) => {
+            markTvSection(section, `discover-row-${index}`, '.movie-card, .genre-chip');
+        });
+
+        const results = document.getElementById('resultsSection');
+        if (results && !results.querySelector('.tv-results-controls-section')) {
+            const controls = document.createElement('section');
+            controls.className = 'tv-results-controls-section';
+            const firstControl = results.querySelector('.results-hero-header');
+            if (firstControl) results.insertBefore(controls, firstControl);
+            [
+                results.querySelector('.results-hero-header'),
+                document.getElementById('aiAnalysisSummary'),
+                results.querySelector('.saas-results-toolbar')
+            ].filter(Boolean).forEach(element => controls.appendChild(element));
+
+            const content = document.createElement('section');
+            content.className = 'tv-results-content-section';
+            const firstContent = document.getElementById('loading') || document.getElementById('resultsGrid');
+            if (firstContent) results.insertBefore(content, firstContent);
+            [
+                document.getElementById('loading'),
+                document.getElementById('resultsGrid'),
+                document.getElementById('paginationBar'),
+                document.getElementById('scrollSentinel')
+            ].filter(Boolean).forEach(element => content.appendChild(element));
+        }
+        markTvSection(results?.querySelector('.tv-results-controls-section'), 'results-controls', '.filter-pill.active, .saas-back-btn');
+        markTvSection(results?.querySelector('.tv-results-content-section'), 'results-content', '.movie-card, .pagination-btn');
+
+        const profile = document.getElementById('profileSection');
+        if (profile && !profile.querySelector('.tv-profile-overview-section')) {
+            const overview = document.createElement('section');
+            overview.className = 'tv-profile-overview-section';
+            const profileHeader = profile.querySelector('.profile-page-header');
+            if (profileHeader) profile.insertBefore(overview, profileHeader);
+            [profileHeader, profile.querySelector('.profile-dashboard-grid')]
+                .filter(Boolean)
+                .forEach(element => overview.appendChild(element));
+        }
+        markTvSection(profile?.querySelector('.tv-profile-overview-section'), 'profile-overview', '#profileRecommendBtn, #profileBackBtn');
+        markTvSection(profile?.querySelector('.profile-gallery-section'), 'profile-gallery', '.movie-card');
+    }
+
     function rowFor(element) {
         return element?.closest?.(ROW_SELECTOR) || null;
+    }
+
+    function sectionFor(element) {
+        if (activeModal()) return null;
+        return element?.closest?.('[data-tv-section]') || null;
+    }
+
+    function laneFor(element) {
+        return rowFor(element) || element;
     }
 
     function isAvailable(element, root = activeRoot()) {
@@ -120,17 +211,29 @@
         const list = Array.from(root.querySelectorAll(CANDIDATE_SELECTOR))
             .filter(element => isAvailable(element, root));
         const rows = new Map();
+        const lanes = new Map();
+        const laneOrder = [];
 
         for (const element of list) {
             const row = rowFor(element);
-            if (!row) continue;
-            if (!rows.has(row)) rows.set(row, []);
-            rows.get(row).push(element);
+            if (row) {
+                if (!rows.has(row)) rows.set(row, []);
+                rows.get(row).push(element);
+            }
+
+            const lane = laneFor(element);
+            if (!lanes.has(lane)) {
+                lanes.set(lane, []);
+                laneOrder.push(lane);
+            }
+            lanes.get(lane).push(element);
         }
 
         cacheRoot = root;
         candidateCache = list;
         rowItemsCache = rows;
+        laneItemsCache = lanes;
+        laneOrderCache = laneOrder;
         cacheDirty = false;
         return list;
     }
@@ -158,6 +261,15 @@
             if (Math.abs(deltaX) > 1) horizontal.scrollLeft += deltaX;
         }
 
+        const section = sectionFor(element);
+        if (section) {
+            const sectionTop = section.getBoundingClientRect().top + window.scrollY;
+            if (Math.abs(window.scrollY - sectionTop) > 1) {
+                window.scrollTo({ top: Math.max(0, sectionTop), behavior: 'auto' });
+            }
+            return;
+        }
+
         const rect = element.getBoundingClientRect();
         const topSafe = Math.max(70, window.innerHeight * 0.14);
         const bottomSafe = window.innerHeight * 0.84;
@@ -179,13 +291,23 @@
             activeRow = nextRow;
         }
 
+        const nextSection = sectionFor(element);
+        if (activeSection !== nextSection) {
+            activeSection?.classList.remove('tv-section-active');
+            nextSection?.classList.add('tv-section-active');
+            activeSection = nextSection;
+        }
+
         try {
             element.focus({ preventScroll: true });
         } catch (_error) {
             element.focus();
         }
 
-        if (!activeModal()) lastContentFocus = element;
+        if (!activeModal()) {
+            lastContentFocus = element;
+            if (nextSection) sectionLastFocus.set(nextSection, element);
+        }
         scrollFocusedIntoView(element);
         return document.activeElement === element;
     }
@@ -213,7 +335,7 @@
             ? ['#resultsGrid .movie-card', '.filter-pill.active', '#query', '.saas-back-btn']
             : view === 'profile'
                 ? ['#profileFavGrid .movie-card', '#profileRecommendBtn', '#profileBackBtn']
-                : ['#voiceBtn', '#query', '#tvFeaturedOpen', '#popularMoviesRow .movie-card', '.mode-tab.active'];
+                : ['#tvFeaturedOpen', '.mode-tab.active', '#query', '#popularMoviesRow .movie-card'];
 
         for (const selector of selectors) {
             const found = document.querySelector(selector);
@@ -240,6 +362,45 @@
         if (direction === 'left' && index > 0) return rowItems[index - 1];
         if (direction === 'right' && index < rowItems.length - 1) return rowItems[index + 1];
         return current;
+    }
+
+    function verticalLaneTarget(current, direction, list) {
+        const currentLane = laneFor(current);
+        const currentIndex = laneOrderCache.indexOf(currentLane);
+        if (currentIndex < 0) return null;
+
+        const step = direction === 'up' ? -1 : 1;
+        const currentSection = sectionFor(current);
+        const currentRect = current.getBoundingClientRect();
+        const currentX = currentRect.left + (currentRect.width / 2);
+
+        for (let index = currentIndex + step; index >= 0 && index < laneOrderCache.length; index += step) {
+            const lane = laneOrderCache[index];
+            const laneItems = (laneItemsCache.get(lane) || []).filter(item => list.includes(item));
+            if (!laneItems.length) continue;
+
+            const targetSection = sectionFor(laneItems[0]);
+            if (targetSection && targetSection !== currentSection) {
+                const remembered = sectionLastFocus.get(targetSection);
+                if (remembered && list.includes(remembered)) return remembered;
+
+                const preferredSelector = targetSection.dataset.tvPreferred;
+                if (preferredSelector) {
+                    const preferred = targetSection.querySelector(preferredSelector);
+                    if (preferred && list.includes(preferred)) return preferred;
+                }
+            }
+
+            return laneItems.reduce((best, candidate) => {
+                const rect = candidate.getBoundingClientRect();
+                const x = rect.left + (rect.width / 2);
+                if (!best) return candidate;
+                const bestRect = best.getBoundingClientRect();
+                const bestX = bestRect.left + (bestRect.width / 2);
+                return Math.abs(x - currentX) < Math.abs(bestX - currentX) ? candidate : best;
+            }, null);
+        }
+        return null;
     }
 
     function spatialTarget(current, direction, list) {
@@ -307,6 +468,11 @@
         if (direction === 'left' || direction === 'right') {
             const rowTarget = sameRowTarget(current, direction);
             if (rowTarget) return rowTarget === current || focusElement(rowTarget);
+        }
+
+        if ((direction === 'up' || direction === 'down') && !activeModal()) {
+            const laneTarget = verticalLaneTarget(current, direction, list);
+            return laneTarget ? focusElement(laneTarget) : true;
         }
 
         const target = spatialTarget(current, direction, list);
@@ -398,6 +564,26 @@
         ].includes(name));
     }
 
+    function ensureDetailCinematicLayer() {
+        const modal = document.getElementById('detailModal');
+        if (!modal || modal.classList.contains('hidden')) return;
+
+        const body = modal.querySelector('.modal-body');
+        if (!body || body.querySelector('.modal-cinematic-backdrop')) return;
+
+        const poster = body.querySelector('.modal-poster img');
+        const source = poster?.currentSrc || poster?.src || '';
+        const backdrop = document.createElement('div');
+        const shade = document.createElement('div');
+        backdrop.className = 'modal-cinematic-backdrop tv-poster-fallback';
+        shade.className = 'modal-cinematic-shade';
+        backdrop.setAttribute('aria-hidden', 'true');
+        shade.setAttribute('aria-hidden', 'true');
+        if (source) backdrop.style.backgroundImage = `url("${source.replace('/w500/', '/w780/')}")`;
+        body.prepend(shade);
+        body.prepend(backdrop);
+    }
+
     function scheduleRefresh(preferredSelector) {
         cacheDirty = true;
         if (preferredSelector) pendingPreferredSelector = preferredSelector;
@@ -405,6 +591,7 @@
 
         refreshFrame = requestAnimationFrame(() => {
             refreshFrame = null;
+            ensureDetailCinematicLayer();
             const list = rebuildCandidateCache();
             const root = activeRoot();
             const modalJustOpened = root !== document.body && root !== navigationRoot;
@@ -446,6 +633,7 @@
         enabled = Boolean(flag);
         document.body.classList.toggle('tv-nav-ready', enabled);
         document.body.classList.toggle('tv-focus-active', enabled);
+        document.documentElement.classList.toggle('tv-nav-ready', enabled);
 
         if (!enabled) {
             observer?.disconnect();
@@ -453,10 +641,13 @@
             document.querySelector('.tv-remote-hint')?.remove();
             candidateCache = [];
             rowItemsCache.clear();
+            laneItemsCache.clear();
+            laneOrderCache = [];
             cacheDirty = true;
             return false;
         }
 
+        prepareTvLayout();
         decorateFocusableElements(document.body);
         navigationRoot = activeRoot();
         addRemoteHint();

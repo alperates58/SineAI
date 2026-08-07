@@ -1222,8 +1222,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Netflix-Style Detail Modal & Explicit Favorites Bar ─────────
     function showModal(item, year, typeStr, rating, badgesHTML) {
         const posterUrl  = item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : null;
+        const backdropPath = item.backdrop || item.poster;
+        const backdropUrl = backdropPath
+            ? `https://image.tmdb.org/t/p/${item.backdrop ? 'w1280' : 'w780'}${backdropPath}`
+            : '';
         const posterHTML = posterUrl
-            ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="lazy">`
+            ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="lazy" decoding="async">`
             : `<div class="no-poster">Afiş Bulunamadı</div>`;
 
         const genresHTML = item.genres?.length > 0
@@ -1246,6 +1250,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ? `<button type="button" class="netflix-btn btn-play-trailer" tabindex="0">▶️ Fragmanı Oynat</button>` : '';
 
         modalBody.innerHTML = `
+            <div class="modal-cinematic-backdrop"${backdropUrl ? ` style="background-image:url('${backdropUrl}')"` : ''}></div>
+            <div class="modal-cinematic-shade"></div>
             <div class="modal-layout">
                 <div class="modal-poster">${posterHTML}</div>
                 <div class="modal-info">
