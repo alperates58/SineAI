@@ -18,3 +18,5 @@ android-tv/local.properties
 android-tv/app/build/
 
 scratch/
+backups/
+

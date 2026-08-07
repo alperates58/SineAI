@@ -1,18 +1,23 @@
 (function () {
     'use strict';
 
-    const TV_CONTRACT_VERSION = 2;
-    const TV_ASSET_VERSION = '2.0.0';
+    const TV_CONTRACT_VERSION = 3;
+    const TV_ASSET_VERSION = '3.0.0';
 
     // Candidate selector for D-pad focus graph.
     // NOTE: Input, textarea, select are intentionally EXCLUDED from default directional navigation
-    // to prevent unwanted soft-keyboard popup on Android TV. They are accessed via explicit edit mode.
+    // to prevent unwanted soft-keyboard popup on Android TV. They are accessed strictly via text entry mode.
     const CANDIDATE_SELECTOR = [
         '[data-tv-focusable="true"]',
         '.movie-card',
         '.genre-chip',
         '.see-all',
+        '.tv-card-action',
+        '.tv-nav-link',
         '.tv-input-trigger',
+        '.pill',
+        '.mode-tab',
+        '.filter-pill',
         'button:not([disabled]):not(.tv-skip-focus)',
         'a[href]:not(.tv-skip-focus)',
         '[tabindex="0"]:not(.tv-skip-focus)'
@@ -35,6 +40,7 @@
         '.search-bottom-bar',
         '.top-nav-bar',
         '.profile-ai-actions',
+        '.tv-discovery-cards',
         '.adv-actions'
     ].join(',');
 
@@ -46,7 +52,8 @@
         '.quick-filter-bar',
         '.netflix-actions-bar',
         '.adv-genres-grid',
-        '.page-numbers-container'
+        '.page-numbers-container',
+        '.tv-discovery-cards'
     ].join(',');
 
     const DIRECTION_KEYS = {
@@ -71,17 +78,24 @@
     let laneItemsCache = new Map();
     let laneOrderCache = [];
     let activeSection = null;
-    let isTextEditMode = false;
+    let tvTextEntryMode = false;
     let currentInputTarget = null;
-    const sectionLastFocus = new WeakMap();
+    let triggerSourceCard = null;
 
-    // Check debug flag ?tv=1&focusDebug=1
+    // Focus Memory per section
+    const focusMemory = {
+        home: null,
+        ai: null,
+        results: null,
+        profile: null,
+        detail: null
+    };
+
+    const sectionLastFocus = new WeakMap();
     const isDebug = new URLSearchParams(window.location.search).get('focusDebug') === '1';
 
     function debugLog(...args) {
-        if (isDebug) {
-            console.log('[TV Focus]', ...args);
-        }
+        if (isDebug) console.log('[SineAI TV]', ...args);
     }
 
     function activeModal() {
@@ -100,6 +114,7 @@
         if (preferredSelector) element.dataset.tvPreferred = preferredSelector;
     }
 
+    // Build TV Navigation Header & Discovery Card Structure
     function prepareTvLayout() {
         const discover = document.getElementById('discoverSection');
         const featured = document.getElementById('tvFeatured');
@@ -108,25 +123,67 @@
         const searchArea = document.getElementById('heroSearchArea');
         const queryTextarea = document.getElementById('query');
 
-        // Setup fixed header top-nav-bar if not already created
+        // Setup Minimal Top Navigation Bar
         if (topNav) {
             topNav.classList.add('tv-fixed-header');
             if (topNav.parentElement !== document.body) {
                 document.body.prepend(topNav);
             }
+
+            // Create TV Header navigation links if missing
+            if (!topNav.querySelector('.tv-nav-links')) {
+                const navLinks = document.createElement('div');
+                navLinks.className = 'tv-nav-links';
+                navLinks.innerHTML = `
+                    <button type="button" class="tv-nav-link active" data-tv-target="home" tabindex="0">Ana Sayfa</button>
+                    <button type="button" class="tv-nav-link" data-tv-target="ai" tabindex="0">✨ AI Keşfet</button>
+                    <button type="button" class="tv-nav-link" data-tv-target="movies" tabindex="0">Filmler</button>
+                    <button type="button" class="tv-nav-link" data-tv-target="tv" tabindex="0">Diziler</button>
+                `;
+                topNav.insertBefore(navLinks, topNav.querySelector('.auth-nav-area'));
+
+                // Handle nav link clicks
+                navLinks.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.tv-nav-link');
+                    if (!btn) return;
+                    navLinks.querySelectorAll('.tv-nav-link').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    const target = btn.dataset.tvTarget;
+                    if (target === 'home') {
+                        const featuredOpen = document.getElementById('tvFeaturedOpen');
+                        if (featuredOpen) focusElement(featuredOpen);
+                    } else if (target === 'ai') {
+                        const queryTrigger = document.getElementById('tvQueryTrigger');
+                        if (queryTrigger) focusElement(queryTrigger);
+                    } else if (target === 'movies') {
+                        const moviesRow = document.getElementById('popularMoviesRow');
+                        if (moviesRow) {
+                            const firstCard = moviesRow.querySelector('.movie-card');
+                            if (firstCard) focusElement(firstCard);
+                        }
+                    } else if (target === 'tv') {
+                        const tvRow = document.getElementById('popularTvRow');
+                        if (tvRow) {
+                            const firstCard = tvRow.querySelector('.movie-card');
+                            if (firstCard) focusElement(firstCard);
+                        }
+                    }
+                });
+            }
         }
 
-        // Add explicit text input trigger button if missing to avoid auto-keyboard on navigation
+        // Add explicit text input trigger button (Text Entry Mode Gatekeeper)
         if (searchArea && queryTextarea && !document.getElementById('tvQueryTrigger')) {
             const triggerBtn = document.createElement('button');
             triggerBtn.type = 'button';
             triggerBtn.id = 'tvQueryTrigger';
             triggerBtn.className = 'tv-input-trigger';
             triggerBtn.setAttribute('tabindex', '0');
-            triggerBtn.innerHTML = '✏️ <span>İsteğini Yaz / Klavye Aç</span>';
+            triggerBtn.innerHTML = '🎙️ <span>Söyle / Yaz</span>';
             queryTextarea.parentElement.insertBefore(triggerBtn, queryTextarea);
-            
-            // Textarea is hidden from direct D-pad focus until trigger is activated
+
+            // Hide raw input from D-pad candidate graph
             queryTextarea.classList.add('tv-hidden-input');
 
             triggerBtn.addEventListener('click', (e) => {
@@ -135,21 +192,84 @@
             });
         }
 
+        // Insert AI Discovery intro header
         if (searchArea && !searchArea.querySelector('.tv-search-intro')) {
             const intro = document.createElement('div');
             intro.className = 'tv-search-intro';
             intro.innerHTML = `
-                <div class="tv-eyebrow">SINEAI KEŞİF</div>
-                <h2>Bu gece ne izlemek istersin?</h2>
-                <p>Bir tür, ruh hâli veya sevdiğin bir yapımı söyle. Sana uygun seçkiyi saniyeler içinde hazırlayalım.</p>
+                <div class="tv-eyebrow">SINEAI KEŞFET</div>
+                <h2>Bu gece ne izlemek istiyorsun?</h2>
+                <p>Ruh hâlini, bir türü veya sevdiğin bir yapımı söyle. Sana özel seçkiyi saniyeler içinde hazırlayalım.</p>
             `;
             searchArea.prepend(intro);
         }
 
-        markTvSection(featured, 'featured', '#tvFeaturedOpen');
-        markTvSection(header, 'search', '.mode-tab.active, #tvQueryTrigger');
-        discover?.querySelectorAll('.row-section').forEach((section, index) => {
-            markTvSection(section, `discover-row-${index}`, '.movie-card, .genre-chip');
+        // Add TV Discovery Cards Section below Hero
+        if (discover && featured && !document.getElementById('tvDiscoverySection')) {
+            const discSec = document.createElement('section');
+            discSec.id = 'tvDiscoverySection';
+            discSec.className = 'row-section container tv-discovery-section';
+            discSec.innerHTML = `
+                <div class="section-head">
+                    <div class="section-title"><span class="section-dot"></span>SineAI ile Keşfet</div>
+                </div>
+                <div class="tv-discovery-cards" data-tv-row="discovery-row">
+                    <button type="button" class="tv-card-action" id="btnAiDiscover" tabindex="0">
+                        <span class="tv-card-icon">✨</span>
+                        <div class="tv-card-text">
+                            <strong>AI ile Bul</strong>
+                            <span>Ne istediğini söyle</span>
+                        </div>
+                    </button>
+                    <button type="button" class="tv-card-action" id="btnDirectSearch" tabindex="0">
+                        <span class="tv-card-icon">🔎</span>
+                        <div class="tv-card-text">
+                            <strong>İsme Göre Ara</strong>
+                            <span>TMDB veritabanında ara</span>
+                        </div>
+                    </button>
+                    <button type="button" class="tv-card-action" id="btnFilterSearch" tabindex="0">
+                        <span class="tv-card-icon">🎛️</span>
+                        <div class="tv-card-text">
+                            <strong>Filtrele</strong>
+                            <span>Tür, yıl ve puan seç</span>
+                        </div>
+                    </button>
+                </div>
+            `;
+            featured.insertAdjacentElement('afterend', discSec);
+
+            // Bind Discovery Card Clicks
+            discSec.querySelector('#btnAiDiscover')?.addEventListener('click', () => {
+                const searchIntro = document.querySelector('.tv-search-intro');
+                if (searchIntro) {
+                    window.scrollTo({ top: searchIntro.getBoundingClientRect().top + window.scrollY - 90, behavior: 'auto' });
+                    const trigger = document.getElementById('tvQueryTrigger');
+                    if (trigger) focusElement(trigger);
+                }
+            });
+
+            discSec.querySelector('#btnDirectSearch')?.addEventListener('click', () => {
+                const directTab = document.querySelector('.mode-tab[data-mode="direct"]');
+                if (directTab) {
+                    directTab.click();
+                    const searchIntro = document.querySelector('.tv-search-intro');
+                    if (searchIntro) window.scrollTo({ top: searchIntro.getBoundingClientRect().top + window.scrollY - 90, behavior: 'auto' });
+                    const trigger = document.getElementById('tvQueryTrigger');
+                    if (trigger) focusElement(trigger);
+                }
+            });
+
+            discSec.querySelector('#btnFilterSearch')?.addEventListener('click', () => {
+                document.getElementById('openAdvSearchBtn')?.click();
+            });
+        }
+
+        markTvSection(featured, 'tv-hero', '#tvFeaturedOpen');
+        markTvSection(document.getElementById('tvDiscoverySection'), 'tv-discovery', '#btnAiDiscover');
+        markTvSection(header, 'tv-ai-prompt', '#tvQueryTrigger, .mode-tab.active');
+        discover?.querySelectorAll('.row-section:not(.tv-discovery-section)').forEach((section, index) => {
+            markTvSection(section, `tv-row-${index}`, '.movie-card, .genre-chip');
         });
 
         const results = document.getElementById('resultsSection');
@@ -175,8 +295,8 @@
                 document.getElementById('scrollSentinel')
             ].filter(Boolean).forEach(element => content.appendChild(element));
         }
-        markTvSection(results?.querySelector('.tv-results-controls-section'), 'results-controls', '.filter-pill.active, .saas-back-btn');
-        markTvSection(results?.querySelector('.tv-results-content-section'), 'results-content', '.movie-card, .pagination-btn');
+        markTvSection(results?.querySelector('.tv-results-controls-section'), 'tv-ai-results-controls', '.filter-pill.active, .saas-back-btn');
+        markTvSection(results?.querySelector('.tv-results-content-section'), 'tv-ai-results-content', '.movie-card, .pagination-btn');
 
         const profile = document.getElementById('profileSection');
         if (profile && !profile.querySelector('.tv-profile-overview-section')) {
@@ -188,28 +308,28 @@
                 .filter(Boolean)
                 .forEach(element => overview.appendChild(element));
         }
-        markTvSection(profile?.querySelector('.tv-profile-overview-section'), 'profile-overview', '#profileRecommendBtn, #profileBackBtn');
-        markTvSection(profile?.querySelector('.profile-gallery-section'), 'profile-gallery', '.movie-card');
+        markTvSection(profile?.querySelector('.tv-profile-overview-section'), 'tv-profile-overview', '#profileRecommendBtn, #profileBackBtn');
+        markTvSection(profile?.querySelector('.profile-gallery-section'), 'tv-profile-gallery', '.movie-card');
     }
 
     function enterTextEditMode(inputElement) {
         if (!inputElement) return;
-        isTextEditMode = true;
+        tvTextEntryMode = true;
         currentInputTarget = inputElement;
         inputElement.classList.remove('tv-hidden-input');
         inputElement.focus();
-        debugLog('Entered Text Edit Mode for:', inputElement.id);
+        debugLog('Entered Text Entry Mode for:', inputElement.id);
     }
 
     function exitTextEditMode() {
-        if (!isTextEditMode) return false;
+        if (!tvTextEntryMode) return false;
         if (currentInputTarget) {
             currentInputTarget.blur();
             currentInputTarget.classList.add('tv-hidden-input');
         }
-        isTextEditMode = false;
+        tvTextEntryMode = false;
         currentInputTarget = null;
-        debugLog('Exited Text Edit Mode');
+        debugLog('Exited Text Entry Mode');
         const trigger = document.getElementById('tvQueryTrigger') || lastContentFocus;
         if (trigger) focusElement(trigger);
         return true;
@@ -232,10 +352,10 @@
         if (!(element instanceof HTMLElement)) return false;
         if (!element.isConnected || element.classList.contains('tv-skip-focus')) return false;
         if (element.matches('.movie-card .fav-btn')) return false;
-        
-        // Skip inputs/textarea/select from standard D-pad candidates unless explicitly in text mode
-        if (element.matches('textarea, input, select') && !isTextEditMode) return false;
-        
+
+        // CRITICAL: Input, textarea, select ARE ABSOLUTELY EXCLUDED FROM D-PAD CANDIDATES UNLESS IN TEXT ENTRY MODE
+        if (element.matches('textarea, input, select') && !tvTextEntryMode) return false;
+
         if (element.closest('.hidden, [aria-hidden="true"]')) return false;
         if (element.hasAttribute('disabled')) return false;
         if (root !== document.body && !root.contains(element)) return false;
@@ -262,18 +382,27 @@
             button.classList.add('tv-skip-focus');
         });
 
-        // Ensure input fields inside auth or adv modal have explicit focus handling
+        // Add explicit card click memory listener to restore focus on BACK
+        scope.querySelectorAll('.movie-card:not([data-tv-memory-bound])').forEach(card => {
+            card.dataset.tvMemoryBound = 'true';
+            card.addEventListener('click', () => {
+                triggerSourceCard = card;
+                focusMemory.detail = card;
+            });
+        });
+
+        // Ensure modal inputs have bound focus/blur listeners
         scope.querySelectorAll('input:not([data-tv-input-bound]), textarea:not([data-tv-input-bound])').forEach(input => {
             input.dataset.tvInputBound = 'true';
             input.addEventListener('focus', () => {
-                if (!isTextEditMode) {
-                    isTextEditMode = true;
+                if (!tvTextEntryMode) {
+                    tvTextEntryMode = true;
                     currentInputTarget = input;
                 }
             });
             input.addEventListener('blur', () => {
                 if (currentInputTarget === input) {
-                    isTextEditMode = false;
+                    tvTextEntryMode = false;
                     currentInputTarget = null;
                 }
             });
@@ -324,8 +453,8 @@
         return candidateCache;
     }
 
-    // Unified horizontal & vertical scroll for focused element with safe viewport margins
-    function scrollFocusedIntoView(element) {
+    // Unified Element Visibility (ensureTvElementVisible)
+    function ensureTvElementVisible(element) {
         if (!element) return;
 
         // 1. Horizontal container scrolling (Action bar, Movie rows, Filter chips)
@@ -351,9 +480,9 @@
         const section = sectionFor(element);
         if (section) {
             const sectionTop = section.getBoundingClientRect().top + window.scrollY;
-            const topHeaderOffset = 70; // Header safe offset
+            const topHeaderOffset = 80;
             const targetY = Math.max(0, sectionTop - topHeaderOffset);
-            
+
             if (Math.abs(window.scrollY - targetY) > 8) {
                 window.scrollTo({ top: targetY, behavior: 'auto' });
             }
@@ -400,7 +529,6 @@
             element.focus();
         }
 
-        // Add tv-focused visual feedback class
         document.querySelectorAll('.tv-focused').forEach(el => el.classList.remove('tv-focused'));
         element.classList.add('tv-focused');
 
@@ -408,9 +536,9 @@
             lastContentFocus = element;
             if (nextSection) sectionLastFocus.set(nextSection, element);
         }
-        
+
         debugLog('Focus ->', element.tagName, element.id || element.className);
-        scrollFocusedIntoView(element);
+        ensureTvElementVisible(element);
         return document.activeElement === element;
     }
 
@@ -437,7 +565,7 @@
             ? ['#resultsGrid .movie-card', '.filter-pill.active', '#tvQueryTrigger', '.saas-back-btn']
             : view === 'profile'
                 ? ['#profileFavGrid .movie-card', '#profileRecommendBtn', '#profileBackBtn']
-                : ['#tvFeaturedOpen', '.mode-tab.active', '#tvQueryTrigger', '#popularMoviesRow .movie-card'];
+                : ['#tvFeaturedOpen', '#btnAiDiscover', '.mode-tab.active', '#tvQueryTrigger', '#popularMoviesRow .movie-card'];
 
         for (const selector of selectors) {
             const found = document.querySelector(selector);
@@ -550,8 +678,8 @@
             const overlap = (direction === 'up' || direction === 'down')
                 ? Math.max(0, Math.min(currentRect.right, rect.right) - Math.max(currentRect.left, rect.left))
                 : Math.max(0, Math.min(currentRect.bottom, rect.bottom) - Math.max(currentRect.top, rect.top));
-            const crossAxisWeight = (direction === 'up' || direction === 'down') ? 2.1 : 1.25;
-            const score = (primary * 10) + (secondary * crossAxisWeight) - Math.min(160, overlap);
+            const crossAxisWeight = (direction === 'up' || direction === 'down') ? 2.5 : 1.0;
+            const score = (primary * 1.0) + (secondary * crossAxisWeight) - Math.min(160, overlap);
 
             if (score < bestScore) {
                 bestScore = score;
@@ -562,10 +690,7 @@
     }
 
     function move(direction) {
-        // If in text edit mode, standard D-pad navigates within text input or exits on Escape/Back
-        if (isTextEditMode) {
-            return false;
-        }
+        if (tvTextEntryMode) return false;
 
         const list = candidates();
         if (!list.length) return false;
@@ -602,7 +727,7 @@
     function closeModalById(modalId, closeId) {
         const modal = document.getElementById(modalId);
         if (!modal || modal.classList.contains('hidden')) return false;
-        const restoreTarget = lastContentFocus;
+        const restoreTarget = triggerSourceCard || focusMemory.detail || lastContentFocus;
         document.getElementById(closeId)?.click();
         window.setTimeout(() => {
             cacheDirty = true;
@@ -615,13 +740,13 @@
     function handleBack() {
         if (!enabled) return false;
 
-        // 1. Text Edit Mode active -> exit text mode first
-        if (isTextEditMode) {
+        // 1. Text Entry Mode active -> exit text mode first
+        if (tvTextEntryMode) {
             exitTextEditMode();
             return true;
         }
 
-        // 2. Modals active -> close top modal
+        // 2. Modals active -> close top modal & restore focus to source card
         if (closeModalById('trailerModal', 'closeTrailerModalBtn')) return true;
         if (closeModalById('detailModal', 'closeModalBtn')) return true;
         if (closeModalById('authModal', 'closeAuthModalBtn')) return true;
@@ -656,9 +781,9 @@
         const isBack = event.key === 'Escape' || event.key === 'BrowserBack';
 
         if (!direction && !isSelect && !isBack) return;
-        
+
         // Allow normal typing inside input/textarea when in text edit mode
-        if (isTextEditMode && !isBack && (event.key !== 'Enter' || currentInputTarget?.tagName === 'TEXTAREA')) {
+        if (tvTextEntryMode && !isBack && (event.key !== 'Enter' || currentInputTarget?.tagName === 'TEXTAREA')) {
             return;
         }
 
@@ -701,34 +826,33 @@
         body.prepend(backdrop);
     }
 
-    // Intercept Recommendation submit to trigger smooth loading state & result focus
+    // Intercept Recommendation Submit for Instant Loading UI & Results Viewport Auto-Scroll
     function setupRecommendationFormListener() {
         const recommendForm = document.getElementById('recommendForm');
         if (recommendForm && !recommendForm.dataset.tvBound) {
             recommendForm.dataset.tvBound = 'true';
             recommendForm.addEventListener('submit', () => {
-                if (isTextEditMode) exitTextEditMode();
-                
-                // Ensure results section container is brought smoothly into view
+                if (tvTextEntryMode) exitTextEditMode();
+
                 const resultsSection = document.getElementById('resultsSection');
                 if (resultsSection) {
                     resultsSection.classList.remove('hidden');
-                    window.scrollTo({ top: resultsSection.offsetTop - 70, behavior: 'smooth' });
+                    resultsSection.scrollIntoView({ block: 'start', behavior: 'auto' });
                 }
 
-                // Schedule focus once results pop in
+                // MutationObserver watches for results Grid population & auto-focuses first poster
                 const observer = new MutationObserver(() => {
                     const firstCard = resultsSection?.querySelector('#resultsGrid .movie-card');
                     if (firstCard) {
                         observer.disconnect();
-                        window.setTimeout(() => {
+                        requestAnimationFrame(() => {
                             focusElement(firstCard);
-                        }, 120);
+                        });
                     }
                 });
                 if (resultsSection) {
                     observer.observe(resultsSection, { childList: true, subtree: true });
-                    window.setTimeout(() => observer.disconnect(), 10000); // safety timeout
+                    window.setTimeout(() => observer.disconnect(), 10000);
                 }
             });
         }

@@ -1,29 +1,34 @@
 /* ==========================================================================
-   SineAI Android TV UI/UX V2 — Premium Cinematic Design System
-   Target: Xiaomi Mi Box / 10-foot TV experience (720p, 1080p, 4K)
+   SineAI Android TV UI/UX V3 — Complete Ground-Up Design System
+   Target: Xiaomi Mi Box / 10-foot Living Room Interface (720p, 1080p, 4K)
    ========================================================================== */
 
-/* 1. TV TOKENS & RESET */
+/* 1. DESIGN TOKENS & BASE RESET */
 .tv-featured,
 .tv-search-intro {
     display: none;
 }
 
 body.tv-nav-ready {
-    --tv-bg: #06070a;
-    --tv-surface-1: #111318;
-    --tv-surface-2: #161920;
-    --tv-surface-raised: #1c1f28;
-    --tv-brand: #7c3aed;
-    --tv-brand-soft: #8b5cf6;
+    --tv-bg: #07080b;
+    --tv-surface: #111318;
+    --tv-surface-hover: #191c23;
+    --tv-surface-raised: #212530;
+    --tv-purple: #7c3aed;
+    --tv-purple-light: #9b72ff;
     --tv-accent: #06b6d4;
-    --tv-text: #f5f5f7;
-    --tv-text-muted: rgba(255, 255, 255, 0.68);
-    --tv-text-dim: rgba(255, 255, 255, 0.45);
+    --tv-text: #f7f7f8;
+    --tv-text-secondary: rgba(255, 255, 255, 0.68);
+    --tv-text-dim: rgba(255, 255, 255, 0.42);
+    --tv-border: rgba(255, 255, 255, 0.12);
 
-    /* Overscan Safe Area scaling across 720p, 1080p, 4K */
-    --tv-safe-h: clamp(40px, 4.5vw, 88px);
-    --tv-safe-v: clamp(24px, 3vh, 52px);
+    --tv-radius-sm: 8px;
+    --tv-radius-md: 12px;
+    --tv-radius-lg: 16px;
+
+    /* Overscan Safe Area scaling */
+    --tv-safe-x: clamp(42px, 4vw, 90px);
+    --tv-safe-y: clamp(26px, 3vh, 58px);
 
     min-height: 100vh;
     margin: 0;
@@ -53,10 +58,10 @@ body.tv-nav-ready::-webkit-scrollbar {
 body.tv-nav-ready .container {
     width: 100%;
     max-width: none;
-    padding-inline: var(--tv-safe-h);
+    padding-inline: var(--tv-safe-x);
 }
 
-/* Hide clutter elements in TV mode */
+/* Hide web clutter in TV mode */
 body.tv-nav-ready .hero-glow,
 body.tv-nav-ready .logo-area,
 body.tv-nav-ready .tagline,
@@ -66,7 +71,7 @@ body.tv-nav-ready .search-sparkle-icon {
     display: none !important;
 }
 
-/* Performance optimization: NO backdrop-filter or heavy blur */
+/* Performance Budget: NO backdrop-filter or heavy blur */
 body.tv-nav-ready .modal,
 body.tv-nav-ready .saas-search-box,
 body.tv-nav-ready .saas-results-toolbar,
@@ -79,7 +84,7 @@ body.tv-nav-ready .btn-nav-profile {
     -webkit-backdrop-filter: none !important;
 }
 
-/* 2. FIXED STICKY HEADER (SORUN A FIX) */
+/* 2. MINIMAL TOP NAV BAR */
 body.tv-nav-ready .tv-fixed-header,
 body.tv-nav-ready .top-nav-bar {
     position: fixed !important;
@@ -90,24 +95,48 @@ body.tv-nav-ready .top-nav-bar {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: var(--tv-safe-v) var(--tv-safe-h) 16px !important;
-    background: linear-gradient(180deg, rgba(6, 7, 10, 0.96) 0%, rgba(6, 7, 10, 0.6) 65%, transparent 100%) !important;
+    height: clamp(72px, 8vh, 88px) !important;
+    padding: 0 var(--tv-safe-x) !important;
+    background: linear-gradient(180deg, rgba(7, 8, 11, 0.98) 0%, rgba(7, 8, 11, 0.6) 65%, transparent 100%) !important;
     pointer-events: auto;
-    transition: transform 160ms ease-out;
 }
 
 body.tv-nav-ready .brand-badge {
     display: inline-flex;
     align-items: center;
-    min-height: 48px;
-    padding: 8px 22px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 999px;
-    background: rgba(17, 19, 24, 0.88);
+    min-height: 44px;
+    padding: 6px 18px;
+    border: 1px solid var(--tv-border);
+    border-radius: var(--tv-radius-md);
+    background: rgba(17, 19, 24, 0.9);
     color: #fff;
     font-size: clamp(15px, 1.05vw, 20px);
     font-weight: 850;
     letter-spacing: 0.04em;
+}
+
+body.tv-nav-ready .tv-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+body.tv-nav-ready .tv-nav-link {
+    min-height: 42px;
+    padding: 6px 16px;
+    border: 1px solid transparent;
+    border-radius: var(--tv-radius-sm);
+    background: transparent;
+    color: var(--tv-text-secondary);
+    font-size: clamp(14px, 0.95vw, 18px);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+body.tv-nav-ready .tv-nav-link.active {
+    border-color: rgba(124, 58, 237, 0.5);
+    background: var(--tv-surface);
+    color: #fff;
 }
 
 body.tv-nav-ready .auth-nav-area {
@@ -117,27 +146,27 @@ body.tv-nav-ready .auth-nav-area {
 
 body.tv-nav-ready .btn-nav-auth,
 body.tv-nav-ready .btn-nav-profile {
-    min-height: 48px;
-    padding: 8px 22px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 999px;
-    background: rgba(17, 19, 24, 0.88);
+    min-height: 44px;
+    padding: 6px 18px;
+    border: 1px solid var(--tv-border);
+    border-radius: var(--tv-radius-md);
+    background: rgba(17, 19, 24, 0.9);
     color: var(--tv-text);
-    font-size: clamp(14px, 0.98vw, 19px);
+    font-size: clamp(14px, 0.95vw, 18px);
     font-weight: 700;
 }
 
-/* 3. HERO STREAMING SECTION */
+/* 3. CINEMATIC HERO SECTION */
 body.tv-nav-ready .tv-featured {
     position: relative;
     display: flex;
     align-items: flex-end;
     width: 100%;
-    height: 82vh;
-    min-height: 540px;
-    max-height: 820px;
+    height: 76vh;
+    min-height: 500px;
+    max-height: 780px;
     margin: 0;
-    padding: 0 0 clamp(40px, 5vh, 70px);
+    padding: 0 0 clamp(30px, 4vh, 60px);
     overflow: hidden;
     background: var(--tv-bg);
     isolation: isolate;
@@ -159,30 +188,30 @@ body.tv-nav-ready .tv-featured-backdrop {
 body.tv-nav-ready .tv-featured-shade {
     z-index: -2;
     background:
-        linear-gradient(90deg, #06070a 0%, rgba(6, 7, 10, 0.92) 35%, rgba(6, 7, 10, 0.38) 64%, transparent 100%),
-        linear-gradient(0deg, #06070a 0%, rgba(6, 7, 10, 0.5) 35%, transparent 100%),
-        linear-gradient(180deg, rgba(6, 7, 10, 0.6) 0%, transparent 22%);
+        linear-gradient(90deg, #07080b 0%, rgba(7, 8, 11, 0.92) 36%, rgba(7, 8, 11, 0.35) 64%, transparent 100%),
+        linear-gradient(0deg, #07080b 0%, rgba(7, 8, 11, 0.45) 35%, transparent 100%),
+        linear-gradient(180deg, rgba(7, 8, 11, 0.6) 0%, transparent 22%);
 }
 
 body.tv-nav-ready .tv-featured-content {
-    width: min(720px, 48vw);
-    padding-left: var(--tv-safe-h);
+    width: min(680px, 44vw);
+    padding-left: var(--tv-safe-x);
 }
 
 body.tv-nav-ready .tv-featured-kicker,
 body.tv-nav-ready .tv-eyebrow {
     margin-bottom: 8px;
-    color: var(--tv-brand-soft);
-    font-size: clamp(13px, 0.88vw, 17px);
+    color: var(--tv-purple-light);
+    font-size: clamp(12px, 0.85vw, 16px);
     font-weight: 900;
     letter-spacing: 0.16em;
     text-transform: uppercase;
 }
 
 body.tv-nav-ready .tv-featured h2 {
-    margin: 0 0 12px;
+    margin: 0 0 10px;
     color: #fff;
-    font-size: clamp(38px, 4vw, 70px);
+    font-size: clamp(36px, 3.8vw, 68px);
     font-weight: 900;
     line-height: 1.02;
     letter-spacing: -0.04em;
@@ -190,37 +219,85 @@ body.tv-nav-ready .tv-featured h2 {
 }
 
 body.tv-nav-ready .tv-featured-meta {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     color: #e2e8f0;
-    font-size: clamp(15px, 1vw, 20px);
+    font-size: clamp(14px, 0.98vw, 19px);
     font-weight: 750;
 }
 
 body.tv-nav-ready .tv-featured p {
     display: -webkit-box;
-    max-width: 650px;
-    margin: 0 0 22px;
+    max-width: 620px;
+    margin: 0 0 20px;
     overflow: hidden;
-    color: var(--tv-text-muted);
-    font-size: clamp(16px, 1.1vw, 21px);
+    color: var(--tv-text-secondary);
+    font-size: clamp(15px, 1.05vw, 20px);
     line-height: 1.45;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
 }
 
 body.tv-nav-ready .tv-featured-button {
-    min-width: 200px;
-    min-height: 54px;
-    padding: 12px 28px;
+    min-width: 180px;
+    min-height: 50px;
+    padding: 10px 24px;
     border: 0;
-    border-radius: 10px;
+    border-radius: var(--tv-radius-sm);
     background: #fff;
-    color: #06070a;
-    font-size: clamp(16px, 1.08vw, 21px);
+    color: #07080b;
+    font-size: clamp(15px, 1.02vw, 20px);
     font-weight: 850;
 }
 
-/* 4. DISCOVERY & SEARCH SECTION */
+/* 4. DISCOVERY CARDS SECTION BELOW HERO */
+body.tv-nav-ready .tv-discovery-section {
+    padding-top: clamp(20px, 3vh, 40px) !important;
+}
+
+body.tv-nav-ready .tv-discovery-cards {
+    display: flex;
+    gap: clamp(14px, 1.2vw, 22px);
+    padding: 10px var(--tv-safe-x) 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+body.tv-nav-ready .tv-card-action {
+    flex: 0 0 clamp(200px, 16vw, 280px);
+    min-height: 90px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border: 1px solid var(--tv-border);
+    border-radius: var(--tv-radius-md);
+    background: var(--tv-surface);
+    color: #fff;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 120ms ease-out, background-color 120ms ease-out, border-color 120ms ease-out !important;
+}
+
+body.tv-nav-ready .tv-card-icon {
+    font-size: clamp(28px, 2.2vw, 38px);
+}
+
+body.tv-nav-ready .tv-card-text {
+    display: flex;
+    flex-direction: column;
+}
+
+body.tv-nav-ready .tv-card-text strong {
+    font-size: clamp(15px, 1.05vw, 20px);
+    font-weight: 850;
+}
+
+body.tv-nav-ready .tv-card-text span {
+    color: var(--tv-text-secondary);
+    font-size: clamp(12px, 0.8vw, 15px);
+}
+
+/* 5. AI PROMPT EXPERIENCE (TEXT ENTRY MODE GATEWAY) */
 body.tv-nav-ready #discoverSection > .app-header {
     position: relative;
     display: flex;
@@ -229,28 +306,27 @@ body.tv-nav-ready #discoverSection > .app-header {
     padding: clamp(90px, 12vh, 140px) 0 clamp(50px, 6vh, 80px);
     background:
         radial-gradient(circle at 85% 20%, rgba(124, 58, 237, 0.12), transparent 30%),
-        radial-gradient(circle at 15% 80%, rgba(6, 182, 212, 0.08), transparent 28%),
-        #06070a;
+        #07080b;
 }
 
 body.tv-nav-ready .hero-search-area {
     display: flex;
     flex-direction: column;
-    width: min(1200px, calc(100vw - (var(--tv-safe-h) * 2)));
+    width: min(1150px, calc(100vw - (var(--tv-safe-x) * 2)));
     margin: 0 auto;
     gap: 16px;
 }
 
 body.tv-nav-ready .tv-search-intro {
     display: block;
-    max-width: 880px;
+    max-width: 850px;
     margin-bottom: 8px;
 }
 
 body.tv-nav-ready .tv-search-intro h2 {
-    margin: 0 0 10px;
+    margin: 0 0 8px;
     color: #fff;
-    font-size: clamp(34px, 3.5vw, 60px);
+    font-size: clamp(32px, 3.2vw, 56px);
     font-weight: 900;
     line-height: 1.05;
     letter-spacing: -0.035em;
@@ -258,15 +334,15 @@ body.tv-nav-ready .tv-search-intro h2 {
 
 body.tv-nav-ready .tv-search-intro p {
     margin: 0;
-    color: var(--tv-text-muted);
-    font-size: clamp(16px, 1.1vw, 21px);
+    color: var(--tv-text-secondary);
+    font-size: clamp(15px, 1.05vw, 20px);
     line-height: 1.45;
 }
 
 body.tv-nav-ready .search-mode-tabs {
     display: flex;
     flex-wrap: nowrap;
-    gap: 12px;
+    gap: 10px;
     margin-bottom: 8px;
     overflow-x: auto;
     scrollbar-width: none;
@@ -277,13 +353,13 @@ body.tv-nav-ready .pill,
 body.tv-nav-ready .filter-pill,
 body.tv-nav-ready .pagination-btn,
 body.tv-nav-ready .page-num-btn {
-    min-height: 48px;
-    padding: 9px 20px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 999px;
-    background: var(--tv-surface-1);
+    min-height: 46px;
+    padding: 8px 18px;
+    border: 1px solid var(--tv-border);
+    border-radius: var(--tv-radius-sm);
+    background: var(--tv-surface);
     color: var(--tv-text);
-    font-size: clamp(14px, 0.95vw, 18px);
+    font-size: clamp(14px, 0.92vw, 17px);
     font-weight: 700;
     white-space: nowrap;
 }
@@ -291,19 +367,18 @@ body.tv-nav-ready .page-num-btn {
 body.tv-nav-ready .mode-tab.active,
 body.tv-nav-ready .filter-pill.active,
 body.tv-nav-ready .page-num-btn.active {
-    border-color: rgba(139, 92, 246, 0.8);
-    background: var(--tv-brand);
+    border-color: rgba(124, 58, 237, 0.8);
+    background: var(--tv-purple);
     color: #fff;
 }
 
-/* INPUT / TEXTAREA TV CONTROL (SORUN B FIX) */
 body.tv-nav-ready .saas-search-box {
     width: 100%;
     margin: 0;
     padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 16px;
-    background: var(--tv-surface-1);
+    border: 1px solid var(--tv-border);
+    border-radius: var(--tv-radius-md);
+    background: var(--tv-surface);
 }
 
 body.tv-nav-ready .tv-input-trigger {
@@ -311,18 +386,19 @@ body.tv-nav-ready .tv-input-trigger {
     align-items: center;
     gap: 10px;
     width: 100%;
-    min-height: 64px;
-    padding: 16px 24px;
+    min-height: 60px;
+    padding: 14px 22px;
     border: 0;
-    border-radius: 16px 16px 0 0;
-    background: var(--tv-surface-2);
-    color: var(--tv-text-muted);
-    font-size: clamp(16px, 1.1vw, 22px);
+    border-radius: var(--tv-radius-md) var(--tv-radius-md) 0 0;
+    background: var(--tv-surface-hover);
+    color: var(--tv-text-secondary);
+    font-size: clamp(16px, 1.08vw, 21px);
     font-weight: 650;
     cursor: pointer;
     text-align: left;
 }
 
+/* STRICT D-PAD INPUT EXCLUSION RULE */
 body.tv-nav-ready textarea#query.tv-hidden-input {
     height: 0 !important;
     min-height: 0 !important;
@@ -336,12 +412,12 @@ body.tv-nav-ready textarea#query.tv-hidden-input {
 body.tv-nav-ready textarea#query:not(.tv-hidden-input) {
     display: block;
     width: 100%;
-    min-height: 90px;
-    padding: 20px 24px;
+    min-height: 85px;
+    padding: 18px 22px;
     border: 0;
-    background: var(--tv-surface-2);
+    background: var(--tv-surface-hover);
     color: #fff;
-    font-size: clamp(18px, 1.25vw, 24px);
+    font-size: clamp(17px, 1.2vw, 23px);
     line-height: 1.4;
 }
 
@@ -349,23 +425,23 @@ body.tv-nav-ready .search-bottom-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 68px;
-    padding: 10px 16px;
+    min-height: 64px;
+    padding: 8px 14px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 body.tv-nav-ready .saas-pill-btn,
 body.tv-nav-ready .saas-submit-btn {
-    min-height: 48px;
-    padding: 10px 22px;
-    border-radius: 999px;
-    font-size: clamp(14px, 0.98vw, 19px);
+    min-height: 46px;
+    padding: 8px 20px;
+    border-radius: var(--tv-radius-sm);
+    font-size: clamp(14px, 0.95vw, 18px);
     font-weight: 750;
 }
 
 body.tv-nav-ready .saas-submit-btn {
     background: #fff;
-    color: #06070a;
+    color: #07080b;
 }
 
 body.tv-nav-ready .mood-pills {
@@ -373,44 +449,44 @@ body.tv-nav-ready .mood-pills {
     flex-wrap: nowrap;
     gap: 10px;
     width: 100%;
-    margin-top: 8px;
-    padding-bottom: 8px;
+    margin-top: 6px;
+    padding-bottom: 6px;
     overflow-x: auto;
     scrollbar-width: none;
 }
 
-/* 5. MOVIE POSTER ROWS & CAROUSELS (SORUN C FIX) */
+/* 6. POSTER CARDS & CAROUSELS */
 body.tv-nav-ready .row-section {
     position: relative;
     display: flex;
     flex-direction: column;
     width: 100%;
-    padding: clamp(40px, 5vh, 70px) 0;
+    padding: clamp(30px, 4vh, 60px) 0;
     overflow: hidden;
     background: var(--tv-bg);
 }
 
 body.tv-nav-ready .section-head {
     width: 100%;
-    padding-inline: var(--tv-safe-h);
-    margin-bottom: 12px;
+    padding-inline: var(--tv-safe-x);
+    margin-bottom: 10px;
 }
 
 body.tv-nav-ready .section-title {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     color: #fff;
-    font-size: clamp(22px, 1.8vw, 34px);
+    font-size: clamp(20px, 1.6vw, 32px);
     font-weight: 850;
     letter-spacing: -0.02em;
 }
 
 body.tv-nav-ready .section-dot {
     width: 5px;
-    height: 28px;
-    border-radius: 4px;
-    background: linear-gradient(180deg, var(--tv-brand-soft), var(--tv-brand));
+    height: 24px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, var(--tv-purple-light), var(--tv-purple));
 }
 
 body.tv-nav-ready .cards-row,
@@ -418,8 +494,8 @@ body.tv-nav-ready .results-grid,
 body.tv-nav-ready .genre-grid {
     display: flex;
     align-items: flex-start;
-    gap: clamp(16px, 1.4vw, 26px);
-    padding: 16px var(--tv-safe-h) 36px;
+    gap: clamp(14px, 1.3vw, 24px);
+    padding: 14px var(--tv-safe-x) 32px;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
@@ -427,20 +503,20 @@ body.tv-nav-ready .genre-grid {
 }
 
 body.tv-nav-ready .movie-card {
-    flex: 0 0 clamp(190px, 13.2vw, 250px);
-    width: clamp(190px, 13.2vw, 250px);
-    min-width: 190px;
+    flex: 0 0 clamp(165px, 11.8vw, 230px);
+    width: clamp(165px, 11.8vw, 230px);
+    min-width: 165px;
     border: 3px solid transparent;
-    border-radius: 12px;
-    background: var(--tv-surface-1);
+    border-radius: var(--tv-radius-md);
+    background: var(--tv-surface);
     transform-origin: center center;
     transition: transform 120ms ease-out, border-color 120ms ease-out, background-color 120ms ease-out !important;
 }
 
 body.tv-nav-ready .poster-container {
     aspect-ratio: 2 / 3;
-    border-radius: 9px 9px 4px 4px;
-    background: var(--tv-surface-2);
+    border-radius: var(--tv-radius-sm);
+    background: var(--tv-surface-hover);
     overflow: hidden;
 }
 
@@ -451,13 +527,13 @@ body.tv-nav-ready .poster-container img {
 }
 
 body.tv-nav-ready .movie-card .card-content {
-    padding: 12px 10px 10px;
+    padding: 10px 8px 8px;
 }
 
 body.tv-nav-ready .movie-card .card-title {
     overflow: hidden;
     color: #fff;
-    font-size: clamp(15px, 1.02vw, 19px);
+    font-size: clamp(14px, 0.95vw, 18px);
     font-weight: 800;
     line-height: 1.25;
     text-overflow: ellipsis;
@@ -465,43 +541,42 @@ body.tv-nav-ready .movie-card .card-title {
 }
 
 body.tv-nav-ready .movie-card .card-meta {
-    margin-top: 4px;
-    color: var(--tv-text-muted);
-    font-size: clamp(13px, 0.8vw, 16px);
+    margin-top: 3px;
+    color: var(--tv-text-secondary);
+    font-size: clamp(12px, 0.78vw, 15px);
 }
 
 body.tv-nav-ready .genre-chip {
-    flex: 0 0 clamp(230px, 17.5vw, 340px);
-    min-height: 130px;
+    flex: 0 0 clamp(220px, 16vw, 310px);
+    min-height: 115px;
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 20px 24px;
+    gap: 14px;
+    padding: 18px 20px;
     border: 3px solid transparent;
-    border-radius: 14px;
-    background: linear-gradient(135deg, var(--tv-surface-2), var(--tv-surface-1));
+    border-radius: var(--tv-radius-md);
+    background: linear-gradient(135deg, var(--tv-surface-hover), var(--tv-surface));
 }
 
 body.tv-nav-ready .genre-chip-icon {
-    font-size: clamp(32px, 2.5vw, 46px);
+    font-size: clamp(28px, 2.3vw, 42px);
 }
 
 body.tv-nav-ready .genre-chip-name {
     color: #fff;
-    font-size: clamp(17px, 1.15vw, 22px);
+    font-size: clamp(16px, 1.1vw, 21px);
     font-weight: 850;
 }
 
-/* 6. AI RESULTS SCREEN & COMPACT LAYOUT (SORUN D & E FIX) */
+/* 7. AI RESULTS SCREEN & COMPACT LAYOUT */
 body.tv-nav-ready .results-container {
     width: 100%;
-    padding: clamp(80px, 10vh, 120px) 0 40px;
+    padding: clamp(72px, 9vh, 105px) 0 30px;
 }
 
-/* Remove artificial 100vh gap in results controls section */
 body.tv-nav-ready .tv-results-controls-section {
     min-height: 0 !important;
-    padding: 0 var(--tv-safe-h) 20px !important;
+    padding: 0 var(--tv-safe-x) 16px !important;
     background: transparent !important;
 }
 
@@ -515,42 +590,42 @@ body.tv-nav-ready .results-hero-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
 body.tv-nav-ready .saas-back-btn {
-    min-height: 46px;
-    padding: 8px 20px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: var(--tv-surface-1);
+    min-height: 42px;
+    padding: 6px 18px;
+    border-radius: var(--tv-radius-sm);
+    border: 1px solid var(--tv-border);
+    background: var(--tv-surface);
     color: #fff;
-    font-size: clamp(14px, 0.95vw, 18px);
+    font-size: clamp(13px, 0.9vw, 17px);
     font-weight: 750;
 }
 
 body.tv-nav-ready .results-main-heading {
     margin: 0;
     color: #fff;
-    font-size: clamp(28px, 2.4vw, 46px);
+    font-size: clamp(26px, 2.2vw, 42px);
     font-weight: 900;
 }
 
 body.tv-nav-ready .ai-analysis-summary {
     display: flex;
     align-items: center;
-    gap: 14px;
-    margin-bottom: 16px;
-    padding: 14px 20px;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 12px 18px;
     border: 1px solid rgba(124, 58, 237, 0.35);
-    border-radius: 12px;
+    border-radius: var(--tv-radius-md);
     background: rgba(124, 58, 237, 0.12);
 }
 
 body.tv-nav-ready .analysis-summary-copy p {
     margin: 2px 0 0;
     color: var(--tv-text);
-    font-size: clamp(15px, 1.02vw, 19px);
+    font-size: clamp(14px, 0.98vw, 18px);
     font-weight: 650;
 }
 
@@ -558,10 +633,10 @@ body.tv-nav-ready .saas-results-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 18px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    background: var(--tv-surface-1);
+    padding: 10px 16px;
+    border: 1px solid var(--tv-border);
+    border-radius: var(--tv-radius-md);
+    background: var(--tv-surface);
 }
 
 body.tv-nav-ready .quick-filter-bar {
@@ -572,39 +647,39 @@ body.tv-nav-ready .quick-filter-bar {
 }
 
 body.tv-nav-ready .saas-select {
-    min-height: 44px;
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: var(--tv-surface-2);
+    min-height: 42px;
+    padding: 6px 14px;
+    border-radius: var(--tv-radius-sm);
+    border: 1px solid var(--tv-border);
+    background: var(--tv-surface-hover);
     color: #fff;
-    font-size: clamp(14px, 0.9vw, 17px);
+    font-size: clamp(13px, 0.88vw, 16px);
 }
 
-/* AI LOADING STATE (SORUN D FIX) */
+/* AI LOADING STATE */
 body.tv-nav-ready #loading {
-    padding: 30px var(--tv-safe-h);
+    padding: 24px var(--tv-safe-x);
     text-align: center;
 }
 
 body.tv-nav-ready .loading-text {
-    margin-top: 16px;
-    color: var(--tv-brand-soft);
-    font-size: clamp(18px, 1.2vw, 24px);
+    margin-top: 14px;
+    color: var(--tv-purple-light);
+    font-size: clamp(17px, 1.15vw, 22px);
     font-weight: 800;
 }
 
 body.tv-nav-ready .skeleton-grid {
     display: flex;
-    gap: 20px;
+    gap: 18px;
     overflow: hidden;
 }
 
 body.tv-nav-ready .skeleton-card {
-    flex: 0 0 220px;
+    flex: 0 0 200px;
     aspect-ratio: 2 / 3;
-    border-radius: 12px;
-    background: var(--tv-surface-1);
+    border-radius: var(--tv-radius-md);
+    background: var(--tv-surface);
     opacity: 0.5;
     animation: tvPulse 1.4s ease-in-out infinite !important;
 }
@@ -614,7 +689,7 @@ body.tv-nav-ready .skeleton-card {
     50% { opacity: 0.7; }
 }
 
-/* 7. CINEMATIC MOVIE DETAIL MODAL (SORUN C FIX) */
+/* 8. CINEMATIC MOVIE DETAIL MODAL */
 body.tv-nav-ready #detailModal {
     padding: 0 !important;
     background: #050609 !important;
@@ -655,22 +730,22 @@ body.tv-nav-ready #detailModal .modal-cinematic-backdrop {
 body.tv-nav-ready #detailModal .modal-cinematic-shade {
     z-index: 2;
     background:
-        linear-gradient(90deg, #050609 0%, rgba(5, 6, 9, 0.95) 42%, rgba(5, 6, 9, 0.45) 68%, transparent 100%),
+        linear-gradient(90deg, #050609 0%, rgba(5, 6, 9, 0.95) 40%, rgba(5, 6, 9, 0.42) 66%, transparent 100%),
         linear-gradient(0deg, #050609 0%, rgba(5, 6, 9, 0.4) 40%, transparent 100%);
 }
 
 body.tv-nav-ready #detailModal .close-btn {
     position: absolute;
-    top: var(--tv-safe-v);
-    right: var(--tv-safe-h);
+    top: var(--tv-safe-y);
+    right: var(--tv-safe-x);
     z-index: 10;
-    min-height: 48px;
-    padding: 8px 20px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 999px;
-    background: rgba(17, 19, 24, 0.88);
+    min-height: 44px;
+    padding: 6px 18px;
+    border: 1px solid var(--tv-border);
+    border-radius: var(--tv-radius-md);
+    background: rgba(17, 19, 24, 0.9);
     color: #fff;
-    font-size: clamp(14px, 0.95vw, 18px);
+    font-size: clamp(13px, 0.9vw, 17px);
     font-weight: 750;
 }
 
@@ -680,56 +755,56 @@ body.tv-nav-ready #detailModal .modal-info {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    width: min(780px, 54vw);
+    width: min(720px, 50vw);
     height: 100%;
-    padding-left: var(--tv-safe-h);
+    padding-left: var(--tv-safe-x);
 }
 
 body.tv-nav-ready #detailModal .modal-info h2 {
-    margin: 0 0 6px;
+    margin: 0 0 4px;
     color: #fff;
-    font-size: clamp(38px, 3.8vw, 64px);
+    font-size: clamp(34px, 3.5vw, 60px);
     font-weight: 900;
     line-height: 1.04;
     letter-spacing: -0.035em;
 }
 
 body.tv-nav-ready #detailModal .modal-info .meta {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     color: #e2e8f0;
-    font-size: clamp(15px, 1.02vw, 20px);
+    font-size: clamp(14px, 0.98vw, 19px);
     font-weight: 750;
 }
 
 body.tv-nav-ready #detailModal .modal-info .overview {
     display: -webkit-box;
-    max-width: 720px;
-    margin: 0 0 20px;
+    max-width: 680px;
+    margin: 0 0 18px;
     overflow: hidden;
-    color: var(--tv-text-muted);
-    font-size: clamp(15px, 1.05vw, 20px);
+    color: var(--tv-text-secondary);
+    font-size: clamp(14px, 0.98vw, 19px);
     line-height: 1.48;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 4;
 }
 
-/* HORIZONTAL ACTION BAR IN DETAIL MODAL (SORUN C FIX) */
+/* HORIZONTAL ACTION BAR IN DETAIL MODAL */
 body.tv-nav-ready #detailModal .netflix-actions-bar {
     display: flex;
     flex-wrap: nowrap;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
-    padding: 8px 4px 14px;
+    padding: 6px 4px 12px;
     overflow-x: auto;
     scrollbar-width: none;
 }
 
 body.tv-nav-ready #detailModal .netflix-btn {
     flex: 0 0 auto;
-    min-height: 52px;
-    padding: 10px 22px;
-    border-radius: 8px;
-    font-size: clamp(14px, 0.95vw, 18px);
+    min-height: 48px;
+    padding: 8px 20px;
+    border-radius: var(--tv-radius-sm);
+    font-size: clamp(13px, 0.9vw, 17px);
     font-weight: 800;
     white-space: nowrap;
 }
@@ -739,7 +814,7 @@ body.tv-nav-ready #detailModal .btn-play-trailer {
     color: #050609;
 }
 
-/* 8. PRECISE UNIFIED FOCUS DESIGN SYSTEM (KURAL 6) */
+/* 9. UNIFIED FOCUS DESIGN SYSTEM */
 body.tv-focus-active .movie-card:focus,
 body.tv-focus-active .genre-chip:focus,
 body.tv-focus-active button:focus,
@@ -748,11 +823,11 @@ body.tv-focus-active select:focus,
 body.tv-focus-active input:focus,
 body.tv-focus-active a:focus,
 body.tv-focus-active .tv-focused {
-    outline: 3px solid var(--tv-brand) !important;
+    outline: 3px solid var(--tv-purple) !important;
     outline-offset: 3px !important;
     border-color: #fff !important;
-    background-color: #f5f5f7 !important;
-    color: #06070a !important;
+    background-color: #f7f7f8 !important;
+    color: #07080b !important;
 }
 
 body.tv-focus-active .movie-card:focus,
@@ -760,25 +835,28 @@ body.tv-focus-active .genre-chip:focus,
 body.tv-focus-active .movie-card.tv-focused,
 body.tv-focus-active .genre-chip.tv-focused {
     z-index: 30;
-    transform: scale(1.04) !important;
+    transform: scale(1.055) !important;
     background-color: var(--tv-surface-raised) !important;
     color: #fff !important;
+    outline-color: #fff !important;
 }
 
 body.tv-focus-active .movie-card:focus .card-title,
 body.tv-focus-active .movie-card.tv-focused .card-title {
-    color: var(--tv-brand-soft) !important;
+    color: var(--tv-purple-light) !important;
 }
 
 body.tv-focus-active button:focus,
 body.tv-focus-active a:focus,
+body.tv-focus-active .tv-card-action:focus,
 body.tv-focus-active .tv-input-trigger:focus,
+body.tv-focus-active .tv-nav-link:focus,
 body.tv-focus-active .mode-tab:focus,
 body.tv-focus-active .filter-pill:focus {
-    transform: scale(1.03) !important;
+    transform: scale(1.035) !important;
 }
 
-/* Transition speed for TV responsiveness (100-140ms) */
+/* Fast TV responsiveness transitions (120ms) */
 body.tv-nav-ready .movie-card,
 body.tv-nav-ready .genre-chip,
 body.tv-nav-ready button,
@@ -789,40 +867,40 @@ body.tv-nav-ready a {
     transition: transform 120ms ease-out, background-color 120ms ease-out, border-color 120ms ease-out, outline 120ms ease-out !important;
 }
 
-/* 9. RESPONSIVE BREAKPOINTS (720p / 1080p / 4K) */
+/* 10. RESPONSIVE BREAKPOINTS (720p / 1080p / 4K) */
 @media (max-height: 750px) {
     body.tv-nav-ready {
-        --tv-safe-h: clamp(32px, 4vw, 56px);
-        --tv-safe-v: clamp(18px, 2.5vh, 36px);
+        --tv-safe-x: clamp(32px, 4vw, 56px);
+        --tv-safe-y: clamp(18px, 2.5vh, 36px);
     }
 
     body.tv-nav-ready .tv-featured {
-        height: 78vh;
-        min-height: 460px;
+        height: 74vh;
+        min-height: 440px;
     }
 
     body.tv-nav-ready .tv-featured h2 {
-        font-size: clamp(32px, 3.8vw, 50px);
+        font-size: clamp(30px, 3.5vw, 48px);
     }
 
     body.tv-nav-ready .movie-card {
-        flex-basis: clamp(160px, 13vw, 210px);
-        width: clamp(160px, 13vw, 210px);
-        min-width: 160px;
+        flex-basis: clamp(150px, 11vw, 195px);
+        width: clamp(150px, 11vw, 195px);
+        min-width: 150px;
     }
 
     body.tv-nav-ready #detailModal .modal-info {
-        width: min(650px, 58vw);
+        width: min(620px, 55vw);
     }
 
     body.tv-nav-ready #detailModal .modal-info h2 {
-        font-size: clamp(32px, 3.5vw, 48px);
+        font-size: clamp(30px, 3.2vw, 44px);
     }
 }
 
 @media (min-width: 2500px) {
     body.tv-nav-ready {
-        --tv-safe-h: clamp(80px, 5vw, 140px);
-        --tv-safe-v: clamp(48px, 4vh, 90px);
+        --tv-safe-x: clamp(80px, 5vw, 140px);
+        --tv-safe-y: clamp(48px, 4vh, 90px);
     }
 }
