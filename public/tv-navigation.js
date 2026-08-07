@@ -1,20 +1,21 @@
 (function () {
     'use strict';
 
-    const TV_CONTRACT_VERSION = 1;
-    const TV_ASSET_VERSION = '1.0.0';
+    const TV_CONTRACT_VERSION = 2;
+    const TV_ASSET_VERSION = '2.0.0';
 
+    // Candidate selector for D-pad focus graph.
+    // NOTE: Input, textarea, select are intentionally EXCLUDED from default directional navigation
+    // to prevent unwanted soft-keyboard popup on Android TV. They are accessed via explicit edit mode.
     const CANDIDATE_SELECTOR = [
         '[data-tv-focusable="true"]',
         '.movie-card',
         '.genre-chip',
         '.see-all',
-        'button:not([disabled])',
-        'textarea:not([disabled])',
-        'input:not([disabled])',
-        'select:not([disabled])',
-        'a[href]',
-        '[tabindex="0"]'
+        '.tv-input-trigger',
+        'button:not([disabled]):not(.tv-skip-focus)',
+        'a[href]:not(.tv-skip-focus)',
+        '[tabindex="0"]:not(.tv-skip-focus)'
     ].join(',');
 
     const ROW_SELECTOR = [
@@ -70,7 +71,18 @@
     let laneItemsCache = new Map();
     let laneOrderCache = [];
     let activeSection = null;
+    let isTextEditMode = false;
+    let currentInputTarget = null;
     const sectionLastFocus = new WeakMap();
+
+    // Check debug flag ?tv=1&focusDebug=1
+    const isDebug = new URLSearchParams(window.location.search).get('focusDebug') === '1';
+
+    function debugLog(...args) {
+        if (isDebug) {
+            console.log('[TV Focus]', ...args);
+        }
+    }
 
     function activeModal() {
         const modals = document.querySelectorAll('.modal:not(.hidden), .update-modal:not(.hidden)');
@@ -94,14 +106,35 @@
         const header = document.querySelector('.app-header');
         const topNav = document.querySelector('.top-nav-bar');
         const searchArea = document.getElementById('heroSearchArea');
+        const queryTextarea = document.getElementById('query');
 
-        if (discover && featured && header && header.parentElement !== discover) {
-            featured.insertAdjacentElement('afterend', header);
+        // Setup fixed header top-nav-bar if not already created
+        if (topNav) {
+            topNav.classList.add('tv-fixed-header');
+            if (topNav.parentElement !== document.body) {
+                document.body.prepend(topNav);
+            }
         }
-        if (featured && topNav && topNav.parentElement !== featured) {
-            topNav.classList.add('tv-hero-nav');
-            featured.prepend(topNav);
+
+        // Add explicit text input trigger button if missing to avoid auto-keyboard on navigation
+        if (searchArea && queryTextarea && !document.getElementById('tvQueryTrigger')) {
+            const triggerBtn = document.createElement('button');
+            triggerBtn.type = 'button';
+            triggerBtn.id = 'tvQueryTrigger';
+            triggerBtn.className = 'tv-input-trigger';
+            triggerBtn.setAttribute('tabindex', '0');
+            triggerBtn.innerHTML = '✏️ <span>İsteğini Yaz / Klavye Aç</span>';
+            queryTextarea.parentElement.insertBefore(triggerBtn, queryTextarea);
+            
+            // Textarea is hidden from direct D-pad focus until trigger is activated
+            queryTextarea.classList.add('tv-hidden-input');
+
+            triggerBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                enterTextEditMode(queryTextarea);
+            });
         }
+
         if (searchArea && !searchArea.querySelector('.tv-search-intro')) {
             const intro = document.createElement('div');
             intro.className = 'tv-search-intro';
@@ -114,7 +147,7 @@
         }
 
         markTvSection(featured, 'featured', '#tvFeaturedOpen');
-        markTvSection(header, 'search', '.mode-tab.active');
+        markTvSection(header, 'search', '.mode-tab.active, #tvQueryTrigger');
         discover?.querySelectorAll('.row-section').forEach((section, index) => {
             markTvSection(section, `discover-row-${index}`, '.movie-card, .genre-chip');
         });
@@ -159,6 +192,29 @@
         markTvSection(profile?.querySelector('.profile-gallery-section'), 'profile-gallery', '.movie-card');
     }
 
+    function enterTextEditMode(inputElement) {
+        if (!inputElement) return;
+        isTextEditMode = true;
+        currentInputTarget = inputElement;
+        inputElement.classList.remove('tv-hidden-input');
+        inputElement.focus();
+        debugLog('Entered Text Edit Mode for:', inputElement.id);
+    }
+
+    function exitTextEditMode() {
+        if (!isTextEditMode) return false;
+        if (currentInputTarget) {
+            currentInputTarget.blur();
+            currentInputTarget.classList.add('tv-hidden-input');
+        }
+        isTextEditMode = false;
+        currentInputTarget = null;
+        debugLog('Exited Text Edit Mode');
+        const trigger = document.getElementById('tvQueryTrigger') || lastContentFocus;
+        if (trigger) focusElement(trigger);
+        return true;
+    }
+
     function rowFor(element) {
         return element?.closest?.(ROW_SELECTOR) || null;
     }
@@ -176,6 +232,10 @@
         if (!(element instanceof HTMLElement)) return false;
         if (!element.isConnected || element.classList.contains('tv-skip-focus')) return false;
         if (element.matches('.movie-card .fav-btn')) return false;
+        
+        // Skip inputs/textarea/select from standard D-pad candidates unless explicitly in text mode
+        if (element.matches('textarea, input, select') && !isTextEditMode) return false;
+        
         if (element.closest('.hidden, [aria-hidden="true"]')) return false;
         if (element.hasAttribute('disabled')) return false;
         if (root !== document.body && !root.contains(element)) return false;
@@ -200,6 +260,23 @@
         scope.querySelectorAll('.movie-card .fav-btn:not(.tv-skip-focus)').forEach(button => {
             button.tabIndex = -1;
             button.classList.add('tv-skip-focus');
+        });
+
+        // Ensure input fields inside auth or adv modal have explicit focus handling
+        scope.querySelectorAll('input:not([data-tv-input-bound]), textarea:not([data-tv-input-bound])').forEach(input => {
+            input.dataset.tvInputBound = 'true';
+            input.addEventListener('focus', () => {
+                if (!isTextEditMode) {
+                    isTextEditMode = true;
+                    currentInputTarget = input;
+                }
+            });
+            input.addEventListener('blur', () => {
+                if (currentInputTarget === input) {
+                    isTextEditMode = false;
+                    currentInputTarget = null;
+                }
+            });
         });
 
         scope.querySelectorAll(ROW_SELECTOR).forEach(row => {
@@ -247,12 +324,16 @@
         return candidateCache;
     }
 
+    // Unified horizontal & vertical scroll for focused element with safe viewport margins
     function scrollFocusedIntoView(element) {
+        if (!element) return;
+
+        // 1. Horizontal container scrolling (Action bar, Movie rows, Filter chips)
         const horizontal = element.closest(HORIZONTAL_SCROLLER);
         if (horizontal && horizontal.scrollWidth > horizontal.clientWidth) {
             const elementRect = element.getBoundingClientRect();
             const containerRect = horizontal.getBoundingClientRect();
-            const safeInset = Math.min(70, containerRect.width * 0.08);
+            const safeInset = Math.min(80, containerRect.width * 0.1);
             let deltaX = 0;
 
             if (elementRect.left < containerRect.left + safeInset) {
@@ -261,27 +342,39 @@
                 deltaX = elementRect.right - containerRect.right + safeInset;
             }
 
-            if (Math.abs(deltaX) > 1) horizontal.scrollLeft += deltaX;
+            if (Math.abs(deltaX) > 1) {
+                horizontal.scrollLeft += deltaX;
+            }
         }
 
+        // 2. Section vertical alignment
         const section = sectionFor(element);
         if (section) {
             const sectionTop = section.getBoundingClientRect().top + window.scrollY;
-            if (Math.abs(window.scrollY - sectionTop) > 1) {
-                window.scrollTo({ top: Math.max(0, sectionTop), behavior: 'auto' });
+            const topHeaderOffset = 70; // Header safe offset
+            const targetY = Math.max(0, sectionTop - topHeaderOffset);
+            
+            if (Math.abs(window.scrollY - targetY) > 8) {
+                window.scrollTo({ top: targetY, behavior: 'auto' });
             }
             return;
         }
 
+        // 3. Fallback element vertical safe bounds check
         const rect = element.getBoundingClientRect();
-        const topSafe = Math.max(70, window.innerHeight * 0.14);
-        const bottomSafe = window.innerHeight * 0.84;
+        const topSafe = 80;
+        const bottomSafe = window.innerHeight - 90;
         let deltaY = 0;
 
-        if (rect.top < topSafe) deltaY = rect.top - topSafe;
-        else if (rect.bottom > bottomSafe) deltaY = rect.bottom - bottomSafe;
+        if (rect.top < topSafe) {
+            deltaY = rect.top - topSafe;
+        } else if (rect.bottom > bottomSafe) {
+            deltaY = rect.bottom - bottomSafe;
+        }
 
-        if (Math.abs(deltaY) > 1) window.scrollBy({ top: deltaY, behavior: 'auto' });
+        if (Math.abs(deltaY) > 2) {
+            window.scrollBy({ top: deltaY, behavior: 'auto' });
+        }
     }
 
     function focusElement(element) {
@@ -307,10 +400,16 @@
             element.focus();
         }
 
+        // Add tv-focused visual feedback class
+        document.querySelectorAll('.tv-focused').forEach(el => el.classList.remove('tv-focused'));
+        element.classList.add('tv-focused');
+
         if (!activeModal()) {
             lastContentFocus = element;
             if (nextSection) sectionLastFocus.set(nextSection, element);
         }
+        
+        debugLog('Focus ->', element.tagName, element.id || element.className);
         scrollFocusedIntoView(element);
         return document.activeElement === element;
     }
@@ -324,7 +423,7 @@
                 '.btn-fav',
                 '.netflix-btn',
                 '.auth-tab.active',
-                'input',
+                '#loginUsername',
                 '.close-btn'
             ];
             for (const selector of modalPreferred) {
@@ -335,10 +434,10 @@
 
         const view = document.body.dataset.view || 'discover';
         const selectors = view === 'results'
-            ? ['#resultsGrid .movie-card', '.filter-pill.active', '#query', '.saas-back-btn']
+            ? ['#resultsGrid .movie-card', '.filter-pill.active', '#tvQueryTrigger', '.saas-back-btn']
             : view === 'profile'
                 ? ['#profileFavGrid .movie-card', '#profileRecommendBtn', '#profileBackBtn']
-                : ['#tvFeaturedOpen', '.mode-tab.active', '#query', '#popularMoviesRow .movie-card'];
+                : ['#tvFeaturedOpen', '.mode-tab.active', '#tvQueryTrigger', '#popularMoviesRow .movie-card'];
 
         for (const selector of selectors) {
             const found = document.querySelector(selector);
@@ -463,6 +562,11 @@
     }
 
     function move(direction) {
+        // If in text edit mode, standard D-pad navigates within text input or exits on Escape/Back
+        if (isTextEditMode) {
+            return false;
+        }
+
         const list = candidates();
         if (!list.length) return false;
         const current = list.includes(document.activeElement) ? document.activeElement : null;
@@ -475,7 +579,7 @@
 
         if ((direction === 'up' || direction === 'down') && !activeModal()) {
             const laneTarget = verticalLaneTarget(current, direction, list);
-            return laneTarget ? focusElement(laneTarget) : true;
+            if (laneTarget) return focusElement(laneTarget);
         }
 
         const target = spatialTarget(current, direction, list);
@@ -510,17 +614,20 @@
 
     function handleBack() {
         if (!enabled) return false;
+
+        // 1. Text Edit Mode active -> exit text mode first
+        if (isTextEditMode) {
+            exitTextEditMode();
+            return true;
+        }
+
+        // 2. Modals active -> close top modal
         if (closeModalById('trailerModal', 'closeTrailerModalBtn')) return true;
         if (closeModalById('detailModal', 'closeModalBtn')) return true;
         if (closeModalById('authModal', 'closeAuthModalBtn')) return true;
         if (closeModalById('advSearchModal', 'closeAdvSearchModalBtn')) return true;
 
-        const active = document.activeElement;
-        if (active?.matches?.('textarea, input, select')) {
-            active.blur();
-            return ensureFocus(true);
-        }
-
+        // 3. Sub-views active -> return to discover
         if (!document.getElementById('profileSection')?.classList.contains('hidden')) {
             document.getElementById('profileBackBtn')?.click();
             scheduleRefresh();
@@ -547,7 +654,14 @@
         const direction = DIRECTION_KEYS[event.key];
         const isSelect = event.key === 'Enter' || event.key === ' ';
         const isBack = event.key === 'Escape' || event.key === 'BrowserBack';
+
         if (!direction && !isSelect && !isBack) return;
+        
+        // Allow normal typing inside input/textarea when in text edit mode
+        if (isTextEditMode && !isBack && (event.key !== 'Enter' || currentInputTarget?.tagName === 'TEXTAREA')) {
+            return;
+        }
+
         if (isSelect && event.repeat) return;
 
         event.preventDefault();
@@ -563,7 +677,7 @@
         const after = new Set(mutation.target.classList);
         const changed = new Set([...before, ...after].filter(name => before.has(name) !== after.has(name)));
         return changed.size > 0 && [...changed].every(name => [
-            'tv-row-active', 'tv-focus-active', 'tv-nav-ready'
+            'tv-row-active', 'tv-focus-active', 'tv-focused', 'tv-nav-ready'
         ].includes(name));
     }
 
@@ -587,6 +701,39 @@
         body.prepend(backdrop);
     }
 
+    // Intercept Recommendation submit to trigger smooth loading state & result focus
+    function setupRecommendationFormListener() {
+        const recommendForm = document.getElementById('recommendForm');
+        if (recommendForm && !recommendForm.dataset.tvBound) {
+            recommendForm.dataset.tvBound = 'true';
+            recommendForm.addEventListener('submit', () => {
+                if (isTextEditMode) exitTextEditMode();
+                
+                // Ensure results section container is brought smoothly into view
+                const resultsSection = document.getElementById('resultsSection');
+                if (resultsSection) {
+                    resultsSection.classList.remove('hidden');
+                    window.scrollTo({ top: resultsSection.offsetTop - 70, behavior: 'smooth' });
+                }
+
+                // Schedule focus once results pop in
+                const observer = new MutationObserver(() => {
+                    const firstCard = resultsSection?.querySelector('#resultsGrid .movie-card');
+                    if (firstCard) {
+                        observer.disconnect();
+                        window.setTimeout(() => {
+                            focusElement(firstCard);
+                        }, 120);
+                    }
+                });
+                if (resultsSection) {
+                    observer.observe(resultsSection, { childList: true, subtree: true });
+                    window.setTimeout(() => observer.disconnect(), 10000); // safety timeout
+                }
+            });
+        }
+    }
+
     function scheduleRefresh(preferredSelector) {
         cacheDirty = true;
         if (preferredSelector) pendingPreferredSelector = preferredSelector;
@@ -595,6 +742,8 @@
         refreshFrame = requestAnimationFrame(() => {
             refreshFrame = null;
             ensureDetailCinematicLayer();
+            setupRecommendationFormListener();
+
             const list = rebuildCandidateCache();
             const root = activeRoot();
             const modalJustOpened = root !== document.body && root !== navigationRoot;
@@ -685,6 +834,7 @@
         refresh,
         handleNativeKey,
         handleBack,
+        exitTextEditMode,
         isEnabled: () => enabled
     };
 
