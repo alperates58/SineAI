@@ -23,13 +23,26 @@
         '.mood-pills',
         '.quick-filter-bar',
         '.pagination-bar',
-        '.page-numbers',
+        '.page-numbers-container',
         '.netflix-actions-bar',
         '.auth-tabs',
-        '.adv-type-selector',
+        '.adv-type-switcher',
         '.adv-genres-grid',
         '.search-bottom-bar',
-        '.top-nav-bar'
+        '.top-nav-bar',
+        '.profile-ai-actions',
+        '.adv-actions'
+    ].join(',');
+
+    const HORIZONTAL_SCROLLER = [
+        '.cards-row',
+        '.genre-grid',
+        '.results-grid',
+        '.mood-pills',
+        '.quick-filter-bar',
+        '.netflix-actions-bar',
+        '.adv-genres-grid',
+        '.page-numbers-container'
     ].join(',');
 
     const DIRECTION_KEYS = {
@@ -42,11 +55,18 @@
     let enabled = false;
     let observer = null;
     let refreshFrame = null;
+    let pendingPreferredSelector = null;
     let lastContentFocus = null;
     let navigationRoot = document.body;
+    let activeRow = null;
+    let rowSequence = 0;
+    let cacheDirty = true;
+    let cacheRoot = null;
+    let candidateCache = [];
+    let rowItemsCache = new Map();
 
     function activeModal() {
-        const modals = Array.from(document.querySelectorAll('.modal:not(.hidden), .update-modal:not(.hidden)'));
+        const modals = document.querySelectorAll('.modal:not(.hidden), .update-modal:not(.hidden)');
         return modals.length ? modals[modals.length - 1] : null;
     }
 
@@ -54,72 +74,114 @@
         return activeModal() || document.body;
     }
 
+    function rowFor(element) {
+        return element?.closest?.(ROW_SELECTOR) || null;
+    }
+
     function isAvailable(element, root = activeRoot()) {
         if (!(element instanceof HTMLElement)) return false;
-        if (element.classList.contains('tv-skip-focus')) return false;
-        if (element.matches('.see-all')) return false;
+        if (!element.isConnected || element.classList.contains('tv-skip-focus')) return false;
         if (element.matches('.movie-card .fav-btn')) return false;
         if (element.closest('.hidden, [aria-hidden="true"]')) return false;
         if (element.hasAttribute('disabled')) return false;
         if (root !== document.body && !root.contains(element)) return false;
 
-        const style = window.getComputedStyle(element);
-        if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
         const rect = element.getBoundingClientRect();
-        return rect.width > 2 && rect.height > 2;
+        if (rect.width <= 2 || rect.height <= 2) return false;
+
+        const style = window.getComputedStyle(element);
+        return style.display !== 'none'
+            && style.visibility !== 'hidden'
+            && Number(style.opacity) !== 0;
     }
 
-    function decorateFocusableElements() {
-        document.querySelectorAll('.movie-card, .genre-chip, .see-all').forEach(element => {
-            element.tabIndex = 0;
-            if (!element.hasAttribute('role')) element.setAttribute('role', 'button');
-        });
+    function decorateFocusableElements(scope = document.body) {
+        scope.querySelectorAll('.movie-card:not([data-tv-decorated]), .genre-chip:not([data-tv-decorated]), .see-all:not([data-tv-decorated])')
+            .forEach(element => {
+                element.dataset.tvDecorated = 'true';
+                element.tabIndex = 0;
+                if (!element.hasAttribute('role')) element.setAttribute('role', 'button');
+            });
 
-        document.querySelectorAll('.movie-card .fav-btn').forEach(button => {
+        scope.querySelectorAll('.movie-card .fav-btn:not(.tv-skip-focus)').forEach(button => {
             button.tabIndex = -1;
             button.classList.add('tv-skip-focus');
         });
 
-        document.querySelectorAll([
-            '.cards-row', '.genre-grid', '.results-grid', '.search-mode-tabs', '.mood-pills',
-            '.quick-filter-bar', '.pagination-bar', '.page-numbers', '.netflix-actions-bar',
-            '.auth-tabs', '.adv-type-selector', '.adv-genres-grid', '.search-bottom-bar', '.top-nav-bar'
-        ].join(',')).forEach((row, index) => {
-            if (!row.dataset.tvRow) row.dataset.tvRow = `row-${index}`;
+        scope.querySelectorAll(ROW_SELECTOR).forEach(row => {
+            if (!row.dataset.tvRow) row.dataset.tvRow = `row-${rowSequence++}`;
         });
+    }
+
+    function rebuildCandidateCache() {
+        const root = activeRoot();
+        decorateFocusableElements(root);
+
+        const list = Array.from(root.querySelectorAll(CANDIDATE_SELECTOR))
+            .filter(element => isAvailable(element, root));
+        const rows = new Map();
+
+        for (const element of list) {
+            const row = rowFor(element);
+            if (!row) continue;
+            if (!rows.has(row)) rows.set(row, []);
+            rows.get(row).push(element);
+        }
+
+        cacheRoot = root;
+        candidateCache = list;
+        rowItemsCache = rows;
+        cacheDirty = false;
+        return list;
     }
 
     function candidates() {
         const root = activeRoot();
-        const all = Array.from(root.querySelectorAll(CANDIDATE_SELECTOR));
-        return all.filter((element, index) => isAvailable(element, root) && all.indexOf(element) === index);
-    }
-
-    function rowFor(element) {
-        return element?.closest?.(ROW_SELECTOR) || null;
+        if (cacheDirty || cacheRoot !== root) return rebuildCandidateCache();
+        return candidateCache;
     }
 
     function scrollFocusedIntoView(element) {
-        const horizontal = element.closest('.cards-row, .genre-grid, .results-grid, .mood-pills, .quick-filter-bar, .netflix-actions-bar, .adv-genres-grid');
+        const horizontal = element.closest(HORIZONTAL_SCROLLER);
         if (horizontal && horizontal.scrollWidth > horizontal.clientWidth) {
-            const elementCenter = element.offsetLeft + (element.offsetWidth / 2);
-            const targetLeft = Math.max(0, elementCenter - (horizontal.clientWidth / 2));
-            horizontal.scrollTo({ left: targetLeft, behavior: 'auto' });
+            const elementRect = element.getBoundingClientRect();
+            const containerRect = horizontal.getBoundingClientRect();
+            const safeInset = Math.min(70, containerRect.width * 0.08);
+            let deltaX = 0;
+
+            if (elementRect.left < containerRect.left + safeInset) {
+                deltaX = elementRect.left - containerRect.left - safeInset;
+            } else if (elementRect.right > containerRect.right - safeInset) {
+                deltaX = elementRect.right - containerRect.right + safeInset;
+            }
+
+            if (Math.abs(deltaX) > 1) horizontal.scrollLeft += deltaX;
         }
 
-        element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' });
+        const rect = element.getBoundingClientRect();
+        const topSafe = Math.max(70, window.innerHeight * 0.14);
+        const bottomSafe = window.innerHeight * 0.84;
+        let deltaY = 0;
+
+        if (rect.top < topSafe) deltaY = rect.top - topSafe;
+        else if (rect.bottom > bottomSafe) deltaY = rect.bottom - bottomSafe;
+
+        if (Math.abs(deltaY) > 1) window.scrollBy({ top: deltaY, behavior: 'auto' });
     }
 
     function focusElement(element) {
         if (!isAvailable(element)) return false;
 
-        document.querySelectorAll('.tv-row-active').forEach(row => row.classList.remove('tv-row-active'));
-        const row = rowFor(element);
-        if (row) row.classList.add('tv-row-active');
+        const nextRow = rowFor(element);
+        if (activeRow !== nextRow) {
+            activeRow?.classList.remove('tv-row-active');
+            nextRow?.classList.add('tv-row-active');
+            activeRow = nextRow;
+        }
 
         try {
             element.focus({ preventScroll: true });
-        } catch (error) {
+        } catch (_error) {
             element.focus();
         }
 
@@ -151,7 +213,7 @@
             ? ['#resultsGrid .movie-card', '.filter-pill.active', '#query', '.saas-back-btn']
             : view === 'profile'
                 ? ['#profileFavGrid .movie-card', '#profileRecommendBtn', '#profileBackBtn']
-                : ['#tvFeaturedOpen', '#popularMoviesRow .movie-card', '#query', '.mode-tab.active'];
+                : ['#voiceBtn', '#query', '#tvFeaturedOpen', '#popularMoviesRow .movie-card', '.mode-tab.active'];
 
         for (const selector of selectors) {
             const found = document.querySelector(selector);
@@ -162,18 +224,17 @@
 
     function ensureFocus(forcePreferred = false) {
         if (!enabled) return false;
-        decorateFocusableElements();
         const list = candidates();
         if (!list.length) return false;
-
         if (!forcePreferred && list.includes(document.activeElement)) return true;
         return focusElement(preferredCandidate(list));
     }
 
-    function sameRowTarget(current, direction, list) {
+    function sameRowTarget(current, direction) {
         const row = rowFor(current);
-        if (!row) return null;
-        const rowItems = list.filter(element => rowFor(element) === row);
+        const rowItems = row ? rowItemsCache.get(row) : null;
+        if (!rowItems?.length) return null;
+
         const index = rowItems.indexOf(current);
         if (index < 0) return null;
         if (direction === 'left' && index > 0) return rowItems[index - 1];
@@ -191,16 +252,20 @@
 
         for (const candidate of list) {
             if (candidate === current) continue;
-            if (rowFor(candidate) === currentRow && currentRow) continue;
+            if (currentRow && rowFor(candidate) === currentRow) continue;
+            if (direction === 'down' && candidate.matches('.see-all')) {
+                const candidateSection = candidate.closest('.row-section');
+                if (candidateSection && !candidateSection.contains(current)) continue;
+            }
 
             const rect = candidate.getBoundingClientRect();
             const x = rect.left + (rect.width / 2);
             const y = rect.top + (rect.height / 2);
             const dx = x - currentX;
             const dy = y - currentY;
-
             let primary;
             let secondary;
+
             if (direction === 'up') {
                 if (dy >= -6) continue;
                 primary = Math.abs(dy);
@@ -219,12 +284,11 @@
                 secondary = Math.abs(dy);
             }
 
-            const horizontalOverlap = Math.max(0, Math.min(currentRect.right, rect.right) - Math.max(currentRect.left, rect.left));
-            const verticalOverlap = Math.max(0, Math.min(currentRect.bottom, rect.bottom) - Math.max(currentRect.top, rect.top));
-            const alignmentBonus = (direction === 'up' || direction === 'down')
-                ? Math.min(180, horizontalOverlap)
-                : Math.min(180, verticalOverlap);
-            const score = (primary * 10) + (secondary * 1.35) - alignmentBonus;
+            const overlap = (direction === 'up' || direction === 'down')
+                ? Math.max(0, Math.min(currentRect.right, rect.right) - Math.max(currentRect.left, rect.left))
+                : Math.max(0, Math.min(currentRect.bottom, rect.bottom) - Math.max(currentRect.top, rect.top));
+            const crossAxisWeight = (direction === 'up' || direction === 'down') ? 2.1 : 1.25;
+            const score = (primary * 10) + (secondary * crossAxisWeight) - Math.min(160, overlap);
 
             if (score < bestScore) {
                 bestScore = score;
@@ -241,8 +305,8 @@
         if (!current) return focusElement(preferredCandidate(list));
 
         if (direction === 'left' || direction === 'right') {
-            const rowTarget = sameRowTarget(current, direction, list);
-            if (rowTarget) return rowTarget === current ? true : focusElement(rowTarget);
+            const rowTarget = sameRowTarget(current, direction);
+            if (rowTarget) return rowTarget === current || focusElement(rowTarget);
         }
 
         const target = spatialTarget(current, direction, list);
@@ -251,18 +315,14 @@
 
     function activateCurrent() {
         const list = candidates();
-        const current = list.includes(document.activeElement) ? document.activeElement : preferredCandidate(list);
+        const current = list.includes(document.activeElement)
+            ? document.activeElement
+            : preferredCandidate(list);
         if (!current) return false;
         if (document.activeElement !== current) focusElement(current);
 
-        if (current.matches('textarea, input')) {
-            current.focus();
-            current.click();
-            return true;
-        }
-
         current.click();
-        window.setTimeout(() => ensureFocus(false), 60);
+        if (!current.matches('textarea, input, select')) scheduleRefresh();
         return true;
     }
 
@@ -272,6 +332,7 @@
         const restoreTarget = lastContentFocus;
         document.getElementById(closeId)?.click();
         window.setTimeout(() => {
+            cacheDirty = true;
             if (restoreTarget && isAvailable(restoreTarget)) focusElement(restoreTarget);
             else ensureFocus(true);
         }, 0);
@@ -293,13 +354,13 @@
 
         if (!document.getElementById('profileSection')?.classList.contains('hidden')) {
             document.getElementById('profileBackBtn')?.click();
-            window.setTimeout(() => ensureFocus(true), 50);
+            scheduleRefresh();
             return true;
         }
 
         if (!document.getElementById('resultsSection')?.classList.contains('hidden')) {
             document.getElementById('backToDiscoverBtn')?.click();
-            window.setTimeout(() => ensureFocus(true), 50);
+            scheduleRefresh();
             return true;
         }
         return false;
@@ -307,7 +368,6 @@
 
     function handleNativeKey(direction) {
         if (!enabled) return false;
-        document.body.classList.add('tv-focus-active');
         if (direction === 'select' || direction === 'enter' || direction === 'ok') return activateCurrent();
         if (['up', 'down', 'left', 'right'].includes(direction)) return move(direction);
         return false;
@@ -328,28 +388,58 @@
         else handleBack();
     }
 
-    function scheduleRefresh() {
-        if (refreshFrame) cancelAnimationFrame(refreshFrame);
+    function classMutationOnlyChangesFocusState(mutation) {
+        if (mutation.attributeName !== 'class') return false;
+        const before = new Set(String(mutation.oldValue || '').split(/\s+/).filter(Boolean));
+        const after = new Set(mutation.target.classList);
+        const changed = new Set([...before, ...after].filter(name => before.has(name) !== after.has(name)));
+        return changed.size > 0 && [...changed].every(name => [
+            'tv-row-active', 'tv-focus-active', 'tv-nav-ready'
+        ].includes(name));
+    }
+
+    function scheduleRefresh(preferredSelector) {
+        cacheDirty = true;
+        if (preferredSelector) pendingPreferredSelector = preferredSelector;
+        if (refreshFrame) return;
+
         refreshFrame = requestAnimationFrame(() => {
             refreshFrame = null;
-            decorateFocusableElements();
+            const list = rebuildCandidateCache();
             const root = activeRoot();
             const modalJustOpened = root !== document.body && root !== navigationRoot;
             navigationRoot = root;
+
+            const preferred = pendingPreferredSelector;
+            pendingPreferredSelector = null;
+            if (preferred) {
+                const target = root.querySelector(preferred) || document.querySelector(preferred);
+                if (target && list.includes(target)) {
+                    focusElement(target);
+                    return;
+                }
+            }
+
             if (modalJustOpened) ensureFocus(true);
-            else if (!candidates().includes(document.activeElement)) ensureFocus(false);
+            else if (!list.includes(document.activeElement)) ensureFocus(false);
         });
+    }
+
+    function observeMutations(mutations) {
+        const affectsNavigation = mutations.some(mutation => {
+            if (mutation.type === 'childList') return true;
+            return !classMutationOnlyChangesFocusState(mutation);
+        });
+        if (affectsNavigation) scheduleRefresh();
     }
 
     function addRemoteHint() {
         if (document.querySelector('.tv-remote-hint')) return;
         const hint = document.createElement('div');
         hint.className = 'tv-remote-hint';
-        hint.textContent = '← → ↑ ↓ Gezin   •   OK Seç   •   Geri Çık';
+        hint.textContent = 'Yön tuşlarıyla gezin  •  OK ile seç  •  Geri ile çık';
         document.body.appendChild(hint);
-        window.setTimeout(() => {
-            hint.style.opacity = '0.28';
-        }, 8000);
+        window.setTimeout(() => hint.remove(), 6500);
     }
 
     function enable(flag = true) {
@@ -361,36 +451,39 @@
             observer?.disconnect();
             observer = null;
             document.querySelector('.tv-remote-hint')?.remove();
+            candidateCache = [];
+            rowItemsCache.clear();
+            cacheDirty = true;
             return false;
         }
 
-        decorateFocusableElements();
+        decorateFocusableElements(document.body);
         navigationRoot = activeRoot();
         addRemoteHint();
         if (!observer) {
-            observer = new MutationObserver(scheduleRefresh);
+            observer = new MutationObserver(observeMutations);
             observer.observe(document.body, {
                 childList: true,
                 subtree: true,
                 attributes: true,
+                attributeOldValue: true,
                 attributeFilter: ['class', 'disabled', 'aria-hidden']
             });
         }
+        scheduleRefresh();
         window.setTimeout(() => ensureFocus(true), 80);
         return true;
     }
 
     function refresh(preferredSelector) {
         if (!enabled) return false;
-        decorateFocusableElements();
-        if (preferredSelector) {
-            const target = document.querySelector(preferredSelector);
-            if (target && isAvailable(target)) return focusElement(target);
-        }
-        return ensureFocus(false);
+        scheduleRefresh(preferredSelector);
+        return true;
     }
 
     window.addEventListener('keydown', handleKeyboard, true);
+    window.addEventListener('resize', () => { cacheDirty = true; }, { passive: true });
+    window.addEventListener('sineai:viewchange', () => scheduleRefresh());
     window.SineAITV = {
         enable,
         refresh,

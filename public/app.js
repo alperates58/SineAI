@@ -70,6 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const toast                = document.getElementById('toast');
     let toastTimer = null;
     const AI_BATCH_SIZE = 10;
+    const IS_TV = navigator.userAgent.includes('SineAITV/')
+        || new URLSearchParams(window.location.search).get('tv') === '1';
+
+    function scrollPageTo(top) {
+        window.scrollTo({ top, behavior: IS_TV ? 'auto' : 'smooth' });
+    }
 
     // Genre Constants
     const MOVIE_GENRES = [
@@ -322,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
         profileSection.classList.remove('hidden');
         setViewState('profile');
         updateProfilePageUI();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        scrollPageTo(0);
     }
 
     function showDiscoverPage() {
@@ -331,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsSection.classList.add('hidden');
         discoverSection.classList.remove('hidden');
         setViewState('discover');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        scrollPageTo(0);
     }
 
     function showResultsSection() {
@@ -340,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
         profileSection.classList.add('hidden');
         resultsSection.classList.remove('hidden');
         setViewState('results');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        scrollPageTo(0);
     }
 
     userProfileBtn.addEventListener('click', showProfilePage);
@@ -356,6 +362,125 @@ document.addEventListener('DOMContentLoaded', () => {
         toastTimer = setTimeout(() => { toast.classList.add('hidden'); }, 3000);
     }
 
+    // Native Android speech recognition is the primary TV path. Browsers use
+    // Web Speech as a fallback so the same button remains functional on web.
+    let voiceRecognition = null;
+    let voiceListening = false;
+    let voiceResultReceived = false;
+    const VOICE_IDLE_LABEL = '🎤 Sesli Arama';
+
+    function setVoiceListening(listening, label) {
+        voiceListening = listening;
+        voiceBtn.classList.toggle('listening', listening);
+        voiceBtn.setAttribute('aria-pressed', String(listening));
+        voiceBtn.textContent = label || (listening ? '🎙️ Dinliyorum…' : VOICE_IDLE_LABEL);
+    }
+
+    function finishVoiceSearch(transcript) {
+        const normalized = String(transcript || '').trim();
+        setVoiceListening(false);
+        if (!normalized) {
+            showError('Ses algılanamadı. Lütfen tekrar deneyin.');
+            return;
+        }
+
+        voiceResultReceived = true;
+        queryInput.value = normalized;
+        queryInput.dispatchEvent(new Event('input', { bubbles: true }));
+        errorBox.classList.add('hidden');
+        showToast(`“${normalized}” aranıyor`);
+
+        // TV'de klavye kullanmadan tek adımda aramayı tamamla.
+        window.setTimeout(() => {
+            if (typeof form.requestSubmit === 'function') form.requestSubmit();
+            else submitBtn.click();
+        }, 40);
+    }
+
+    function failVoiceSearch(message) {
+        setVoiceListening(false);
+        showError(message || 'Sesli arama başlatılamadı. Lütfen tekrar deneyin.');
+        window.SineAITV?.refresh('#voiceBtn');
+    }
+
+    window.addEventListener('sineai:voice-start', () => {
+        voiceResultReceived = false;
+        errorBox.classList.add('hidden');
+        setVoiceListening(true);
+    });
+    window.addEventListener('sineai:voice-result', (event) => {
+        finishVoiceSearch(event.detail?.transcript);
+    });
+    window.addEventListener('sineai:voice-cancelled', () => {
+        setVoiceListening(false);
+        window.SineAITV?.refresh('#voiceBtn');
+    });
+    window.addEventListener('sineai:voice-error', (event) => {
+        failVoiceSearch(event.detail?.message);
+    });
+    window.addEventListener('sineai:microphone-permission', (event) => {
+        if (event.detail?.granted === false) {
+            failVoiceSearch('Mikrofon izni verilmedi. TV ayarlarından SineAI için mikrofon iznini açın.');
+        }
+    });
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        voiceRecognition = new SpeechRecognition();
+        voiceRecognition.lang = 'tr-TR';
+        voiceRecognition.continuous = false;
+        voiceRecognition.interimResults = false;
+        voiceRecognition.maxAlternatives = 1;
+        voiceRecognition.onstart = () => {
+            voiceResultReceived = false;
+            errorBox.classList.add('hidden');
+            setVoiceListening(true);
+        };
+        voiceRecognition.onresult = (event) => {
+            finishVoiceSearch(event.results?.[0]?.[0]?.transcript);
+        };
+        voiceRecognition.onerror = (event) => {
+            const messages = {
+                'not-allowed': 'Mikrofon izni verilmedi. Tarayıcı ayarlarından mikrofon iznini açın.',
+                'audio-capture': 'Mikrofon kullanılamıyor. TV mikrofonunu veya kumandayı kontrol edin.',
+                'no-speech': 'Ses algılanamadı. Lütfen tekrar deneyin.',
+                network: 'Ses tanıma servisine bağlanılamadı.'
+            };
+            failVoiceSearch(messages[event.error] || 'Sesli arama tamamlanamadı.');
+        };
+        voiceRecognition.onend = () => {
+            if (!voiceResultReceived) setVoiceListening(false);
+        };
+    }
+
+    voiceBtn.addEventListener('click', () => {
+        errorBox.classList.add('hidden');
+        voiceResultReceived = false;
+
+        try {
+            if (window.SineAIAndroid && typeof window.SineAIAndroid.startVoiceSearch === 'function') {
+                setVoiceListening(true, '🎙️ Hazırlanıyor…');
+                window.SineAIAndroid.startVoiceSearch();
+                return;
+            }
+        } catch (error) {
+            console.warn('Native voice bridge unavailable:', error);
+        }
+
+        if (!voiceRecognition) {
+            failVoiceSearch('Bu cihazda sesli arama hizmeti bulunamadı.');
+            return;
+        }
+
+        try {
+            if (voiceListening) voiceRecognition.stop();
+            else voiceRecognition.start();
+        } catch (error) {
+            failVoiceSearch('Sesli arama şu anda başlatılamıyor. Birkaç saniye sonra tekrar deneyin.');
+        }
+    });
+    window.SineAIVoiceReady = true;
+
     // ── Discover Section Loading (Popular & Genres) ─────
     async function loadPopular(type, containerId) {
         const container = document.getElementById(containerId);
@@ -369,13 +494,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             container.innerHTML = '';
             if (type === 'movie') renderTvFeatured(data.results[0]);
-            data.results.forEach(item => {
+            data.results.forEach((item, index) => {
                 const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
                 const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
                 const typeStr = type === 'tv' ? 'Dizi' : 'Film';
                 const posterUrl = item.poster ? `https://image.tmdb.org/t/p/w342${item.poster}` : null;
                 const posterHTML = posterUrl
-                    ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="lazy">`
+                    ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="${IS_TV && index < 7 ? 'eager' : 'lazy'}" decoding="async">`
                     : `<div class="no-poster">Afiş Yok</div>`;
 
                 let badgesHTML = '';
@@ -403,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="card-content">
                         <h3 class="card-title">${item.title}</h3>
                         <div class="card-meta"><span>${year}</span></div>
-                        ${badgesHTML}
+                        ${IS_TV ? '' : badgesHTML}
                     </div>
                 `;
 
@@ -431,7 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
         const backdrop = item.backdrop || item.poster;
         if (tvFeaturedBackdrop && backdrop) {
-            const size = item.backdrop ? 'original' : 'w780';
+            const size = item.backdrop ? 'w1280' : 'w780';
             tvFeaturedBackdrop.style.backgroundImage = `url("https://image.tmdb.org/t/p/${size}${backdrop}")`;
         }
         if (tvFeaturedTitle) tvFeaturedTitle.textContent = item.title;
@@ -617,7 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (pageState.mode === 'ai') {
             renderAIPage(targetPage);
         }
-        window.scrollTo({ top: resultsSection.offsetTop - 40, behavior: 'smooth' });
+        scrollPageTo(resultsSection.offsetTop - 40);
     }
 
     if (prevPageBtn) {
@@ -670,7 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsGrid.innerHTML = '';
         scrollSentinel.classList.add('hidden');
         if (aiAnalysisSummary) aiAnalysisSummary.classList.add('hidden');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        scrollPageTo(0);
     }
 
     function renderAIAnalysis(analysis) {
@@ -690,13 +815,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const fragment = document.createDocumentFragment();
-        items.forEach(item => {
+        items.forEach((item, index) => {
             const year    = item.release_date ? new Date(item.release_date).getFullYear() : 'Bilinmiyor';
             const typeStr = item.type === 'tv' ? 'Dizi' : 'Film';
             const rating  = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
             const posterUrl  = item.poster ? `https://image.tmdb.org/t/p/w342${item.poster}` : null;
             const posterHTML = posterUrl
-                ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="lazy">`
+                ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="${IS_TV && index < 7 ? 'eager' : 'lazy'}" decoding="async">`
                 : `<div class="no-poster">Afiş Bulunamadı</div>`;
 
             let badgesHTML = '';
@@ -729,9 +854,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="card-content">
                     <h3 class="card-title">${item.title}</h3>
                     <div class="card-meta"><span>${year}</span></div>
-                    ${item.reason ? `<div class="card-reason">${item.reason}</div>` : ''}
-                    <p class="card-desc">${item.overview || 'Açıklama bulunmuyor.'}</p>
-                    ${badgesHTML}
+                    ${!IS_TV && item.reason ? `<div class="card-reason">${item.reason}</div>` : ''}
+                    ${IS_TV ? '' : `<p class="card-desc">${item.overview || 'Açıklama bulunmuyor.'}</p>`}
+                    ${IS_TV ? '' : badgesHTML}
                 </div>
             `;
 

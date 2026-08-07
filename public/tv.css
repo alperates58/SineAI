@@ -4,14 +4,17 @@
 }
 
 body.tv-nav-ready {
-    --tv-edge: clamp(40px, 4.6vw, 92px);
+    --tv-edge: clamp(42px, 4.8vw, 96px);
     --tv-focus: #ffffff;
-    --tv-brand: #8b5cf6;
-    --tv-brand-strong: #6d28d9;
-    --tv-surface: #17171c;
-    background: #050507;
+    --tv-brand: #a78bfa;
+    --tv-brand-strong: #7c3aed;
+    --tv-accent: #67e8f9;
+    --tv-surface: #15141b;
+    --tv-surface-raised: #1c1925;
+    background: #07070b;
     color: #f8fafc;
     font-size: 18px;
+    -webkit-font-smoothing: antialiased;
 }
 
 body.tv-nav-ready .container {
@@ -22,10 +25,11 @@ body.tv-nav-ready .container {
 }
 
 body.tv-nav-ready .app-header {
-    padding: 20px 0 28px;
+    padding: 18px 0 30px;
     text-align: left;
     background:
-        linear-gradient(180deg, rgba(5,5,7,0.98) 0%, rgba(5,5,7,0.84) 72%, rgba(5,5,7,0) 100%);
+        linear-gradient(180deg, #0a0910 0%, #08070c 78%, #07070b 100%);
+    border-bottom: 1px solid rgba(255,255,255,0.055);
     overflow: visible;
     z-index: 20;
 }
@@ -36,27 +40,30 @@ body.tv-nav-ready .hero-glow {
 
 body.tv-nav-ready .top-nav-bar {
     min-height: 54px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
 }
 
 body.tv-nav-ready .brand-badge {
-    padding: 9px 17px;
-    border: 0;
-    border-radius: 7px;
-    color: #fff;
-    background: linear-gradient(135deg, var(--tv-brand-strong), var(--tv-brand));
+    padding: 9px 18px;
+    border: 1px solid rgba(167,139,250,0.34);
+    border-radius: 999px;
+    color: #ede9fe;
+    background: #17131f;
     font-size: clamp(15px, 1.15vw, 22px);
-    letter-spacing: 0.02em;
+    font-weight: 850;
+    letter-spacing: 0.055em;
 }
 
 body.tv-nav-ready .btn-nav-auth,
 body.tv-nav-ready .btn-nav-profile {
     min-height: 48px;
     padding: 10px 20px;
-    border-radius: 7px;
+    border-radius: 999px;
     color: #fff;
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(255,255,255,0.18);
+    background: #17161d;
+    border-color: rgba(255,255,255,0.13);
     font-size: clamp(14px, 1vw, 19px);
 }
 
@@ -68,7 +75,7 @@ body.tv-nav-ready .hero-search-area {
         "logo tabs"
         "logo search"
         "logo moods";
-    column-gap: clamp(32px, 4vw, 76px);
+    column-gap: clamp(34px, 4.2vw, 80px);
     align-items: center;
     max-width: 1650px;
     margin: 0 auto;
@@ -81,17 +88,18 @@ body.tv-nav-ready .logo-area {
 }
 
 body.tv-nav-ready .logo-image {
-    width: clamp(210px, 16vw, 280px);
+    width: clamp(190px, 13.5vw, 245px);
     height: auto;
-    max-height: 300px;
+    max-height: 250px;
     object-fit: contain;
     object-position: left center;
+    filter: none;
 }
 
 body.tv-nav-ready .tagline {
     grid-area: tagline;
     margin: 0 0 10px;
-    color: #d1d5db;
+    color: #b8b6c3;
     font-size: clamp(17px, 1.35vw, 25px);
     text-align: left;
 }
@@ -110,9 +118,9 @@ body.tv-nav-ready .pagination-btn,
 body.tv-nav-ready .page-num-btn {
     min-height: 48px;
     padding: 10px 19px;
-    border-radius: 7px;
-    border: 1px solid rgba(255,255,255,0.16);
-    background: rgba(255,255,255,0.08);
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: #15141a;
     color: #f8fafc;
     font-size: clamp(14px, 1vw, 19px);
 }
@@ -121,7 +129,7 @@ body.tv-nav-ready .mode-tab.active,
 body.tv-nav-ready .filter-pill.active,
 body.tv-nav-ready .page-num-btn.active {
     color: #fff;
-    background: var(--tv-brand-strong);
+    background: linear-gradient(135deg, #6d28d9, #8b5cf6);
     border-color: var(--tv-brand);
 }
 
@@ -130,16 +138,17 @@ body.tv-nav-ready .saas-search-box {
     width: 100%;
     max-width: none;
     margin: 0;
-    border-radius: 10px;
-    border: 2px solid rgba(255,255,255,0.16);
-    background: rgba(20,20,24,0.96);
-    box-shadow: 0 18px 55px rgba(0,0,0,0.42);
+    border-radius: 16px;
+    border: 1px solid rgba(167,139,250,0.32);
+    border-left: 5px solid var(--tv-brand);
+    background: #14131a;
+    box-shadow: 0 14px 36px rgba(0,0,0,0.34);
     backdrop-filter: none;
 }
 
 body.tv-nav-ready textarea#query {
-    min-height: 78px;
-    padding: 20px 24px;
+    min-height: 68px;
+    padding: 19px 24px 17px;
     color: #fff;
     font-size: clamp(18px, 1.35vw, 25px);
     line-height: 1.35;
@@ -151,14 +160,15 @@ body.tv-nav-ready .search-sparkle-icon {
 
 body.tv-nav-ready .search-bottom-bar {
     min-height: 64px;
-    padding: 9px 12px 11px;
+    padding: 10px 13px 12px;
+    border-top: 1px solid rgba(255,255,255,0.07);
 }
 
 body.tv-nav-ready .saas-pill-btn,
 body.tv-nav-ready .saas-submit-btn {
     min-height: 48px;
     padding: 10px 20px;
-    border-radius: 7px;
+    border-radius: 999px;
     font-size: clamp(14px, 1vw, 19px);
 }
 
@@ -166,6 +176,19 @@ body.tv-nav-ready .saas-submit-btn {
     background: #fff;
     color: #09090b;
     box-shadow: none;
+}
+
+body.tv-nav-ready .btn-voice {
+    color: #ddd6fe;
+    background: rgba(124,58,237,0.16);
+    border-color: rgba(167,139,250,0.34);
+}
+
+body.tv-nav-ready .btn-voice.listening {
+    color: #fff;
+    background: #b91c1c;
+    border-color: #fca5a5;
+    animation: none !important;
 }
 
 body.tv-nav-ready .mood-pills {
@@ -214,10 +237,10 @@ body.tv-nav-ready .tv-featured {
     position: relative;
     display: flex;
     align-items: flex-end;
-    min-height: clamp(330px, 48vh, 560px);
-    margin: 0 0 10px;
+    min-height: clamp(350px, 50vh, 590px);
+    margin: 0 0 6px;
     overflow: hidden;
-    background: #0b0b0e;
+    background: #0b0a0f;
     isolation: isolate;
 }
 
@@ -237,8 +260,8 @@ body.tv-nav-ready .tv-featured-backdrop {
 body.tv-nav-ready .tv-featured-shade {
     z-index: -2;
     background:
-        linear-gradient(90deg, rgba(5,5,7,0.98) 0%, rgba(5,5,7,0.82) 36%, rgba(5,5,7,0.18) 76%, rgba(5,5,7,0.58) 100%),
-        linear-gradient(0deg, #050507 0%, transparent 54%);
+        linear-gradient(90deg, rgba(7,7,11,0.99) 0%, rgba(7,7,11,0.86) 34%, rgba(7,7,11,0.18) 74%, rgba(7,7,11,0.55) 100%),
+        linear-gradient(0deg, #07070b 0%, transparent 56%);
 }
 
 body.tv-nav-ready .tv-featured-content {
@@ -248,7 +271,7 @@ body.tv-nav-ready .tv-featured-content {
 
 body.tv-nav-ready .tv-featured-kicker {
     margin-bottom: 9px;
-    color: #c4b5fd;
+    color: var(--tv-accent);
     font-size: clamp(13px, 0.9vw, 18px);
     font-weight: 900;
     letter-spacing: 0.16em;
@@ -265,7 +288,7 @@ body.tv-nav-ready .tv-featured h2 {
 
 body.tv-nav-ready .tv-featured-meta {
     margin-bottom: 12px;
-    color: #d8b4fe;
+    color: #ddd6fe;
     font-size: clamp(15px, 1.05vw, 20px);
     font-weight: 800;
 }
@@ -288,7 +311,7 @@ body.tv-nav-ready .tv-featured-button {
     min-height: 56px;
     padding: 12px 26px;
     border: 0;
-    border-radius: 7px;
+    border-radius: 999px;
     background: #fff;
     color: #09090b;
     font-size: clamp(16px, 1.15vw, 22px);
@@ -298,7 +321,7 @@ body.tv-nav-ready .tv-featured-button {
 /* Netflix-like rows */
 body.tv-nav-ready .row-section {
     max-width: none;
-    padding: 24px var(--tv-edge) 2px;
+    padding: 26px var(--tv-edge) 4px;
     overflow: visible;
 }
 
@@ -318,14 +341,14 @@ body.tv-nav-ready .section-dot {
     width: 6px;
     height: 30px;
     border-radius: 4px;
-    background: var(--tv-brand);
+    background: linear-gradient(180deg, var(--tv-accent), var(--tv-brand));
 }
 
 body.tv-nav-ready .see-all {
     min-height: 44px;
     padding: 8px 14px;
     border: 1px solid transparent;
-    border-radius: 7px;
+    border-radius: 999px;
     color: #d1d5db;
     font-size: clamp(15px, 1vw, 19px);
     font-weight: 750;
@@ -336,8 +359,8 @@ body.tv-nav-ready .results-grid,
 body.tv-nav-ready .genre-grid {
     display: flex;
     width: 100%;
-    gap: clamp(16px, 1.4vw, 28px);
-    padding: 24px 8px 38px;
+    gap: clamp(17px, 1.45vw, 29px);
+    padding: 22px 8px 36px;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: none;
@@ -358,20 +381,22 @@ body.tv-nav-ready .results-grid .movie-card {
     min-width: 190px;
     overflow: visible;
     border: 3px solid transparent;
-    border-radius: 10px;
-    background: transparent;
+    border-radius: 13px;
+    background: #111015;
     box-shadow: none;
     transform-origin: center center;
+    contain: layout style;
 }
 
 body.tv-nav-ready .poster-container {
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.52);
+    border-radius: 10px 10px 6px 6px;
+    background: #17151e;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
 }
 
 body.tv-nav-ready .movie-card .card-content {
     min-height: 76px;
-    padding: 13px 5px 4px;
+    padding: 13px 12px 11px;
 }
 
 body.tv-nav-ready .movie-card .card-title {
@@ -420,9 +445,10 @@ body.tv-nav-ready .genre-chip {
     gap: 18px;
     padding: 20px 24px;
     border: 3px solid transparent;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #20202a, #111116);
-    box-shadow: 0 10px 28px rgba(0,0,0,0.36);
+    border-radius: 14px;
+    background: linear-gradient(135deg, #211d2d, #121117);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    contain: layout style;
 }
 
 body.tv-nav-ready .genre-chip-icon {
@@ -461,15 +487,15 @@ body.tv-nav-ready .saas-back-btn,
 body.tv-nav-ready .saas-select {
     min-height: 50px;
     padding: 10px 18px;
-    border-radius: 7px;
+    border-radius: 999px;
     font-size: clamp(15px, 1vw, 19px);
 }
 
 body.tv-nav-ready .ai-analysis-summary {
     margin: 0 0 18px;
     padding: 16px 20px;
-    border-radius: 9px;
-    background: #15151b;
+    border-radius: 14px;
+    background: #17151e;
     border-color: rgba(139,92,246,0.42);
 }
 
@@ -480,8 +506,8 @@ body.tv-nav-ready .analysis-summary-copy p {
 body.tv-nav-ready .saas-results-toolbar {
     margin-bottom: 12px;
     padding: 13px 16px;
-    border-radius: 9px;
-    background: #111116;
+    border-radius: 14px;
+    background: #111015;
     backdrop-filter: none;
 }
 
@@ -503,17 +529,17 @@ body.tv-nav-ready .modal-content {
     max-height: 92vh;
     padding: clamp(28px, 3vw, 54px);
     border: 1px solid rgba(255,255,255,0.16);
-    border-radius: 12px;
-    background: #121216;
-    box-shadow: 0 30px 100px rgba(0,0,0,0.9);
+    border-radius: 18px;
+    background: #121117;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.78);
 }
 
 body.tv-nav-ready .close-btn {
     min-width: 120px;
     min-height: 48px;
     padding: 9px 15px;
-    border-radius: 7px;
-    background: rgba(255,255,255,0.12);
+    border-radius: 999px;
+    background: #201e26;
     color: #fff;
     font-size: clamp(14px, 0.95vw, 18px);
 }
@@ -567,7 +593,7 @@ body.tv-nav-ready .netflix-btn {
     min-width: max-content;
     min-height: 56px;
     padding: 12px 22px;
-    border-radius: 7px;
+    border-radius: 999px;
     font-size: clamp(15px, 1vw, 19px);
 }
 
@@ -580,16 +606,18 @@ body.tv-focus-active textarea:focus,
 body.tv-focus-active select:focus,
 body.tv-focus-active input:focus,
 body.tv-focus-active a:focus {
-    outline: 4px solid var(--tv-focus) !important;
-    outline-offset: 3px;
+    outline: 3px solid var(--tv-focus) !important;
+    outline-offset: 2px;
     border-color: var(--tv-focus) !important;
-    box-shadow: 0 0 0 7px rgba(139,92,246,0.92), 0 22px 55px rgba(0,0,0,0.8) !important;
+    box-shadow: 0 0 0 5px rgba(139,92,246,0.78) !important;
 }
 
 body.tv-focus-active .movie-card:focus,
 body.tv-focus-active .genre-chip:focus {
     z-index: 30;
-    transform: scale(1.075) !important;
+    transform: translateY(-2px) scale(1.04) !important;
+    box-shadow: 0 0 0 5px rgba(139,92,246,0.78), 0 12px 28px rgba(0,0,0,0.58) !important;
+    will-change: transform;
 }
 
 body.tv-focus-active button:focus,
@@ -598,7 +626,7 @@ body.tv-focus-active textarea:focus,
 body.tv-focus-active select:focus,
 body.tv-focus-active input:focus,
 body.tv-focus-active a:focus {
-    transform: scale(1.035) !important;
+    transform: scale(1.018) !important;
 }
 
 body.tv-nav-ready .tv-row-active {
@@ -614,17 +642,36 @@ body.tv-nav-ready .tv-remote-hint {
     padding: 10px 16px;
     border: 1px solid rgba(255,255,255,0.15);
     border-radius: 999px;
-    background: rgba(0,0,0,0.76);
+    background: #111015;
     color: #d1d5db;
     font-size: 14px;
     font-weight: 700;
     pointer-events: none;
-    opacity: 0.9;
+    opacity: 0.94;
 }
 
 body.tv-nav-ready .app-footer {
-    padding: 24px 0;
-    background: #050507;
+    display: none;
+}
+
+/* Keep the TV compositor's work predictable: only focus transforms animate. */
+body.tv-nav-ready .movie-card,
+body.tv-nav-ready .genre-chip,
+body.tv-nav-ready button,
+body.tv-nav-ready .see-all,
+body.tv-nav-ready textarea,
+body.tv-nav-ready input,
+body.tv-nav-ready select,
+body.tv-nav-ready a {
+    transition-property: transform, border-color, background-color, color !important;
+    transition-duration: 110ms !important;
+    transition-timing-function: ease-out !important;
+}
+
+body.tv-nav-ready .poster-container img,
+body.tv-nav-ready .tv-featured-backdrop,
+body.tv-nav-ready .tv-featured-shade {
+    transition: none !important;
 }
 
 @media (max-width: 1100px) {

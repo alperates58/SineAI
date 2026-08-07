@@ -10,7 +10,10 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
+import android.speech.RecognizerIntent
 import android.view.KeyEvent
 import android.view.View
 import android.webkit.JavascriptInterface
@@ -26,16 +29,20 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import org.json.JSONObject
 
 class MainActivity : Activity() {
 
     private var webView: WebView? = null
     private var tvNavigationReady = false
     private var pendingAudioPermissionRequest: PermissionRequest? = null
+    private var pendingNativeVoiceSearch = false
+    private var lastDpadDispatchAt = 0L
     private val PREFS       = "sineai_prefs"
     private val KEY_URL     = "server_url"
     private val DEFAULT_URL = "https://sineai.alperates.com.tr"
     private val MIC_PERMISSION_REQUEST = 4101
+    private val VOICE_SEARCH_REQUEST = 4102
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -99,7 +106,7 @@ class MainActivity : Activity() {
             textZoom                       = 100
             setSupportMultipleWindows(false)
             javaScriptCanOpenWindowsAutomatically = false
-            userAgentString = "${userAgentString} SineAITV/1.3"
+            userAgentString = "${userAgentString} SineAITV/1.4"
             // TV'de büyük ekran önceliği
             @Suppress("DEPRECATION")
             setRenderPriority(WebSettings.RenderPriority.HIGH)
@@ -113,6 +120,9 @@ class MainActivity : Activity() {
         wv.isVerticalScrollBarEnabled   = false
         wv.isFocusable = true
         wv.isFocusableInTouchMode = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            wv.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true)
+        }
 
         wv.webChromeClient = object : WebChromeClient() {
             override fun onPermissionRequest(request: PermissionRequest?) {
@@ -136,15 +146,7 @@ class MainActivity : Activity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 tvNavigationReady = false
-                view?.evaluateJavascript(
-                    """
-                    (function() {
-                        if (!window.SineAITV) return false;
-                        window.SineAITV.enable(true);
-                        return true;
-                    })();
-                    """.trimIndent()
-                ) { ready -> tvNavigationReady = ready == "true" }
+                view?.let(::injectBundledTvExperience)
             }
 
             override fun onReceivedError(
@@ -183,7 +185,94 @@ class MainActivity : Activity() {
         wv.loadUrl(url)
     }
 
+    private fun injectBundledTvExperience(view: WebView) {
+        val tvCss = readAssetText("tv.css")
+        val tvNavigation = readAssetText("tv-navigation.js")
+
+        if (tvCss == null || tvNavigation == null) {
+            view.evaluateJavascript(
+                "Boolean(window.SineAITV && window.SineAITV.enable(true));"
+            ) { ready -> tvNavigationReady = ready == "true" }
+            return
+        }
+
+        val script = """
+            (function() {
+                try {
+                    if (window.SineAITV) window.SineAITV.enable(false);
+                } catch (_error) {}
+
+                var oldStyle = document.getElementById('sineai-native-tv-style');
+                if (oldStyle) oldStyle.remove();
+                var style = document.createElement('style');
+                style.id = 'sineai-native-tv-style';
+                style.textContent = ${JSONObject.quote(tvCss)};
+                document.head.appendChild(style);
+            })();
+
+            $tvNavigation
+
+            (function() {
+                if (window.SineAIVoiceReady) return;
+                var button = document.getElementById('voiceBtn');
+                var input = document.getElementById('query');
+                var form = document.getElementById('recommendForm');
+                var errorBox = document.getElementById('errorBox');
+                if (!button || !input || !form || !window.SineAIAndroid) return;
+
+                function setVoiceState(active, label) {
+                    button.classList.toggle('listening', active);
+                    button.setAttribute('aria-pressed', String(active));
+                    button.textContent = label || (active ? '🎙️ Dinliyorum…' : '🎤 Sesli Arama');
+                }
+
+                window.addEventListener('sineai:voice-start', function() {
+                    if (errorBox) errorBox.classList.add('hidden');
+                    setVoiceState(true);
+                });
+                window.addEventListener('sineai:voice-result', function(event) {
+                    var transcript = String((event.detail && event.detail.transcript) || '').trim();
+                    setVoiceState(false);
+                    if (!transcript) return;
+                    input.value = transcript;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    if (typeof form.requestSubmit === 'function') form.requestSubmit();
+                    else form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                });
+                window.addEventListener('sineai:voice-cancelled', function() {
+                    setVoiceState(false);
+                });
+                window.addEventListener('sineai:voice-error', function(event) {
+                    setVoiceState(false);
+                    if (!errorBox) return;
+                    errorBox.textContent = (event.detail && event.detail.message) || 'Sesli arama başlatılamadı.';
+                    errorBox.classList.remove('hidden');
+                });
+                button.addEventListener('click', function() {
+                    setVoiceState(true, '🎙️ Hazırlanıyor…');
+                    window.SineAIAndroid.startVoiceSearch();
+                });
+                window.SineAIVoiceReady = true;
+            })();
+
+            Boolean(window.SineAITV && window.SineAITV.enable(true));
+        """.trimIndent()
+
+        view.evaluateJavascript(script) { ready -> tvNavigationReady = ready == "true" }
+    }
+
+    private fun readAssetText(name: String): String? {
+        return runCatching {
+            assets.open(name).bufferedReader(Charsets.UTF_8).use { it.readText() }
+        }.getOrNull()
+    }
+
     inner class AndroidBridge {
+        @JavascriptInterface
+        fun startVoiceSearch() {
+            runOnUiThread { beginNativeVoiceSearch() }
+        }
+
         @JavascriptInterface
         fun requestMicrophonePermission() {
             runOnUiThread { requestMicrophonePermissionFromUser() }
@@ -191,6 +280,37 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun hasMicrophonePermission(): Boolean = this@MainActivity.hasMicrophonePermission()
+    }
+
+    private fun beginNativeVoiceSearch() {
+        if (!hasMicrophonePermission()) {
+            pendingNativeVoiceSearch = true
+            requestMicrophonePermissionFromUser()
+            return
+        }
+
+        launchNativeVoiceRecognizer()
+    }
+
+    private fun launchNativeVoiceRecognizer() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "tr-TR")
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "tr-TR")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Ne izlemek istediğinizi söyleyin")
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+        }
+
+        try {
+            dispatchWebEvent("sineai:voice-start")
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, VOICE_SEARCH_REQUEST)
+        } catch (_: ActivityNotFoundException) {
+            dispatchVoiceError("Bu TV'de kullanılabilir bir ses tanıma hizmeti bulunamadı.")
+        } catch (_: Exception) {
+            dispatchVoiceError("Sesli arama başlatılamadı. Lütfen tekrar deneyin.")
+        }
     }
 
     private fun hasMicrophonePermission(): Boolean {
@@ -231,14 +351,19 @@ class MainActivity : Activity() {
     }
 
     private fun dispatchMicrophonePermission(granted: Boolean) {
-        webView?.evaluateJavascript(
-            """
-            window.dispatchEvent(new CustomEvent('sineai:microphone-permission', {
-                detail: { granted: $granted }
-            }));
-            """.trimIndent(),
-            null
+        dispatchWebEvent(
+            "sineai:microphone-permission",
+            JSONObject().put("granted", granted)
         )
+    }
+
+    private fun dispatchVoiceError(message: String) {
+        dispatchWebEvent("sineai:voice-error", JSONObject().put("message", message))
+    }
+
+    private fun dispatchWebEvent(name: String, detail: JSONObject = JSONObject()) {
+        val script = "window.dispatchEvent(new CustomEvent(${JSONObject.quote(name)}, {detail: $detail}));"
+        webView?.evaluateJavascript(script, null)
     }
 
     private fun openYouTubeIfNeeded(uri: Uri?): Boolean {
@@ -301,8 +426,14 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun sendTvDirection(direction: String): Boolean {
+    private fun sendTvDirection(direction: String, event: KeyEvent? = null): Boolean {
         if (!tvNavigationReady) return false
+
+        if (direction != "select") {
+            val now = SystemClock.uptimeMillis()
+            if ((event?.repeatCount ?: 0) > 0 && now - lastDpadDispatchAt < 65L) return true
+            lastDpadDispatchAt = now
+        }
 
         webView?.evaluateJavascript(
             "window.SineAITV && window.SineAITV.handleNativeKey('$direction');",
@@ -328,10 +459,10 @@ class MainActivity : Activity() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_UP    -> return sendTvDirection("up")
-            KeyEvent.KEYCODE_DPAD_DOWN  -> return sendTvDirection("down")
-            KeyEvent.KEYCODE_DPAD_LEFT  -> return sendTvDirection("left")
-            KeyEvent.KEYCODE_DPAD_RIGHT -> return sendTvDirection("right")
+            KeyEvent.KEYCODE_DPAD_UP    -> return sendTvDirection("up", event)
+            KeyEvent.KEYCODE_DPAD_DOWN  -> return sendTvDirection("down", event)
+            KeyEvent.KEYCODE_DPAD_LEFT  -> return sendTvDirection("left", event)
+            KeyEvent.KEYCODE_DPAD_RIGHT -> return sendTvDirection("right", event)
             KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_NUMPAD_ENTER,
@@ -381,9 +512,52 @@ class MainActivity : Activity() {
         }
         pendingAudioPermissionRequest = null
         dispatchMicrophonePermission(granted)
+
+        if (pendingNativeVoiceSearch) {
+            pendingNativeVoiceSearch = false
+            if (granted) {
+                launchNativeVoiceRecognizer()
+            } else {
+                dispatchVoiceError("Mikrofon izni verilmedi. TV ayarlarından SineAI için mikrofon iznini açın.")
+            }
+        }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != VOICE_SEARCH_REQUEST) return
+
+        if (resultCode == RESULT_OK) {
+            val transcript = data
+                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+                ?.trim()
+
+            if (!transcript.isNullOrEmpty()) {
+                dispatchWebEvent(
+                    "sineai:voice-result",
+                    JSONObject().put("transcript", transcript)
+                )
+                return
+            }
+        }
+
+        dispatchWebEvent("sineai:voice-cancelled")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        webView?.onResume()
+    }
+
+    override fun onPause() {
+        webView?.onPause()
+        super.onPause()
     }
 
     override fun onDestroy() {
+        webView?.removeJavascriptInterface("SineAIAndroid")
         webView?.destroy()
         super.onDestroy()
     }

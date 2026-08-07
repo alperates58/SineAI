@@ -37,8 +37,8 @@ Proje, sırları korumak adına `.env` dosyası kullanmaktadır. **Lütfen API a
 - **Kişi Arama & Gelişmiş Filtreler**: Kullanıcı "Christopher Nolan filmleri" gibi sorgular yaptığında, ilgili kişi `search/person` ile bulunup filtrelemeye dahil edilir. AI, puan, yıl ve süre limitlerini anlayarak TMDB API filtrelerine çevirir.
 - **Akıllı Tema ve Keyword Eşleştirme**: "Zaman yolculuğu", "Yapay zeka", "Zombi" gibi tematik aramalar AI tarafından algılanıp, özel bir sözlük ile TMDB Keyword ID'lerine dönüştürülerek (`with_keywords`) kesin sonuçlar elde edilir.
 - **Android TV Uyumu**: Arayüz, akıllı televizyonlarda (Android TV) kumanda ile gezinmeye uygun hale getirilmiştir. Kartlar, butonlar ve detay modalları `tabindex="0"` ve `:focus-visible` ile donatılarak yön tuşları ile kontrol edilebilir bir deneyim sunar. Ek olarak, detay modalı iki kolonlu premium bir görünüme kavuşturulmuş; eserlerin süresi (runtime), yönetmen/yaratıcı bilgileri ve ait oldukları kategoriler rozetler halinde modal içine entegre edilmiştir.
-- **Sesli Arama (Voice Search)**: Web Speech API kullanılarak arama kutusuna konuşarak metin yazdırılabilir.
-  > **Gizlilik/Güvenlik**: Web sürümünde sesli arama, tarayıcının Web Speech API desteğine bağlıdır. İleride mobil/Android TV sürümüne geçildiğinde Native Speech Recognizer ile değiştirilebilir.
+- **Sesli Arama (Voice Search)**: Web sürümünde Web Speech API, Android TV uygulamasında ise Türkçe yerel Android Speech Recognizer kullanılır. TV sürümü ilk kullanımda mikrofon iznini ister, algılanan metni arama kutusuna aktarır ve aramayı otomatik başlatır.
+- **Akıcı TV Gezinmesi**: Android TV sürümü odaklanabilir öğeleri önbelleğe alır, gereksiz tam sayfa ölçümlerini engeller ve TV'ye özel CSS/gezinme katmanını APK içinde de taşır. Böylece sunucu önbelleği eski olsa bile kumanda ve odak iyileştirmeleri yeni APK ile devreye girer.
 
 ## Docker Build / Test
 
