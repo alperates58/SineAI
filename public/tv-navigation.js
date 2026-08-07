@@ -180,7 +180,16 @@
             triggerBtn.id = 'tvQueryTrigger';
             triggerBtn.className = 'tv-input-trigger';
             triggerBtn.setAttribute('tabindex', '0');
-            triggerBtn.innerHTML = '🎙️ <span>Söyle / Yaz</span>';
+            triggerBtn.innerHTML = `
+                <div class="tv-trigger-content">
+                    <span class="tv-trigger-sparkle">✨</span>
+                    <div class="tv-trigger-labels">
+                        <strong class="tv-trigger-title">Ne izlemek istediğini söyle veya yaz...</strong>
+                        <span class="tv-trigger-sub">Örn: "Okyanusta geçen romantik gerilim" veya "From benzeri dizi"</span>
+                    </div>
+                    <span class="tv-trigger-badge">🎙️ Kumanda ile Yaz</span>
+                </div>
+            `;
             queryTextarea.parentElement.insertBefore(triggerBtn, queryTextarea);
 
             // Hide raw input from D-pad candidate graph
@@ -191,6 +200,7 @@
                 enterTextEditMode(queryTextarea);
             });
         }
+
 
         // Insert AI Discovery intro header
         if (searchArea && !searchArea.querySelector('.tv-search-intro')) {
