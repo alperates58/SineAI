@@ -836,7 +836,7 @@
         body.prepend(backdrop);
     }
 
-    // Intercept Recommendation Submit for Instant Loading UI & Results Viewport Auto-Scroll
+    // Intercept Recommendation Submit for Instant Glowing AI Loading & Results Auto-Scroll
     function setupRecommendationFormListener() {
         const recommendForm = document.getElementById('recommendForm');
         if (recommendForm && !recommendForm.dataset.tvBound) {
@@ -845,9 +845,17 @@
                 if (tvTextEntryMode) exitTextEditMode();
 
                 const resultsSection = document.getElementById('resultsSection');
+                const loadingEl = document.getElementById('loading');
+
                 if (resultsSection) {
                     resultsSection.classList.remove('hidden');
-                    resultsSection.scrollIntoView({ block: 'start', behavior: 'auto' });
+                }
+
+                if (loadingEl) {
+                    loadingEl.classList.remove('hidden');
+                    window.setTimeout(() => {
+                        loadingEl.scrollIntoView({ block: 'center', behavior: 'auto' });
+                    }, 40);
                 }
 
                 // MutationObserver watches for results Grid population & auto-focuses first poster
@@ -855,9 +863,10 @@
                     const firstCard = resultsSection?.querySelector('#resultsGrid .movie-card');
                     if (firstCard) {
                         observer.disconnect();
-                        requestAnimationFrame(() => {
+                        window.setTimeout(() => {
+                            firstCard.scrollIntoView({ block: 'center', behavior: 'auto' });
                             focusElement(firstCard);
-                        });
+                        }, 80);
                     }
                 });
                 if (resultsSection) {
@@ -867,6 +876,7 @@
             });
         }
     }
+
 
     function scheduleRefresh(preferredSelector) {
         cacheDirty = true;
