@@ -102,17 +102,7 @@ body.tv-nav-ready .top-nav-bar {
 }
 
 body.tv-nav-ready .brand-badge {
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-    padding: 6px 18px;
-    border: 1px solid var(--tv-border);
-    border-radius: var(--tv-radius-md);
-    background: rgba(17, 19, 24, 0.9);
-    color: #fff;
-    font-size: clamp(15px, 1.05vw, 20px);
-    font-weight: 850;
-    letter-spacing: 0.04em;
+    display: none !important;
 }
 
 body.tv-nav-ready .tv-nav-links {
@@ -122,8 +112,8 @@ body.tv-nav-ready .tv-nav-links {
 }
 
 body.tv-nav-ready .tv-nav-link {
-    min-height: 42px;
-    padding: 6px 16px;
+    min-height: 44px;
+    padding: 6px 18px;
     border: 1px solid transparent;
     border-radius: var(--tv-radius-sm);
     background: transparent;
@@ -134,8 +124,8 @@ body.tv-nav-ready .tv-nav-link {
 }
 
 body.tv-nav-ready .tv-nav-link.active {
-    border-color: rgba(124, 58, 237, 0.5);
-    background: var(--tv-surface);
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
     color: #fff;
 }
 
@@ -146,15 +136,21 @@ body.tv-nav-ready .auth-nav-area {
 
 body.tv-nav-ready .btn-nav-auth,
 body.tv-nav-ready .btn-nav-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     min-height: 44px;
-    padding: 6px 18px;
-    border: 1px solid var(--tv-border);
-    border-radius: var(--tv-radius-md);
-    background: rgba(17, 19, 24, 0.9);
-    color: var(--tv-text);
+    padding: 8px 22px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(6, 182, 212, 0.2));
+    color: #ffffff;
     font-size: clamp(14px, 0.95vw, 18px);
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    cursor: pointer;
 }
+
 
 /* 3. CINEMATIC HERO SECTION */
 body.tv-nav-ready .tv-featured {
@@ -814,7 +810,7 @@ body.tv-nav-ready #detailModal .btn-play-trailer {
     color: #050609;
 }
 
-/* 9. UNIFIED FOCUS DESIGN SYSTEM */
+/* 9. UNIFIED PREMIUM FOCUS DESIGN SYSTEM (NO PURPLE DOUBLE RINGS) */
 body.tv-focus-active .movie-card:focus,
 body.tv-focus-active .genre-chip:focus,
 body.tv-focus-active button:focus,
@@ -823,13 +819,14 @@ body.tv-focus-active select:focus,
 body.tv-focus-active input:focus,
 body.tv-focus-active a:focus,
 body.tv-focus-active .tv-focused {
-    outline: 3px solid var(--tv-purple) !important;
-    outline-offset: 3px !important;
-    border-color: #fff !important;
-    background-color: #f7f7f8 !important;
+    outline: none !important;
+    border-color: #ffffff !important;
+    background-color: #ffffff !important;
     color: #07080b !important;
+    box-shadow: 0 8px 26px rgba(255, 255, 255, 0.35) !important;
 }
 
+/* Focused Poster Cards & Genre Chips */
 body.tv-focus-active .movie-card:focus,
 body.tv-focus-active .genre-chip:focus,
 body.tv-focus-active .movie-card.tv-focused,
@@ -837,23 +834,45 @@ body.tv-focus-active .genre-chip.tv-focused {
     z-index: 30;
     transform: scale(1.055) !important;
     background-color: var(--tv-surface-raised) !important;
-    color: #fff !important;
-    outline-color: #fff !important;
+    color: #ffffff !important;
+    border-color: #ffffff !important;
+    outline: 3px solid #ffffff !important;
+    outline-offset: 0px !important;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.85) !important;
 }
 
 body.tv-focus-active .movie-card:focus .card-title,
 body.tv-focus-active .movie-card.tv-focused .card-title {
-    color: var(--tv-purple-light) !important;
+    color: #ffffff !important;
 }
 
+/* Focused Buttons, Nav Links & Action Pills */
 body.tv-focus-active button:focus,
 body.tv-focus-active a:focus,
 body.tv-focus-active .tv-card-action:focus,
 body.tv-focus-active .tv-input-trigger:focus,
 body.tv-focus-active .tv-nav-link:focus,
 body.tv-focus-active .mode-tab:focus,
-body.tv-focus-active .filter-pill:focus {
-    transform: scale(1.035) !important;
+body.tv-focus-active .filter-pill:focus,
+body.tv-focus-active button.tv-focused,
+body.tv-focus-active a.tv-focused,
+body.tv-focus-active .tv-card-action.tv-focused,
+body.tv-focus-active .tv-input-trigger.tv-focused,
+body.tv-focus-active .tv-nav-link.tv-focused,
+body.tv-focus-active .mode-tab.tv-focused,
+body.tv-focus-active .filter-pill.tv-focused {
+    transform: scale(1.04) !important;
+    background: #ffffff !important;
+    color: #07080b !important;
+    border-color: #ffffff !important;
+    outline: none !important;
+    box-shadow: 0 8px 28px rgba(255, 255, 255, 0.35) !important;
+}
+
+body.tv-focus-active button:focus *,
+body.tv-focus-active a:focus *,
+body.tv-focus-active .tv-focused * {
+    color: #07080b !important;
 }
 
 /* Fast TV responsiveness transitions (120ms) */
