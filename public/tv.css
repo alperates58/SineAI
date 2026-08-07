@@ -5,6 +5,7 @@
 }
 
 body.tv-nav-ready {
+    --sineai-tv-contract: 1;
     --tv-edge: clamp(54px, 5.2vw, 104px);
     --tv-brand: #8b5cf6;
     --tv-brand-soft: #a78bfa;

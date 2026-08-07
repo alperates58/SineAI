@@ -1,6 +1,9 @@
 (function () {
     'use strict';
 
+    const TV_CONTRACT_VERSION = 1;
+    const TV_ASSET_VERSION = '1.0.0';
+
     const CANDIDATE_SELECTOR = [
         '[data-tv-focusable="true"]',
         '.movie-card',
@@ -676,6 +679,8 @@
     window.addEventListener('resize', () => { cacheDirty = true; }, { passive: true });
     window.addEventListener('sineai:viewchange', () => scheduleRefresh());
     window.SineAITV = {
+        contractVersion: TV_CONTRACT_VERSION,
+        assetVersion: TV_ASSET_VERSION,
         enable,
         refresh,
         handleNativeKey,

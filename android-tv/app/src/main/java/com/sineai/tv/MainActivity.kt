@@ -43,6 +43,7 @@ class MainActivity : Activity() {
     private val DEFAULT_URL = "https://sineai.alperates.com.tr"
     private val MIC_PERMISSION_REQUEST = 4101
     private val VOICE_SEARCH_REQUEST = 4102
+    private val TV_CONTRACT_VERSION = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,7 +107,7 @@ class MainActivity : Activity() {
             textZoom                       = 100
             setSupportMultipleWindows(false)
             javaScriptCanOpenWindowsAutomatically = false
-            userAgentString = "${userAgentString} SineAITV/1.5"
+            userAgentString = "${userAgentString} SineAITV/1.6"
             // TV'de büyük ekran önceliği
             @Suppress("DEPRECATION")
             setRenderPriority(WebSettings.RenderPriority.HIGH)
@@ -146,7 +147,7 @@ class MainActivity : Activity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 tvNavigationReady = false
-                view?.let(::injectBundledTvExperience)
+                view?.let(::initializeTvExperience)
             }
 
             override fun onReceivedError(
@@ -185,34 +186,100 @@ class MainActivity : Activity() {
         wv.loadUrl(url)
     }
 
+    private fun initializeTvExperience(view: WebView) {
+        val remoteProbe = """
+            (function() {
+                var navigation = window.SineAITV;
+                if (!navigation ||
+                    navigation.contractVersion !== ${TV_CONTRACT_VERSION} ||
+                    typeof navigation.enable !== 'function' ||
+                    typeof navigation.handleNativeKey !== 'function' ||
+                    typeof navigation.handleBack !== 'function') return false;
+
+                try {
+                    if (navigation.enable(true) === false) return false;
+                    var cssContract = getComputedStyle(document.body)
+                        .getPropertyValue('--sineai-tv-contract').trim();
+                    if (cssContract !== '${TV_CONTRACT_VERSION}') {
+                        navigation.enable(false);
+                        return false;
+                    }
+                } catch (_error) {
+                    try { navigation.enable(false); } catch (_ignored) {}
+                    return false;
+                }
+
+                var nativeStyle = document.getElementById('sineai-native-tv-style');
+                if (nativeStyle) nativeStyle.remove();
+                document.documentElement.dataset.sineaiTvSource = 'remote';
+                document.documentElement.dataset.sineaiTvAssetVersion = String(navigation.assetVersion || 'unknown');
+                return true;
+            })();
+        """.trimIndent()
+
+        view.evaluateJavascript(remoteProbe) { ready ->
+            if (ready == "true") tvNavigationReady = true
+            else injectBundledTvExperience(view)
+        }
+    }
+
     private fun injectBundledTvExperience(view: WebView) {
         val tvCss = readAssetText("tv.css")
         val tvNavigation = readAssetText("tv-navigation.js")
-
-        if (tvCss == null || tvNavigation == null) {
-            view.evaluateJavascript(
-                "Boolean(window.SineAITV && window.SineAITV.enable(true));"
-            ) { ready -> tvNavigationReady = ready == "true" }
-            return
-        }
+        val bundledAssetsAvailable = tvCss != null && tvNavigation != null
+        val bundledCss = tvCss.orEmpty()
+        val bundledNavigation = tvNavigation.orEmpty()
 
         val script = """
             (function() {
-                try {
-                    if (window.SineAITV) window.SineAITV.enable(false);
-                } catch (_error) {}
+                var navigation = window.SineAITV;
+                var remoteReady = Boolean(
+                    navigation &&
+                    navigation.contractVersion === ${TV_CONTRACT_VERSION} &&
+                    typeof navigation.enable === 'function' &&
+                    typeof navigation.handleNativeKey === 'function' &&
+                    typeof navigation.handleBack === 'function'
+                );
 
-                var oldStyle = document.getElementById('sineai-native-tv-style');
-                if (oldStyle) oldStyle.remove();
-                var style = document.createElement('style');
-                style.id = 'sineai-native-tv-style';
-                style.textContent = ${JSONObject.quote(tvCss)};
-                document.head.appendChild(style);
-            })();
+                if (remoteReady) {
+                    try {
+                        remoteReady = navigation.enable(true) !== false;
+                        var cssContract = getComputedStyle(document.body)
+                            .getPropertyValue('--sineai-tv-contract').trim();
+                        remoteReady = remoteReady && cssContract === '${TV_CONTRACT_VERSION}';
+                    } catch (_error) {
+                        remoteReady = false;
+                    }
+                }
 
-            $tvNavigation
+                if (remoteReady) {
+                    var nativeStyle = document.getElementById('sineai-native-tv-style');
+                    if (nativeStyle) nativeStyle.remove();
+                    document.documentElement.dataset.sineaiTvSource = 'remote';
+                    document.documentElement.dataset.sineaiTvAssetVersion = String(navigation.assetVersion || 'unknown');
+                } else {
+                    try {
+                        if (navigation) navigation.enable(false);
+                    } catch (_error) {}
 
-            (function() {
+                    if (!${bundledAssetsAvailable}) return false;
+
+                    var oldStyle = document.getElementById('sineai-native-tv-style');
+                    if (oldStyle) oldStyle.remove();
+                    var style = document.createElement('style');
+                    style.id = 'sineai-native-tv-style';
+                    style.textContent = ${JSONObject.quote(bundledCss)};
+                    document.head.appendChild(style);
+
+                    $bundledNavigation
+
+                    navigation = window.SineAITV;
+                    if (!navigation || navigation.contractVersion !== ${TV_CONTRACT_VERSION}) return false;
+                    document.documentElement.dataset.sineaiTvSource = 'bundled';
+                    document.documentElement.dataset.sineaiTvAssetVersion = String(navigation.assetVersion || 'unknown');
+                }
+
+                (function() {
                 if (window.SineAIVoiceReady) return;
                 var button = document.getElementById('voiceBtn');
                 var input = document.getElementById('query');
@@ -253,9 +320,10 @@ class MainActivity : Activity() {
                     window.SineAIAndroid.startVoiceSearch();
                 });
                 window.SineAIVoiceReady = true;
-            })();
+                })();
 
-            Boolean(window.SineAITV && window.SineAITV.enable(true));
+                return Boolean(window.SineAITV && window.SineAITV.enable(true));
+            })();
         """.trimIndent()
 
         view.evaluateJavascript(script) { ready -> tvNavigationReady = ready == "true" }

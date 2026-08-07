@@ -8,6 +8,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const fastify = Fastify({ logger: true });
+const LIVE_UI_ASSETS = new Set([
+  'index.html',
+  'style.css',
+  'app.js',
+  'tv.css',
+  'tv-navigation.js'
+]);
 
 // Environment Variables
 const PORT = process.env.PORT || 3000;
@@ -126,7 +133,12 @@ const FALLBACK_NORMALIZE = {
 // Setup Static Files
 fastify.register(fastifyStatic, {
   root: path.join(__dirname, 'public'),
-  prefix: '/', 
+  prefix: '/',
+  setHeaders(res, filePath) {
+    if (LIVE_UI_ASSETS.has(path.basename(filePath))) {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    }
+  }
 });
 
 // Turkish intent analysis + concrete title generation.

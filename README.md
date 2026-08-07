@@ -47,6 +47,13 @@ docker build -t sineai .
 docker run -p 3000:3000 --env-file .env sineai
 ```
 
+## Android TV Guncelleme Mimarisi
+
+- TV arayuzu ve kumanda navigasyonu once sunucudaki `tv.css` ile `tv-navigation.js` dosyalarindan yuklenir.
+- Bu dosyalar yeniden deploy edildiginde mevcut APK, yeni tasarimi bir sonraki sayfa acilisinda otomatik kullanir.
+- Sunucudaki TV dosyalari eksik, erisilemez veya APK ile uyumsuzsa uygulama kendi icindeki guvenli yedek dosyalara doner.
+- Yeni APK yalnizca Android izinleri, sesli arama veya diger native davranislar degistiginde gerekir.
+
 ## Coolify Deploy Notları
 
 - SineAI, Coolify veya Traefik üzerinden deploy edilmeye uygun olarak tasarlanmıştır.
