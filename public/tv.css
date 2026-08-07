@@ -372,92 +372,125 @@ body.tv-nav-ready .page-num-btn.active {
     color: #ffffff;
 }
 
+body.tv-nav-ready .hero-search-area,
+body.tv-nav-ready #recommendForm,
+body.tv-nav-ready .search-input-area,
 body.tv-nav-ready .saas-search-box {
-    width: 100%;
-    margin: 0;
-    padding: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 20px;
-    background: linear-gradient(135deg, rgba(23, 25, 34, 0.95), rgba(14, 16, 22, 0.98));
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
 }
 
-body.tv-nav-ready .search-input-area {
-    width: 100%;
-    margin: 0;
+body.tv-nav-ready .search-mode-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+    padding: 6px !important;
+    border-radius: var(--tv-radius-md) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    width: fit-content !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+}
+
+body.tv-nav-ready .mode-tab,
+body.tv-nav-ready .filter-pill,
+body.tv-nav-ready .pagination-btn,
+body.tv-nav-ready .page-num-btn {
+    min-height: 44px !important;
+    padding: 8px 22px !important;
+    border: 1px solid transparent !important;
+    border-radius: var(--tv-radius-sm) !important;
+    background: transparent !important;
+    color: var(--tv-text-secondary) !important;
+    font-size: clamp(14px, 0.95vw, 18px) !important;
+    font-weight: 750 !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+}
+
+body.tv-nav-ready .mode-tab.active,
+body.tv-nav-ready .filter-pill.active,
+body.tv-nav-ready .page-num-btn.active {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    background: var(--tv-purple) !important;
+    color: #ffffff !important;
+}
+
+body.tv-nav-ready .saas-search-box {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 14px !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    border-radius: 20px !important;
+    background: linear-gradient(135deg, rgba(23, 25, 34, 0.95), rgba(14, 16, 22, 0.98)) !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
 }
 
 /* PREMIUM FULL-WIDTH TV PROMPT TRIGGER BAR */
 body.tv-nav-ready .tv-input-trigger {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    min-height: 68px;
-    padding: 16px 22px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--tv-text);
-    cursor: pointer;
-    text-align: left;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    min-height: 72px !important;
+    padding: 16px 24px !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    border-radius: 14px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: var(--tv-text) !important;
+    cursor: pointer !important;
+    text-align: left !important;
     transition: transform 120ms ease-out, background-color 120ms ease-out, border-color 120ms ease-out, box-shadow 120ms ease-out !important;
 }
 
 body.tv-nav-ready .tv-trigger-content {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    gap: 14px;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 16px !important;
 }
 
 body.tv-nav-ready .tv-trigger-sparkle {
-    font-size: 24px;
-    color: var(--tv-purple-light);
+    font-size: 26px !important;
+    color: var(--tv-purple-light) !important;
 }
 
 body.tv-nav-ready .tv-trigger-labels {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
 }
 
 body.tv-nav-ready .tv-trigger-title {
-    font-size: clamp(16px, 1.1vw, 21px);
-    font-weight: 800;
-    color: #ffffff;
+    font-size: clamp(16px, 1.15vw, 22px) !important;
+    font-weight: 850 !important;
+    color: #ffffff !important;
 }
 
 body.tv-nav-ready .tv-trigger-sub {
-    font-size: clamp(12px, 0.85vw, 15px);
-    color: var(--tv-text-secondary);
-    margin-top: 2px;
+    font-size: clamp(12px, 0.85vw, 15px) !important;
+    color: var(--tv-text-secondary) !important;
+    margin-top: 3px !important;
 }
 
 body.tv-nav-ready .tv-trigger-badge {
-    padding: 6px 14px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 750;
-    white-space: nowrap;
-}
-
-/* FOCUSED PROMPT TRIGGER BAR */
-body.tv-focus-active .tv-input-trigger:focus,
-body.tv-focus-active .tv-input-trigger.tv-focused {
-    transform: scale(1.02) !important;
-    background: #ffffff !important;
-    color: #07080b !important;
-    border-color: #ffffff !important;
-    outline: none !important;
-    box-shadow: 0 10px 32px rgba(255, 255, 255, 0.35) !important;
-}
-
-body.tv-focus-active .tv-input-trigger:focus *,
-body.tv-focus-active .tv-input-trigger.tv-focused * {
-    color: #07080b !important;
+    padding: 8px 16px !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
 }
 
 /* STRICT D-PAD INPUT EXCLUSION RULE */
@@ -472,91 +505,93 @@ body.tv-nav-ready textarea#query.tv-hidden-input {
 }
 
 body.tv-nav-ready textarea#query:not(.tv-hidden-input) {
-    display: block;
-    width: 100%;
-    min-height: 90px;
-    padding: 18px 22px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 14px;
-    background: rgba(17, 19, 26, 0.95);
-    color: #ffffff;
-    font-size: clamp(17px, 1.2vw, 23px);
-    line-height: 1.4;
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    min-height: 90px !important;
+    padding: 18px 22px !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 14px !important;
+    background: rgba(17, 19, 26, 0.95) !important;
+    color: #ffffff !important;
+    font-size: clamp(17px, 1.2vw, 23px) !important;
+    line-height: 1.4 !important;
 }
 
 body.tv-nav-ready .search-bottom-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 60px;
-    padding: 12px 6px 4px;
-    margin-top: 6px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    min-height: 60px !important;
+    padding: 14px 6px 4px !important;
+    margin-top: 8px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 body.tv-nav-ready .search-quick-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
 }
 
 body.tv-nav-ready .saas-pill-btn {
-    min-height: 44px;
-    padding: 8px 20px;
-    border-radius: 999px;
-    font-size: clamp(13px, 0.92vw, 17px);
-    font-weight: 750;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-    cursor: pointer;
+    min-height: 46px !important;
+    padding: 10px 22px !important;
+    border-radius: 999px !important;
+    font-size: clamp(13px, 0.92vw, 17px) !important;
+    font-weight: 750 !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #ffffff !important;
+    cursor: pointer !important;
 }
 
 body.tv-nav-ready .btn-voice {
-    background: rgba(124, 58, 237, 0.22);
-    border-color: rgba(139, 92, 246, 0.35);
-    color: #ede9fe;
+    background: rgba(124, 58, 237, 0.22) !important;
+    border-color: rgba(139, 92, 246, 0.35) !important;
+    color: #ede9fe !important;
 }
 
 body.tv-nav-ready .saas-submit-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 46px;
-    padding: 10px 24px;
-    border-radius: 999px;
-    border: 0;
-    background: linear-gradient(135deg, #ffffff, #f1f5f9);
-    color: #07080b;
-    font-size: clamp(14px, 0.98vw, 18px);
-    font-weight: 850;
-    cursor: pointer;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-height: 48px !important;
+    padding: 10px 26px !important;
+    border-radius: 999px !important;
+    border: 0 !important;
+    background: linear-gradient(135deg, #ffffff, #f1f5f9) !important;
+    color: #07080b !important;
+    font-size: clamp(14px, 0.98vw, 18px) !important;
+    font-weight: 850 !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
 }
 
 body.tv-nav-ready .mood-pills {
     display: flex !important;
-    flex-wrap: nowrap;
-    gap: 10px;
-    width: 100%;
-    margin-top: 12px;
-    padding: 4px 2px 8px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+    width: 100% !important;
+    margin-top: 14px !important;
+    padding: 4px 2px 8px !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
 }
 
 body.tv-nav-ready .pill {
-    min-height: 44px;
-    padding: 8px 20px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.06);
-    color: #e2e8f0;
-    font-size: clamp(13px, 0.9vw, 17px);
-    font-weight: 750;
-    white-space: nowrap;
-    cursor: pointer;
+    min-height: 46px !important;
+    padding: 10px 22px !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.07) !important;
+    color: #e2e8f0 !important;
+    font-size: clamp(13px, 0.9vw, 17px) !important;
+    font-weight: 750 !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
 }
+
 
 
 /* 6. POSTER CARDS & CAROUSELS */
@@ -918,7 +953,18 @@ body.tv-nav-ready #detailModal .btn-play-trailer {
     color: #050609;
 }
 
-/* 9. UNIFIED PREMIUM FOCUS DESIGN SYSTEM (NO PURPLE DOUBLE RINGS) */
+/* 9. UNIFIED PREMIUM FOCUS DESIGN SYSTEM (NO PURPLE DOUBLE RINGS & NO LEGACY LEAKS) */
+body.tv-nav-ready *:focus,
+body.tv-nav-ready *:focus-visible,
+body.tv-nav-ready *:focus-within,
+body.tv-focus-active *:focus,
+body.tv-focus-active *:focus-visible,
+body.tv-focus-active *:focus-within {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+}
+
 body.tv-focus-active .movie-card:focus,
 body.tv-focus-active .genre-chip:focus,
 body.tv-focus-active button:focus,
@@ -954,7 +1000,7 @@ body.tv-focus-active .movie-card.tv-focused .card-title {
     color: #ffffff !important;
 }
 
-/* Focused Buttons, Nav Links & Action Pills */
+/* Focused Buttons, Nav Links, Action Pills & Controls */
 body.tv-focus-active button:focus,
 body.tv-focus-active a:focus,
 body.tv-focus-active .tv-card-action:focus,
@@ -962,26 +1008,41 @@ body.tv-focus-active .tv-input-trigger:focus,
 body.tv-focus-active .tv-nav-link:focus,
 body.tv-focus-active .mode-tab:focus,
 body.tv-focus-active .filter-pill:focus,
+body.tv-focus-active .saas-pill-btn:focus,
+body.tv-focus-active .btn-voice:focus,
+body.tv-focus-active .btn-random:focus,
+body.tv-focus-active .saas-submit-btn:focus,
+body.tv-focus-active .pill:focus,
 body.tv-focus-active button.tv-focused,
 body.tv-focus-active a.tv-focused,
 body.tv-focus-active .tv-card-action.tv-focused,
 body.tv-focus-active .tv-input-trigger.tv-focused,
 body.tv-focus-active .tv-nav-link.tv-focused,
 body.tv-focus-active .mode-tab.tv-focused,
-body.tv-focus-active .filter-pill.tv-focused {
+body.tv-focus-active .filter-pill.tv-focused,
+body.tv-focus-active .saas-pill-btn.tv-focused,
+body.tv-focus-active .btn-voice.tv-focused,
+body.tv-focus-active .btn-random.tv-focused,
+body.tv-focus-active .saas-submit-btn.tv-focused,
+body.tv-focus-active .pill.tv-focused {
     transform: scale(1.04) !important;
     background: #ffffff !important;
+    background-color: #ffffff !important;
     color: #07080b !important;
     border-color: #ffffff !important;
     outline: none !important;
+    outline-offset: 0 !important;
     box-shadow: 0 8px 28px rgba(255, 255, 255, 0.35) !important;
 }
 
 body.tv-focus-active button:focus *,
+body.tv-focus-active button.tv-focused *,
 body.tv-focus-active a:focus *,
+body.tv-focus-active a.tv-focused *,
 body.tv-focus-active .tv-focused * {
     color: #07080b !important;
 }
+
 
 /* Fast TV responsiveness transitions (120ms) */
 body.tv-nav-ready .movie-card,
