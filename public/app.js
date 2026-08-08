@@ -1250,50 +1250,46 @@ document.addEventListener('DOMContentLoaded', () => {
             ? `<button type="button" class="netflix-btn btn-play-trailer" tabindex="0">▶️ Fragmanı Oynat</button>` : '';
 
         modalBody.innerHTML = `
-            <div class="modal-cinematic-backdrop"${backdropUrl ? ` style="background-image:url('${backdropUrl}')"` : ''}></div>
-            <div class="modal-cinematic-shade"></div>
-            <div class="modal-layout">
-                <div class="modal-poster">${posterHTML}</div>
-                <div class="modal-info">
-                    <h2>${item.title}</h2>
-                    ${originalTitleHTML}
-                    <div class="meta">
-                        <span class="meta-badge-year">${year}</span>
-                        <span>•</span><span class="meta-badge-type">${typeStr}</span>
-                        <span>•</span><span class="meta-badge-score">⭐ ${rating}</span>
-                        ${runtimeStr ? `<span>•</span><span>${runtimeStr}</span>` : ''}
+            <div class="detail-modal-wrapper">
+                <div class="detail-backdrop"${backdropUrl ? ` style="background-image:url('${backdropUrl}')"` : ''}></div>
+                <div class="detail-gradient"></div>
+                <div class="detail-body">
+                    <div class="detail-title-group">
+                        <h1 class="detail-title">${item.title}</h1>
+                        ${originalTitleHTML}
+                    </div>
+                    <div class="detail-meta-row">
+                        <span class="detail-meta-pill">${year}</span>
+                        <span class="detail-meta-pill">${typeStr}</span>
+                        <span class="detail-meta-pill">⭐ ${rating}</span>
+                        ${runtimeStr ? `<span class="detail-meta-pill">${runtimeStr}</span>` : ''}
                     </div>
                     ${genresHTML}
                     ${directorHTML}
                     ${item.reason ? `<div class="card-reason modal-reason">${item.reason}</div>` : ''}
-                    <div class="overview">${item.overview || 'Bu yapım için detaylı bir açıklama bulunmuyor.'}</div>
+                    <p class="detail-synopsis">${item.overview || 'Bu yapım için detaylı bir açıklama bulunmuyor.'}</p>
                     
-                    <div class="providers">
-                        <h3>İzlenebilecek Platformlar (TR)</h3>
-                        <div style="margin-top:8px;">${badgesHTML}</div>
+                    <div class="providers" style="margin-top: 12px;">
+                        <div style="font-size: 11px; font-weight: 800; color: var(--on-surface-variant); text-transform: uppercase; margin-bottom: 8px;">ŞİMDİ İZLE</div>
+                        <div>${badgesHTML}</div>
                     </div>
 
-                    <!-- Netflix-Style Control Actions Bar (Including Explicit Favorites Button) -->
-                    <div class="netflix-actions-bar">
+                    <div class="detail-actions netflix-actions-bar" style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 12px;">
                         ${trailerHTML}
-                        <button type="button" class="netflix-btn btn-similar-recommend" tabindex="0" aria-label="Benzerlerini Öner">
-                            <span class="btn-icon">✨</span>
-                            <span class="btn-label">Benzerlerini Öner</span>
+                        <button type="button" class="btn-primary-pill btn-similar-recommend" tabindex="0">
+                            <span class="material-symbols-outlined">auto_awesome</span>
+                            <span>Benzerlerini Bul</span>
                         </button>
-                        <button type="button" class="netflix-btn btn-reaction btn-fav ${isFav ? 'active' : ''}" data-type="fav" tabindex="0">
-                            <span class="btn-icon">${isFav ? '❤️' : '🤍'}</span>
-                            <span class="btn-label">${isFav ? 'Favorilerimde' : 'Favorilerime Ekle'}</span>
+                        <button type="button" class="btn-secondary-pill btn-reaction btn-fav ${isFav ? 'active' : ''}" data-type="fav" tabindex="0">
+                            <span class="material-symbols-outlined">${isFav ? 'favorite' : 'favorite_border'}</span>
+                            <span class="btn-label">${isFav ? 'Favorilerimde' : 'Listeme Ekle'}</span>
                         </button>
-                        <button type="button" class="netflix-btn btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''}" data-type="super" tabindex="0">
-                            <span class="btn-icon">💖</span>
+                        <button type="button" class="btn-secondary-pill btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''}" data-type="super" tabindex="0">
+                            <span>💖</span>
                             <span class="btn-label">Çok Beğendim</span>
                         </button>
-                        <button type="button" class="netflix-btn btn-reaction btn-like ${currentRec === 'like' ? 'active' : ''}" data-type="like" tabindex="0">
-                            <span class="btn-icon">👍</span>
-                            <span class="btn-label">Beğendim</span>
-                        </button>
-                        <button type="button" class="netflix-btn btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''}" data-type="dislike" tabindex="0">
-                            <span class="btn-icon">👎</span>
+                        <button type="button" class="btn-secondary-pill btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''}" data-type="dislike" tabindex="0">
+                            <span>👎</span>
                             <span class="btn-label">Beğenmedim</span>
                         </button>
                     </div>
