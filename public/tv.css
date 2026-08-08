@@ -1139,15 +1139,33 @@ body.tv-nav-ready #detailModal .recommendation-reason + .overview {
     display: none;
 }
 
-/* HORIZONTAL ACTION BAR IN DETAIL MODAL */
-body.tv-nav-ready #detailModal .netflix-actions-bar {
+/* Detail actions are two explicit D-pad rows. A wrapped flex row looks like
+   multiple rows but remains one navigation lane, which made reactions
+   unreachable with ArrowDown on narrower TV viewports. */
+body.tv-nav-ready #detailModal .detail-action-groups {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 10px;
     width: 100%;
-    padding: 6px 4px 12px;
-    overflow-x: visible;
+}
+
+body.tv-nav-ready #detailModal .netflix-actions-bar {
+    display: grid;
+    flex-wrap: nowrap;
+    gap: 10px;
+    width: 100%;
+    padding: 0 4px;
+    overflow: visible;
     scrollbar-width: none;
+}
+
+body.tv-nav-ready #detailModal .detail-primary-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body.tv-nav-ready #detailModal .detail-reaction-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-bottom: 8px;
 }
 
 /* Compact, readable authentication dialog for 10-foot displays. */
@@ -1221,13 +1239,25 @@ body.tv-nav-ready #advSearchModal .adv-genre-chip.selected {
 }
 
 body.tv-nav-ready #detailModal .netflix-btn {
-    flex: 0 0 auto;
+    display: flex;
+    width: 100%;
+    min-width: 0;
     min-height: 48px;
-    padding: 8px 20px;
+    padding: 8px 12px;
+    align-items: center;
+    justify-content: center;
     border-radius: var(--tv-radius-sm);
-    font-size: clamp(13px, 0.9vw, 17px);
+    font-size: clamp(12px, 0.82vw, 16px);
     font-weight: 800;
-    white-space: nowrap;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+}
+
+body.tv-nav-ready #detailModal .netflix-btn .btn-label,
+body.tv-nav-ready #detailModal .netflix-btn > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 body.tv-nav-ready #detailModal .btn-play-trailer {

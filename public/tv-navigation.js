@@ -2,7 +2,7 @@
     'use strict';
 
     const TV_CONTRACT_VERSION = 4;
-    const TV_ASSET_VERSION = '4.0.0';
+    const TV_ASSET_VERSION = '4.1.0';
 
     // Candidate selector for D-pad focus graph.
     // NOTE: Input, textarea, select are intentionally EXCLUDED from default directional navigation
@@ -532,7 +532,6 @@
         for (const candidate of list) {
             if (candidate === current) continue;
             const currentIsGrid = Boolean(current.closest('.results-grid, .genre-grid, .adv-genres-grid'));
-            if (currentRow && rowFor(candidate) === currentRow && !currentIsGrid) continue;
             if (direction === 'down' && candidate.matches('.see-all')) {
                 const candidateSection = candidate.closest('.row-section');
                 if (candidateSection && !candidateSection.contains(current)) continue;
@@ -543,6 +542,12 @@
             const y = rect.top + (rect.height / 2);
             const dx = x - currentX;
             const dy = y - currentY;
+            // A responsive row can still wrap despite its semantic row marker.
+            // Ignore same-row candidates only when they are actually on the same
+            // visual line; vertically separated items must remain reachable.
+            const sameSemanticRow = currentRow && rowFor(candidate) === currentRow;
+            const sameVisualLine = Math.abs(dy) < Math.max(10, Math.min(currentRect.height, rect.height) * 0.55);
+            if (sameSemanticRow && !currentIsGrid && sameVisualLine) continue;
             let primary;
             let secondary;
 

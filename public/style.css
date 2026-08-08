@@ -1023,6 +1023,22 @@ body[data-view="search"] #heroSearchArea::before {
     gap: 10px;
 }
 
+.detail-action-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.detail-primary-actions,
+.detail-reaction-actions {
+    width: 100%;
+}
+
+.detail-reaction-actions .netflix-btn {
+    justify-content: center;
+}
+
 .netflix-btn {
     min-height: 46px;
 }

@@ -1582,22 +1582,28 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         <p class="overview text-xs md:text-sm text-on-surface-variant leading-relaxed max-w-prose line-clamp-3 md:line-clamp-4">${safeOverview}</p>
                         
-                        <div class="flex flex-wrap items-center gap-3 mt-1 netflix-actions-bar">
-                            ${playTrailerBtnHTML}
-                            <button type="button" class="netflix-btn btn-similar-recommend bg-transparent border border-tertiary text-tertiary hover:bg-tertiary/10 font-bold px-5 py-3 rounded-full flex items-center gap-2 text-xs md:text-sm transition-all cursor-pointer" tabindex="0">
-                                <span class="material-symbols-outlined text-base">auto_awesome</span>
-                                <span>Benzerlerini Bul</span>
-                            </button>
-                            <button type="button" class="netflix-btn btn-reaction btn-fav ${isFav ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-5 py-3 rounded-full border border-outline-variant flex items-center gap-2 text-xs md:text-sm transition-colors cursor-pointer" data-type="fav" aria-label="${safeTitle} favorisini değiştir" aria-pressed="${isFav}" tabindex="0">
-                                <span class="material-symbols-outlined text-base">${isFav ? 'favorite' : 'favorite_border'}</span>
-                                <span class="btn-label">${isFav ? 'Favorilerimde' : 'Listeme Ekle'}</span>
-                            </button>
-                            <button type="button" class="netflix-btn btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant text-xs md:text-sm transition-colors cursor-pointer" data-type="super" title="Çok Beğendim" aria-label="Çok beğendim" aria-pressed="${currentRec === 'super'}" tabindex="0">
-                                <span>💖</span>
-                            </button>
-                            <button type="button" class="netflix-btn btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant text-xs md:text-sm transition-colors cursor-pointer" data-type="dislike" title="Beğenmedim" aria-label="Beğenmedim" aria-pressed="${currentRec === 'dislike'}" tabindex="0">
-                                <span>👎</span>
-                            </button>
+                        <div class="detail-action-groups mt-1" aria-label="İçerik işlemleri">
+                            <div class="netflix-actions-bar detail-primary-actions" data-tv-row="detail-primary-actions">
+                                ${playTrailerBtnHTML}
+                                <button type="button" class="netflix-btn btn-similar-recommend bg-transparent border border-tertiary text-tertiary hover:bg-tertiary/10 font-bold px-5 py-3 rounded-full flex items-center gap-2 text-xs md:text-sm transition-all cursor-pointer" tabindex="0">
+                                    <span class="material-symbols-outlined text-base">auto_awesome</span>
+                                    <span class="btn-label">Benzerlerini Bul</span>
+                                </button>
+                                <button type="button" class="netflix-btn btn-reaction btn-fav ${isFav ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-5 py-3 rounded-full border border-outline-variant flex items-center gap-2 text-xs md:text-sm transition-colors cursor-pointer" data-type="fav" aria-label="${safeTitle} favorisini değiştir" aria-pressed="${isFav}" tabindex="0">
+                                    <span class="material-symbols-outlined text-base">${isFav ? 'favorite' : 'favorite_border'}</span>
+                                    <span class="btn-label">${isFav ? 'Favorilerimde' : 'Listeme Ekle'}</span>
+                                </button>
+                            </div>
+                            <div class="netflix-actions-bar detail-reaction-actions" data-tv-row="detail-reaction-actions" aria-label="İçerik değerlendirmesi">
+                                <button type="button" class="netflix-btn btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant flex items-center justify-center gap-2 text-xs md:text-sm transition-colors cursor-pointer" data-type="super" title="Çok Beğendim" aria-label="Çok beğendim" aria-pressed="${currentRec === 'super'}" tabindex="0">
+                                    <span aria-hidden="true">💖</span>
+                                    <span class="btn-label">Çok Beğendim</span>
+                                </button>
+                                <button type="button" class="netflix-btn btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant flex items-center justify-center gap-2 text-xs md:text-sm transition-colors cursor-pointer" data-type="dislike" title="Beğenmedim" aria-label="Beğenmedim" aria-pressed="${currentRec === 'dislike'}" tabindex="0">
+                                    <span aria-hidden="true">👎</span>
+                                    <span class="btn-label">Beğenmedim</span>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="mt-2 pt-3 border-t border-outline-variant/40">
@@ -1650,7 +1656,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         detailModal.classList.remove('hidden');
         window.setTimeout(() => {
-            window.SineAITV?.refresh('.modal:not(.hidden) .btn-play-trailer, .modal:not(.hidden) .btn-similar-recommend, .modal:not(.hidden) .btn-fav, .modal:not(.hidden) .close-btn');
+            window.SineAITV?.refresh('.modal:not(.hidden) .btn-play-trailer, .modal:not(.hidden) .btn-similar-recommend, .modal:not(.hidden) .btn-fav, .modal:not(.hidden) .btn-super, .modal:not(.hidden) .btn-dislike, .modal:not(.hidden) .close-btn');
         }, 80);
     }
 
