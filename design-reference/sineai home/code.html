@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SineAI - Ana Sayfa</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#0c0e10",
+                        "tertiary-container": "#0c002a",
+                        "tertiary-fixed-dim": "#d0bcff",
+                        "surface-tint": "#c7c6ca",
+                        "surface": "#111415",
+                        "on-surface-variant": "#c7c6cb",
+                        "on-tertiary": "#3b0091",
+                        "surface-variant": "#333537",
+                        "secondary-fixed": "#eaddff",
+                        "inverse-surface": "#e2e2e4",
+                        "surface-bright": "#37393b",
+                        "on-secondary-fixed": "#25005a",
+                        "on-tertiary-container": "#875de9",
+                        "on-primary-fixed-variant": "#46464a",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#d2bbff",
+                        "tertiary": "#d0bcff",
+                        "inverse-on-surface": "#2f3132",
+                        "background": "#111415",
+                        "on-secondary": "#3f008e",
+                        "primary": "#c7c6ca",
+                        "surface-dim": "#111415",
+                        "surface-container": "#1e2021",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed": "#1a1b1f",
+                        "outline": "#909095",
+                        "surface-container-low": "#1a1c1d",
+                        "primary-container": "#07080b",
+                        "primary-fixed-dim": "#c7c6ca",
+                        "inverse-primary": "#5e5e62",
+                        "surface-container-high": "#282a2c",
+                        "on-tertiary-fixed-variant": "#5321b4",
+                        "on-surface": "#e2e2e4",
+                        "on-primary-container": "#78787c",
+                        "tertiary-fixed": "#e9ddff",
+                        "secondary": "#d2bbff",
+                        "primary-fixed": "#e3e2e6",
+                        "on-tertiary-fixed": "#23005c",
+                        "secondary-container": "#6001d1",
+                        "outline-variant": "#46464b",
+                        "on-primary": "#2f3034",
+                        "on-background": "#e2e2e4",
+                        "surface-container-highest": "#333537",
+                        "on-secondary-fixed-variant": "#5a00c6",
+                        "on-error": "#690005",
+                        "error-container": "#93000a",
+                        "on-secondary-container": "#c9aeff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-lg": "48px",
+                        "grid-margin-mobile": "20px",
+                        "grid-margin-desktop": "80px",
+                        "gutter": "24px",
+                        "stack-sm": "8px",
+                        "stack-md": "16px"
+                    },
+                    "fontFamily": {
+                        "display-hero-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "display-hero": ["Inter"],
+                        "body-md": ["Inter"],
+                        "metadata-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-hero-mobile": ["40px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-caps": ["11px", { "lineHeight": "12px", "letterSpacing": "0.08em", "fontWeight": "800" }],
+                        "display-hero": ["72px", { "lineHeight": "80px", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "metadata-sm": ["13px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #07080B; }
+        /* Hide scrollbar for rails but keep functionality */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Smooth scrolling */
+        html { scroll-behavior: smooth; }
+        
+        /* Navbar solid background transition */
+        .nav-scrolled { background-color: #07080B !important; }
+        
+        /* AI Glow animation */
+        @keyframes subtle-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.2); }
+            70% { box-shadow: 0 0 0 10px rgba(124, 58, 237, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+        }
+        .ai-pulse:hover { animation: subtle-pulse 2s infinite; }
+    </style>
+</head>
+<body class="text-on-surface font-body-md overflow-x-hidden min-h-screen antialiased selection:bg-tertiary-container selection:text-tertiary">
+<!-- Navigation -->
+<nav class="fixed top-0 w-full z-50 flex justify-between items-center px-grid-margin-desktop h-20 bg-transparent transition-colors duration-300" id="topNav">
+<div class="flex items-center gap-12">
+<a class="flex items-center gap-2" href="#">
+<img alt="SineAI Logo" class="h-8 w-8 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDA5N6tMOURqmPsdciI-dhkYUdfY5ej5Dy_KOD0FhzuAWjUgxC95oIfHQK4RzQGhFhb3_PrNKES7ImM0wTwOtIpfsIQ0wRyVP7xZqOOhh4Egv0cvM-VekXidNwFSn-hB1E4usWPlvTvKkohHy8cFmVrLC3nv3kyRsRlKfYGMdQ8vkiLFo0UGLI9I_LsiuHx7LNib6ifdq0COTngMRQK5OJRZ4GbHl5nF_XSO6CeLeIYmPD4_6cyNJMCUg"/>
+<span class="font-display-hero-mobile text-display-hero-mobile font-extrabold text-on-surface tracking-tighter">SineAI</span>
+</a>
+<!-- Hidden on mobile, flex on md and up -->
+<ul class="hidden md:flex items-center gap-8">
+<li><a class="text-on-surface font-bold border-b-2 border-on-tertiary-container pb-1 transition-colors duration-300 hover:text-on-surface" href="#">Ana Sayfa</a></li>
+<li><a class="text-on-surface-variant font-medium hover:text-on-surface transition-colors duration-300" href="#">Filmler</a></li>
+<li><a class="text-on-surface-variant font-medium hover:text-on-surface transition-colors duration-300" href="#">Diziler</a></li>
+<li><a class="text-on-surface-variant font-medium hover:text-on-surface transition-colors duration-300" href="#">AI Keşfet</a></li>
+</ul>
+</div>
+<div class="flex items-center gap-6">
+<button aria-label="Search" class="text-on-surface-variant hover:text-on-surface transition-colors scale-100 active:scale-95 transition-transform"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">search</span></button>
+<button aria-label="Favorites" class="text-on-surface-variant hover:text-on-surface transition-colors hidden md:block scale-100 active:scale-95 transition-transform"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">favorite</span></button>
+<button aria-label="Profile" class="text-on-surface-variant hover:text-on-surface transition-colors scale-100 active:scale-95 transition-transform"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">person</span></button>
+</div>
+</nav>
+<!-- Hero Section -->
+<section class="relative w-full h-[85vh] min-h-[600px] flex items-end overflow-hidden group">
+<!-- Cinematic Background Image -->
+<div class="absolute inset-0 bg-cover bg-center w-full h-full transform transition-transform duration-1000 group-hover:scale-105" data-alt="A highly detailed cinematic shot of Spider-Man swinging through a moody, rain-slicked New York City at night. Neon signs reflect off puddles. The lighting is dramatic, high contrast with deep blacks, vibrant red and blue accents from the suit, and atmospheric fog. The composition leaves the left side open for text, creating a premium, blockbuster movie poster aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAOyiBN9OvElGS6-HYNFe3k9sZkVNzPLBZY7QF_F1wsKhQkI2AUs57eL2q1xy_5KknqgbVoI6Bp-iW4Ep80ZLhW23R1JKOiCQ7nDXZP4A04QMQ12_4KBaEf0cCNwXWgVZzKKeIjkU7yEeBwLrNpo-GcXSVll6nsTJPpJ0Lvv4svuQmsbesw9q15JRGXoISeGVMUlA-zrCfyblsiPuxQy3BmMDdzQDDAvurfST_ee9J2z7-FG7wi3_IMeA')"></div>
+<!-- Gradient Overlays for Depth and Readability -->
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container via-primary-container/40 to-transparent"></div>
+<div class="absolute inset-0 bg-gradient-to-r from-primary-container via-primary-container/80 to-transparent w-2/3"></div>
+<!-- Content Safe Zone -->
+<div class="relative z-10 w-full max-w-[1920px] mx-auto px-grid-margin-desktop pb-24 grid grid-cols-12 gap-gutter">
+<div class="col-span-12 md:col-span-8 lg:col-span-5 flex flex-col gap-stack-md">
+<p class="font-label-caps text-label-caps text-secondary uppercase tracking-widest flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                    SİNEAI SEÇİMİ
+                </p>
+<h1 class="font-display-hero text-display-hero text-on-surface leading-tight text-balance">
+                    Örümcek-Adam: Yepyeni Bir Gün
+                </h1>
+<div class="flex items-center gap-4 text-on-surface-variant font-metadata-sm text-metadata-sm">
+<span>2026</span>
+<span class="w-1 h-1 rounded-full bg-surface-variant"></span>
+<span>Film</span>
+<span class="w-1 h-1 rounded-full bg-surface-variant"></span>
+<span class="flex items-center gap-1">IMDb 7.9 <span class="material-symbols-outlined text-[14px] text-yellow-400" style="font-variation-settings: 'FILL' 1;">star</span></span>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-lg text-balance">
+                    Peter Parker'ın hayatındaki en büyük sınavını konu alan destansı bir macera.
+                </p>
+<div class="flex items-center gap-4 mt-stack-sm">
+<button class="bg-on-surface text-primary-container font-body-md font-semibold px-8 py-3 rounded-full flex items-center gap-2 hover:scale-105 transition-transform duration-200 shadow-[0_4px_14px_0_rgba(226,226,228,0.25)]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                        Detayları Gör
+                    </button>
+<button class="bg-transparent border border-outline text-on-surface font-body-md font-medium px-8 py-3 rounded-full flex items-center gap-2 hover:bg-surface-variant hover:border-surface-variant transition-all duration-200">
+<span class="material-symbols-outlined">add</span>
+                        Listeme Ekle
+                    </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Main Content Area -->
+<main class="relative z-10 w-full max-w-[1920px] mx-auto pb-32 flex flex-col gap-stack-lg -mt-8">
+<!-- Rail: Sana Özel -->
+<section class="pl-grid-margin-desktop">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-stack-md flex items-center gap-2">
+                Sana Özel
+                <span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</h2>
+<div class="flex gap-[8px] overflow-x-auto no-scrollbar pb-8 pr-grid-margin-desktop snap-x">
+<!-- Poster Cards (2:3 Ratio) -->
+<!-- Card 1 -->
+<a class="flex-none w-[200px] h-[300px] rounded-lg overflow-hidden relative group snap-start transition-transform duration-300 hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-tertiary focus:ring-offset-4 focus:ring-offset-primary-container" href="#">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full" data-alt="A cinematic, high-contrast movie poster for a gritty sci-fi thriller. The image features a solitary figure looking out over a dark, dystopian cityscape illuminated by sparse, piercing neon blue lights. The aesthetic is extremely dark, relying on deep blacks and subtle blue gradients to convey mystery and scale. Minimalist composition." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBn4KDqFxBfzIRvzw3aiS5wkzG5X79iN4fT2vZnT9ERKKTcaKvE3MbX3ku9QLzY_9XEBhXhm3jjEpXjFysVd95EEFVdxZSq4ya0EOOcnn3ghCQki_dU5SXLuMcQtge2U8OiwZuCXNDo9T4ce-hzpg0-OfkJpOvNuVq58ELqeH8RFke28AqxG1mTvAJeHM1qJNfgJD5ljXsafhi7DjLJVvrpkzVLihGOJ6A08weOuirxhLXF_96UFXnwLQ')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+<h3 class="font-body-md font-bold text-on-surface truncate">Neon Gölgeler</h3>
+<p class="font-metadata-sm text-metadata-sm text-on-surface-variant">2024</p>
+</div>
+</a>
+<!-- Card 2 -->
+<a class="flex-none w-[200px] h-[300px] rounded-lg overflow-hidden relative group snap-start transition-transform duration-300 hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-on-surface focus:ring-offset-4 focus:ring-offset-primary-container" href="#">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full" data-alt="A dramatic, historical epic movie poster. A silhouetted army marches across a vast, barren desert landscape at sunset. The sky is a dramatic gradient of fiery orange and deep crimson, fading into black at the top edge. The lighting is stark and highly stylized, emphasizing silhouettes and grand scale. Cinematic and intense." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBmSDxCV9hDt87s-eXQ_Bs-anYBhiGl-lAZHF3JBKEVea9zObdA4cqQtriM7ZjQR9ZBxczceQmmBKoqOPOo8J9d1TXxi2AbjQfso--nCSSeoU6Qo55qFOuyLf1l-D-RGSOOwL1q80Dp7YZIa5qH2ex8adiXetIdZDa0B-brKutd4bPylAcCQqhBBWE6_CkwDSiVkw90Qtmln8Clf5tJucxhp9HSmYYJG8clExc_bX-MyAewhMGhjBqGHg')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+<h3 class="font-body-md font-bold text-on-surface truncate">Kızıl Kumlar</h3>
+<p class="font-metadata-sm text-metadata-sm text-on-surface-variant">2023</p>
+</div>
+</a>
+<!-- Card 3 -->
+<a class="flex-none w-[200px] h-[300px] rounded-lg overflow-hidden relative group snap-start transition-transform duration-300 hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-on-surface focus:ring-offset-4 focus:ring-offset-primary-container" href="#">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full" data-alt="A premium, suspenseful psychological thriller movie poster. A close-up of an eye reflecting a shattered mirror in a dark, dimly lit room. The color palette is monochromatic with deep grays, blacks, and a single stark white highlight. The mood is tense, minimalist, and very dark, allowing the stark white elements to pop." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDYmh2Y6CU7-2Z5aSfVSra48NBHWC4YNSJOguphPpKOMwxpj9usA98ucWIBU8-R__GPlp44T87Do50f0YDKzL1P4SmoEtcqetLDCV7wyd9B0za1M5yJ9NgNOw5dW-vhxCBfJUGqg6gZKmjugcBSxEFzE3TeEIV-JIWhKIjM3VGBQwdRlzjfqS26L48HrtaVxGnUi2J_iAT_JAWt4bnCCqo7vMIOKs6TsZJO5IMVK6OJi6hlyHfQI5AZzg')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+<h3 class="font-body-md font-bold text-on-surface truncate">Kırık Ayna</h3>
+<p class="font-metadata-sm text-metadata-sm text-on-surface-variant">2025</p>
+</div>
+</a>
+<!-- Card 4 -->
+<a class="flex-none w-[200px] h-[300px] rounded-lg overflow-hidden relative group snap-start transition-transform duration-300 hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-tertiary focus:ring-offset-4 focus:ring-offset-primary-container border-[1px] border-tertiary/30" href="#">
+<div class="absolute top-2 right-2 z-20 bg-tertiary-container/80 backdrop-blur-sm rounded-full p-1 border border-tertiary/50">
+<span class="material-symbols-outlined text-tertiary text-[16px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div class="absolute inset-0 bg-cover bg-center w-full h-full" data-alt="A stylized, modern fantasy movie poster. A glowing, intricate, geometric portal opening in the middle of a dense, dark forest. The portal emits a vibrant violet (#7C3AED) light that contrasts sharply against the pitch-black trees. The aesthetic is clean, sharp, and slightly surreal, emphasizing intelligent darkness with a magical AI-like accent." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAZg15R5No5J6akjKl-N_j3oHQR6BTxc--IvkOMV-jJ9JqPtz3r7cDXkaVZlLyqV4ZTN8zZSr2whp0N7t0Er_5ZiahSORJb5GR72UMGVbqQTo4aQa3T8FsOP7MrS2hCiNyNt7gHEIyO-Awhpq9IsL7ug0py7HPpNTV8_0e7dtyjPLuO_81EHI0dUhwsztuPgTYfi-JciM30vemGzF1WulesQS96iv9Cv1jjgTu7XdhWDjzKa3v7eTJ81g')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+<h3 class="font-body-md font-bold text-on-surface truncate">Geçit</h3>
+<p class="font-metadata-sm text-metadata-sm text-on-surface-variant">AI Önerisi</p>
+</div>
+</a>
+<!-- Card 5 -->
+<a class="flex-none w-[200px] h-[300px] rounded-lg overflow-hidden relative group snap-start transition-transform duration-300 hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-on-surface focus:ring-offset-4 focus:ring-offset-primary-container" href="#">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full" data-alt="A minimalist, high-end action movie poster. A sleek, matte black sports car drifting on a rain-soaked asphalt road at night. The only sources of light are the bright red taillights stretching into streaks and a faint streetlamp. The composition is highly dynamic but uses vast areas of negative black space for a premium feel." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAgrOOWkaG8E_YYR_Tmb2n9aBD9uNCSV3B5eC3yEgWORvUSVW85SeoB88vAGqviJsuJoKsm0T89tlaciUyyj9JOy16iu-d-w7GIL9KHeCHTyjbaIxdNrFTwlVihyqnZjh1Ad-umoIHohxQYkV2nG0WzXXihH__Uj3uGql1YcZ1_u-zggO61pMu94ooGKVUHXIvWsjjKfpKdGe1tg-tmhs_iBbVMJcN6BBZUoXRqNh2VihGci9hXFJz8rQ')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+<h3 class="font-body-md font-bold text-on-surface truncate">Hız Sınırı</h3>
+<p class="font-metadata-sm text-metadata-sm text-on-surface-variant">2022</p>
+</div>
+</a>
+<!-- Card 6 (Partial view to hint at more) -->
+<a class="flex-none w-[200px] h-[300px] rounded-lg overflow-hidden relative group snap-start transition-transform duration-300 hover:scale-105" href="#">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full" data-alt="An atmospheric mystery movie poster. Thick fog rolling over a dark, calm ocean under a moonless night sky. A tiny, faintly glowing lantern on a small wooden boat is the only light source, barely piercing the gloom. The image uses deep blues and blacks to create a moody, sophisticated cinematic tone." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBNRobJsKiOybI5A2_B9CV6H_rLL6rpOn6o1ixL1d7DMD5s6ggbUxEkVke81tBXAk02MHcVu8Os_4NQL3jygdCXrzs_ME4kHK6AlfeVSK2oI4ai0qnuxexjXQSdt2Ukk0kZwYdpWsQLqDDEZg9uMeRCMQTnBqO4qqtY6c4Fm_4atmhwQ5lF4H5CjdgZeh-ToB1WGvvifcZdDAUqLVNhYeBnoFXvPCVB-BnGHf1Y92RVwE-TYUkLws_4yA')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+<h3 class="font-body-md font-bold text-on-surface truncate">Sessiz Sular</h3>
+<p class="font-metadata-sm text-metadata-sm text-on-surface-variant">2021</p>
+</div>
+</a>
+</div>
+</section>
+<!-- AI Discovery Module -->
+<section class="px-grid-margin-desktop py-8">
+<div class="relative w-full rounded-xl p-[1px] bg-gradient-to-br from-[#7C3AED] to-transparent overflow-hidden">
+<div class="bg-surface-container-lowest rounded-xl p-8 md:p-12 relative flex flex-col md:flex-row items-center justify-between gap-8 z-10">
+<!-- Inner Glow -->
+<div class="absolute inset-0 bg-[#7C3AED]/5 pointer-events-none rounded-xl"></div>
+<div class="flex-1 flex flex-col gap-4 relative z-10 max-w-2xl">
+<h2 class="font-headline-lg text-headline-lg text-on-surface flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary text-[32px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                            SineAI: Bu gece ne izlemek istersin?
+                        </h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">
+                            Ruh halini veya istediğin filmi anlat.
+                        </p>
+<div class="flex flex-wrap gap-3 mt-4">
+<button class="px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant font-metadata-sm transition-colors text-metadata-sm">
+                                Beyin yakan
+                            </button>
+<button class="px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant font-metadata-sm transition-colors text-metadata-sm">
+                                Ters köşe
+                            </button>
+<button class="px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant font-metadata-sm transition-colors text-metadata-sm">
+                                Ailece
+                            </button>
+</div>
+</div>
+<div class="relative z-10 flex-shrink-0 w-full md:w-auto">
+<button class="w-full md:w-auto bg-transparent border border-tertiary text-tertiary font-body-md font-semibold px-8 py-4 rounded-full flex items-center justify-center gap-2 hover:bg-tertiary/10 transition-colors duration-200 ai-pulse shadow-[inset_0_0_10px_rgba(124,58,237,0.1)]">
+<span class="material-symbols-outlined">search</span>
+                            AI ile Keşfet
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Rail: Şu Anda Popüler -->
+<section class="pl-grid-margin-desktop">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-stack-md">
+                Şu Anda Popüler
+            </h2>
+<div class="flex gap-[8px] overflow-x-auto no-scrollbar pb-8 pr-grid-margin-desktop snap-x">
+<!-- Poster Cards -->
+<!-- Card 1 -->
+<a class="flex-none w-[200px] h-[300px] rounded-lg overflow-hidden relative group snap-start transition-transform duration-300 hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-on-surface focus:ring-offset-4 focus:ring-offset-primary-container" href="#">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full" data-alt="A stylized, high-contrast poster for a space exploration documentary. A massive, glowing orange gas giant planet dominates the background against deep, pitch-black space. In the foreground, a tiny, silhouetted astronaut floats, emphasizing immense scale. The aesthetic is extremely cinematic, minimalist, and utilizes intense dark themes." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAUqHWSzfLOlnFqfaOZ1lVAIiDUqs2nJGOr33YVpFo6TBWO5SNGsaAN_2XnrUKlcVe-q4mOpR6ay0U-5u6ElxwRp-DhOp52BO4dtwLceOFOn9N5oxBYGWGUxx-lb8SJpEIYF23PALTn67MMlkoq6DLifBDAkjPpEEXE2T4qobxLZWCUmBV93AGDqB1Zixzs00Cm3V4_5Og0LRQA7fEglBhwx8i4BQWjuu_tzPpZl5YlGfaVpAt1VPcrAg')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+<h3 class="font-body-md font-bold text-on-surface truncate">Sonsuz Boşluk</h3>
+<p class="font-metadata-sm text-metadata-sm text-on-surface-variant">2026</p>
+</div>
+</a>
+<!-- Card 2 -->
+<a class="flex-none w-[200px] h-[300px] rounded-lg overflow-hidden relative group snap-start transition-transform duration-300 hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-on-surface focus:ring-offset-4 focus:ring-offset-primary-container" href="#">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full" data-alt="A dark comedy movie poster. A stark white, empty room with a single, perfectly centered red balloon floating above a minimalist black armchair. The lighting is harsh and theatrical, casting long shadows. The color palette is strictly black, white, and red. The mood is unsettling yet sophisticated." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCqmu67etuJycvBSHZxfoeiBKBEKYJHcZZPZOT3duptCq6534VvQfCDzokI8cNortr_fGyplenyoAOzNatV7Fl7GQeSFawbxYloVadD_npz-0WC69hH8x54JvRgYhgn47qhwCkx0C9e215QqfVfZyjiGeuh-Bqn_IIrriQz-rpJgTiwFXmLysHfoW1Og9_aiSE8Th6wurT7Ecjn_70WC10rYyPji4JM7j9xVvx7D8WIt0UloHyH8mIuOQ')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+<h3 class="font-body-md font-bold text-on-surface truncate">Absürt Oda</h3>
+<p class="font-metadata-sm text-metadata-sm text-on-surface-variant">2025</p>
+</div>
+</a>
+<!-- Card 3 -->
+<a class="flex-none w-[200px] h-[300px] rounded-lg overflow-hidden relative group snap-start transition-transform duration-300 hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-on-surface focus:ring-offset-4 focus:ring-offset-primary-container" href="#">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full" data-alt="An intense martial arts movie poster. A close-up silhouette of two fighters in mid-air combat against a backdrop of a glowing, oversized full moon. The surrounding environment is cloaked in deep, midnight black. The style is highly graphic and sleek, focusing on motion and striking contrast rather than detailed realism." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuALby3UDunsr0aC64mDrMWC454eQk4RYhDi5rsBGzDUgXJ_evMZ1ya3tmaPqXd1JPqNA9sBPEnTweRvKWzHuAa4z_P1PvVVXOv6oUAML8ceGcSelVY6wgH5XWjwn5tHSodHfm5_xOpqf-qhavGcbRTlVv4NQsimjuhHmAxu329etnlh-44Vau9brCSwVxOfF8lWJJGjHNrtrKvZP08QkWClB7LOFhk8o7M0M1GD8so-dPkbYki1X95tfg')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+<h3 class="font-body-md font-bold text-on-surface truncate">Ayışığı Dövüşü</h3>
+<p class="font-metadata-sm text-metadata-sm text-on-surface-variant">2024</p>
+</div>
+</a>
+<!-- Card 4 -->
+<a class="flex-none w-[200px] h-[300px] rounded-lg overflow-hidden relative group snap-start transition-transform duration-300 hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-on-surface focus:ring-offset-4 focus:ring-offset-primary-container" href="#">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full" data-alt="A neo-noir detective movie poster. A classic 1950s fedora hat rests on a dimly lit wooden desk next to a glowing, futuristic, holographic data pad emitting blue light. The room is steeped in heavy shadow, creating a deep, intelligent darkness aesthetic that blends retro noir with high-tech elements." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAUhoB0BBsR5W8Q1lmsmad2i9k8NlF_hmVsUd2JrGOH9yEu5uDcqbVQJorDfp3n1K2nIJRngcZNkvOaOsjlPdzxAIJ5HubOu8HH6wEjwi8ExDQo7BwtfSaVU46PEWg-TiZ0lqXpwPRBIBd7JidgqMs_UZRoXIzbGB2x8h4sngZRPnBGa3AxnrsS9N-UhxDQMyX491yV3xAMPMc9241UxuAW4GSJF8a8oeL79CPluGcJvbyDOTUPmfgcyQ')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+<h3 class="font-body-md font-bold text-on-surface truncate">Gölge Dedektif</h3>
+<p class="font-metadata-sm text-metadata-sm text-on-surface-variant">2026</p>
+</div>
+</a>
+<!-- Card 5 -->
+<a class="flex-none w-[200px] h-[300px] rounded-lg overflow-hidden relative group snap-start transition-transform duration-300 hover:scale-105 focus:scale-105 focus:outline-none focus:ring-2 focus:ring-on-surface focus:ring-offset-4 focus:ring-offset-primary-container" href="#">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full" data-alt="A minimalist horror movie poster. A dense, foreboding pine forest viewed from a high angle. The forest is almost entirely black, with only the jagged tops of the trees visible against a slightly lighter, charcoal-gray sky. No visible text or faces, just raw, overwhelming atmospheric tension and premium dark aesthetics." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDbVYXcJZou8RD-uDHFnJdrDPJHrqDGajW8s5sA7Pti-afBAzkzHWlnOsMNjlAogW_uXTHHquFowTI-ULjvqakw5V9IyqqGBQ3lX49mQHcYtl_QIkoq0gZa5ZpTmNygzPla2ZU4ffnKhabhdvre6r3tJ-sViF6ympmSKiW0uGrlgyHf0BpAy1C2TuK6JcY-gNsmqrpEhOHofDp1WKCG1r8UNYZwN0UeRRyewtawnK6O0q9RXgmVM90NPQ')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+<h3 class="font-body-md font-bold text-on-surface truncate">Karanlık Orman</h3>
+<p class="font-metadata-sm text-metadata-sm text-on-surface-variant">2023</p>
+</div>
+</a>
+</div>
+</section>
+</main>
+<script>
+        // Simple script to handle navbar background on scroll
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('topNav');
+            if (window.scrollY > 50) {
+                nav.classList.add('nav-scrolled');
+            } else {
+                nav.classList.remove('nav-scrolled');
+            }
+        });
+    </script>
+</body></html>

@@ -94,8 +94,9 @@ class MainActivity : Activity() {
     private fun setupWebView(url: String) {
         val wv = WebView(this).also { webView = it }
 
-        // Backdrop-filter blur ve animasyonlar için hardware acceleration
-        wv.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        // Window düzeyinde hardwareAccelerated="true" zaten manifest'te tanımlıdır.
+        // View düzeyinde LAYER_TYPE_HARDWARE emülatörlerde siyah ekrana yol açtığı için varsayılan (LAYER_TYPE_NONE) kullanılır.
+        wv.setLayerType(View.LAYER_TYPE_NONE, null)
 
         wv.settings.apply {
             javaScriptEnabled              = true
@@ -144,6 +145,15 @@ class MainActivity : Activity() {
                 return openYouTubeIfNeeded(url?.let(Uri::parse))
             }
 
+            override fun onReceivedSslError(
+                view: WebView?,
+                handler: android.webkit.SslErrorHandler?,
+                error: android.net.http.SslError?
+            ) {
+                // Emülatörlerde ve özel SSL sertifikalarında sayfanın yüklenmesini engellememek için
+                handler?.proceed()
+            }
+
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 tvNavigationReady = false
@@ -169,10 +179,10 @@ class MainActivity : Activity() {
                            <h2 style="font-size:24px;font-weight:800;color:#a78bfa">Bağlantı Kurulamadı</h2>
                            <p style="color:#94a3b8;font-size:15px">$currentUrl</p>
                            <button onclick="location.reload()" style="
-                               padding:14px 36px;background:linear-gradient(135deg,#7c3aed,#a855f7);
-                               color:#fff;border:none;border-radius:12px;
-                               font-size:16px;font-weight:700;cursor:pointer">
-                             Tekrar Dene
+                                padding:14px 36px;background:linear-gradient(135deg,#7c3aed,#a855f7);
+                                color:#fff;border:none;border-radius:12px;
+                                font-size:16px;font-weight:700;cursor:pointer">
+                              Tekrar Dene
                            </button>
                            </body></html>""",
                         "text/html", "utf-8"

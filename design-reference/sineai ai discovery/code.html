@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SineAI - AI Keşfet</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#0c0e10",
+                        "tertiary-container": "#0c002a",
+                        "tertiary-fixed-dim": "#d0bcff",
+                        "surface-tint": "#c7c6ca",
+                        "surface": "#111415",
+                        "on-surface-variant": "#c7c6cb",
+                        "on-tertiary": "#3b0091",
+                        "surface-variant": "#333537",
+                        "secondary-fixed": "#eaddff",
+                        "inverse-surface": "#e2e2e4",
+                        "surface-bright": "#37393b",
+                        "on-secondary-fixed": "#25005a",
+                        "on-tertiary-container": "#875de9",
+                        "on-primary-fixed-variant": "#46464a",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#d2bbff",
+                        "tertiary": "#d0bcff",
+                        "inverse-on-surface": "#2f3132",
+                        "background": "#111415",
+                        "on-secondary": "#3f008e",
+                        "primary": "#c7c6ca",
+                        "surface-dim": "#111415",
+                        "surface-container": "#1e2021",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed": "#1a1b1f",
+                        "outline": "#909095",
+                        "surface-container-low": "#1a1c1d",
+                        "primary-container": "#07080b",
+                        "primary-fixed-dim": "#c7c6ca",
+                        "inverse-primary": "#5e5e62",
+                        "surface-container-high": "#282a2c",
+                        "on-tertiary-fixed-variant": "#5321b4",
+                        "on-surface": "#e2e2e4",
+                        "on-primary-container": "#78787c",
+                        "tertiary-fixed": "#e9ddff",
+                        "secondary": "#d2bbff",
+                        "primary-fixed": "#e3e2e6",
+                        "on-tertiary-fixed": "#23005c",
+                        "secondary-container": "#6001d1",
+                        "outline-variant": "#46464b",
+                        "on-primary": "#2f3034",
+                        "on-background": "#e2e2e4",
+                        "surface-container-highest": "#333537",
+                        "on-secondary-fixed-variant": "#5a00c6",
+                        "on-error": "#690005",
+                        "error-container": "#93000a",
+                        "on-secondary-container": "#c9aeff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-lg": "48px",
+                        "grid-margin-mobile": "20px",
+                        "grid-margin-desktop": "80px",
+                        "gutter": "24px",
+                        "stack-sm": "8px",
+                        "stack-md": "16px"
+                    },
+                    "fontFamily": {
+                        "display-hero-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "display-hero": ["Inter"],
+                        "body-md": ["Inter"],
+                        "metadata-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-hero-mobile": ["40px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-caps": ["11px", { "lineHeight": "12px", "letterSpacing": "0.08em", "fontWeight": "800" }],
+                        "display-hero": ["72px", { "lineHeight": "80px", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "metadata-sm": ["13px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #07080b; /* Force primary-container for the deep immersive feel */
+            color: #e2e2e4; /* on-surface */
+            margin: 0;
+            overflow-x: hidden;
+        }
+        
+        .ai-glow {
+            box-shadow: 0 0 20px 0 rgba(135, 93, 233, 0.2);
+            transition: box-shadow 0.3s ease;
+        }
+        .ai-glow:hover {
+            box-shadow: 0 0 30px 5px rgba(135, 93, 233, 0.4);
+        }
+
+        .chip-hover {
+            transition: all 0.2s ease-in-out;
+        }
+        .chip-hover:hover {
+            transform: scale(1.05);
+            border-color: #e2e2e4;
+        }
+    </style>
+</head>
+<body class="bg-primary-container text-on-surface min-h-screen flex flex-col antialiased selection:bg-on-tertiary-container selection:text-white relative">
+<!-- Ambient Background Gradient Overlay -->
+<div class="fixed inset-0 pointer-events-none z-0" style="background: radial-gradient(circle at 50% -20%, rgba(135, 93, 233, 0.15), transparent 70%);"></div>
+<!-- Side NavBar (Desktop) -->
+<nav class="hidden md:flex flex-col bg-surface fixed left-0 top-0 h-full w-20 hover:w-64 transition-all duration-300 z-50 py-stack-md bg-surface-container-low overflow-hidden group">
+<div class="flex items-center px-4 mb-stack-lg flex-shrink-0 whitespace-nowrap">
+<span class="material-symbols-outlined text-on-tertiary-container text-4xl mr-4" style="font-variation-settings: 'FILL' 1;">movie</span>
+<div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<h1 class="font-headline-md text-headline-md font-black text-on-surface tracking-tight">SineAI</h1>
+<p class="font-label-caps text-label-caps text-on-surface-variant">Sinematik Deneyim</p>
+</div>
+</div>
+<div class="flex-1 px-2 space-y-2">
+<a class="flex items-center gap-4 text-on-surface-variant p-4 rounded-xl hover:bg-surface-variant hover:text-on-surface transition-colors whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-2xl">home</span>
+<span class="font-body-md text-body-md opacity-0 group-hover:opacity-100 transition-opacity duration-300">Ana Sayfa</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant p-4 rounded-xl hover:bg-surface-variant hover:text-on-surface transition-colors whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-2xl">movie</span>
+<span class="font-body-md text-body-md opacity-0 group-hover:opacity-100 transition-opacity duration-300">Filmler</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant p-4 rounded-xl hover:bg-surface-variant hover:text-on-surface transition-colors whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-2xl">tv</span>
+<span class="font-body-md text-body-md opacity-0 group-hover:opacity-100 transition-opacity duration-300">Diziler</span>
+</a>
+<a class="flex items-center gap-4 bg-tertiary-container text-on-tertiary-container rounded-full p-4 scale-105 border-2 border-tertiary whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="font-body-md text-body-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-bold">AI Keşfet</span>
+</a>
+</div>
+<div class="mt-auto px-2 space-y-2 mb-4">
+<a class="flex items-center gap-4 text-on-surface-variant p-4 rounded-xl hover:bg-surface-variant hover:text-on-surface transition-colors whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-2xl">search</span>
+<span class="font-body-md text-body-md opacity-0 group-hover:opacity-100 transition-opacity duration-300">Arama</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant p-4 rounded-xl hover:bg-surface-variant hover:text-on-surface transition-colors whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-2xl">favorite</span>
+<span class="font-body-md text-body-md opacity-0 group-hover:opacity-100 transition-opacity duration-300">Favoriler</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant p-4 rounded-xl hover:bg-surface-variant hover:text-on-surface transition-colors whitespace-nowrap" href="#">
+<span class="material-symbols-outlined text-2xl">account_circle</span>
+<span class="font-body-md text-body-md opacity-0 group-hover:opacity-100 transition-opacity duration-300">Profil</span>
+</a>
+</div>
+</nav>
+<!-- Top NavBar (Mobile) -->
+<nav class="md:hidden fixed top-0 w-full z-50 flex justify-between items-center px-grid-margin-mobile h-20 bg-transparent bg-gradient-to-b from-surface-container-lowest to-transparent">
+<h1 class="font-display-hero-mobile text-display-hero-mobile font-extrabold text-on-surface tracking-tighter">SineAI</h1>
+<div class="flex items-center gap-4 text-primary">
+<button class="material-symbols-outlined hover:text-on-surface transition-colors duration-300 scale-100 active:scale-95 transition-transform text-2xl">search</button>
+<button class="material-symbols-outlined hover:text-on-surface transition-colors duration-300 scale-100 active:scale-95 transition-transform text-2xl">favorite</button>
+<button class="material-symbols-outlined hover:text-on-surface transition-colors duration-300 scale-100 active:scale-95 transition-transform text-2xl">person</button>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 relative z-10 flex flex-col items-center justify-center min-h-screen px-grid-margin-mobile md:px-grid-margin-desktop md:ml-20">
+<div class="max-w-4xl w-full text-center flex flex-col items-center justify-center mt-20 md:mt-0">
+<!-- Headline & Subtitle -->
+<div class="mb-stack-lg space-y-stack-sm text-center">
+<h2 class="font-display-hero text-headline-lg md:text-display-hero font-extrabold text-on-surface tracking-tighter leading-tight bg-clip-text text-transparent bg-gradient-to-r from-on-surface to-on-surface-variant">
+                    Bu gece ne izlemek istiyorsun?
+                </h2>
+<p class="font-body-lg text-body-md md:text-body-lg text-on-surface-variant max-w-2xl mx-auto">
+                    Ruh halini, sevdiğin bir filmi veya aradığın deneyimi anlat. SineAI senin için mükemmel eşleşmeyi bulsun.
+                </p>
+</div>
+<!-- Primary AI Input Area -->
+<div class="w-full max-w-3xl mb-stack-lg relative group">
+<div class="absolute -inset-0.5 bg-gradient-to-r from-tertiary to-on-tertiary-container rounded-full blur opacity-30 group-hover:opacity-60 transition duration-1000 group-hover:duration-200"></div>
+<div class="relative flex items-center bg-surface-container-low rounded-full p-2 border border-outline-variant focus-within:border-on-tertiary-container focus-within:ring-1 focus-within:ring-on-tertiary-container transition-all">
+<span class="material-symbols-outlined text-on-tertiary-container pl-4 pr-2 text-2xl" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<input class="w-full bg-transparent border-none text-on-surface font-body-lg text-body-lg placeholder-on-surface-variant/50 focus:ring-0 focus:outline-none px-4 py-4 rounded-full" placeholder="Örn: Inception tarzı kafa yoran bir bilim kurgu..." type="text"/>
+<button class="bg-on-surface text-primary-container font-metadata-sm text-metadata-sm uppercase px-6 py-4 rounded-full hover:bg-surface-tint transition-colors ml-2 whitespace-nowrap flex items-center gap-2">
+<span>SineAI'ye Yaz</span>
+<span class="material-symbols-outlined text-sm">send</span>
+</button>
+</div>
+</div>
+<!-- Mood / Vibe Chips -->
+<div class="w-full max-w-4xl">
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-stack-sm text-left px-2 uppercase">Veya bir ruh hali seçin</p>
+<div class="flex flex-wrap gap-3 justify-center md:justify-start">
+<button class="chip-hover flex items-center gap-2 bg-surface-container-high border border-outline-variant rounded-full px-5 py-3 text-on-surface font-body-md text-body-md">
+<span>🧠</span>
+<span>Beyin yakan</span>
+</button>
+<button class="chip-hover flex items-center gap-2 bg-surface-container-high border border-outline-variant rounded-full px-5 py-3 text-on-surface font-body-md text-body-md">
+<span>😱</span>
+<span>Gerilim</span>
+</button>
+<button class="chip-hover flex items-center gap-2 bg-surface-container-high border border-outline-variant rounded-full px-5 py-3 text-on-surface font-body-md text-body-md">
+<span>😂</span>
+<span>Kafa dağıtmalık</span>
+</button>
+<button class="chip-hover flex items-center gap-2 bg-surface-container-high border border-outline-variant rounded-full px-5 py-3 text-on-surface font-body-md text-body-md">
+<span>❤️</span>
+<span>Romantik</span>
+</button>
+<button class="chip-hover flex items-center gap-2 bg-surface-container-high border border-outline-variant rounded-full px-5 py-3 text-on-surface font-body-md text-body-md">
+<span>👨‍👩‍👧</span>
+<span>Ailece</span>
+</button>
+<button class="chip-hover flex items-center gap-2 bg-surface-container-high border border-outline-variant rounded-full px-5 py-3 text-on-surface font-body-md text-body-md">
+<span>🔥</span>
+<span>Aksiyon</span>
+</button>
+<button class="chip-hover flex items-center gap-2 bg-surface-container-high border border-outline-variant rounded-full px-5 py-3 text-on-surface font-body-md text-body-md text-tertiary">
+<span>⭐</span>
+<span>IMDb 8+</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom NavBar (Mobile) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 bg-surface-container-lowest flex justify-around items-center h-16 border-t border-surface-variant">
+<a class="flex flex-col items-center justify-center w-full h-full text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-2xl mb-1">home</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-2xl mb-1">movie</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-2xl mb-1">tv</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full text-on-tertiary-container relative" href="#">
+<div class="absolute -top-3 bg-tertiary-container p-2 rounded-full border-4 border-surface-container-lowest">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+</a>
+</nav>
+<script>
+        // Simple subtle entrance animation for chips
+        document.addEventListener('DOMContentLoaded', () => {
+            const chips = document.querySelectorAll('.chip-hover');
+            chips.forEach((chip, index) => {
+                chip.style.opacity = '0';
+                chip.style.transform = 'translateY(10px)';
+                setTimeout(() => {
+                    chip.style.transition = 'all 0.4s ease-out';
+                    chip.style.opacity = '1';
+                    chip.style.transform = 'translateY(0)';
+                }, 300 + (index * 50));
+            });
+        });
+    </script>
+</body></html>
