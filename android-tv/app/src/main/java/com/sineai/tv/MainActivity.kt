@@ -113,7 +113,7 @@ class MainActivity : Activity() {
             textZoom                       = 100
             setSupportMultipleWindows(false)
             javaScriptCanOpenWindowsAutomatically = false
-            userAgentString = "${userAgentString} SineAITV/1.10"
+            userAgentString = "${userAgentString} SineAITV/1.11"
             // TV'de büyük ekran önceliği
             @Suppress("DEPRECATION")
             setRenderPriority(WebSettings.RenderPriority.HIGH)

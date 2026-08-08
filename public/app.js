@@ -143,6 +143,10 @@ document.addEventListener('DOMContentLoaded', () => {
     submitBtn.setAttribute('aria-busy', 'false');
 
     function scrollPageTo(top) {
+        if (IS_TV) {
+            document.documentElement.scrollTop = top;
+            document.body.scrollTop = top;
+        }
         window.scrollTo({ top, behavior: IS_TV ? 'auto' : 'smooth' });
     }
 
@@ -440,6 +444,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showProfilePage() {
+        // Profile is a new full-page view. Reset the previous page position both
+        // before and after layout so fixed TV navigation never covers its header.
+        scrollPageTo(0);
         featuredSection?.classList.add('hidden');
         if (heroSearchArea) heroSearchArea.classList.add('hidden');
         toggleHomeBrowse(false);
@@ -449,6 +456,15 @@ document.addEventListener('DOMContentLoaded', () => {
         setViewState('profile');
         updateProfilePageUI();
         scrollPageTo(0);
+        window.requestAnimationFrame(() => {
+            scrollPageTo(0);
+            window.SineAITV?.refresh('#profileBackBtn');
+        });
+        // Some Android WebView/TV Chromium builds perform a delayed native
+        // focus scroll after the first frame. Reassert the new view origin
+        // after that settle window so the fixed header cannot cover controls.
+        window.setTimeout(() => scrollPageTo(0), 80);
+        window.setTimeout(() => scrollPageTo(0), 240);
     }
 
     function showDiscoverPage() {

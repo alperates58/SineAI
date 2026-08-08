@@ -450,7 +450,7 @@
         const selectors = view === 'results'
             ? ['#resultsGrid .movie-card', '.filter-pill.active', '#tvQueryTrigger', '.saas-back-btn']
             : view === 'profile'
-                ? ['#profileFavGrid .movie-card', '#profileRecommendBtn', '#profileBackBtn']
+                ? ['#profileBackBtn', '#profileRecommendBtn', '#goToDiscoverBtn', '#profileFavGrid .movie-card']
                 : view === 'ai' || view === 'search'
                     ? ['#tvQueryTrigger', '.mode-tab.active', '#voiceBtn', '#randomPickBtn']
                 : ['#tvFeaturedOpen', '#btnAiDiscover', '.mode-tab.active', '#tvQueryTrigger', '#popularMoviesRow .movie-card'];
