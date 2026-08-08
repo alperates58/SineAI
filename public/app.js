@@ -1278,7 +1278,7 @@ document.addEventListener('DOMContentLoaded', () => {
             : `<div class="no-poster">Afiş Bulunamadı</div>`;
 
         const genresHTML = item.genres?.length > 0
-            ? `<div class="genre-pills">${item.genres.map(g => `<span class="genre-pill">${g}</span>`).join('')}</div>`
+            ? item.genres.map(g => `<span class="bg-surface-container/90 px-3 py-1 rounded-full border border-outline-variant text-xs font-semibold text-on-surface-variant">${g}</span>`).join(' ')
             : '';
 
         let runtimeStr = '';
@@ -1286,31 +1286,31 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (item.runtime) runtimeStr = `${item.runtime} dk`;
 
         const originalTitleHTML = (item.original_title && item.original_title !== item.title)
-            ? `<div class="original-title">${item.original_title}</div>` : '';
+            ? `<div class="text-sm md:text-base text-on-surface-variant font-medium opacity-80 mt-0.5">${item.original_title}</div>` : '';
         const directorHTML = item.director
-            ? `<div class="modal-director"><strong>${item.type === 'movie' ? 'Yönetmen' : 'Yaratıcı'}:</strong> ${item.director}</div>` : '';
+            ? `<div class="text-xs md:text-sm text-on-surface-variant font-medium"><strong>${item.type === 'movie' ? 'Yönetmen' : 'Yaratıcı'}:</strong> ${item.director}</div>` : '';
 
         const currentRec = getReaction(item);
         const isFav = isFavorited(item);
 
-        const playTrailerBtnHTML = `<button type="button" class="btn-play-trailer bg-on-surface text-primary-container font-bold px-8 py-3.5 rounded-full flex items-center gap-2 hover:scale-105 transition-transform text-sm md:text-base cursor-pointer" tabindex="0">
-            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+        const playTrailerBtnHTML = `<button type="button" class="btn-play-trailer bg-on-surface text-primary-container font-bold px-7 py-3 rounded-full flex items-center gap-2 hover:scale-105 transition-transform text-sm cursor-pointer" tabindex="0">
+            <span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
             <span>Fragmanı Oynat</span>
         </button>`;
 
         modalBody.innerHTML = `
-            <div class="relative w-full min-h-[500px] md:min-h-[600px] bg-cover bg-center overflow-hidden rounded-2xl flex items-end p-6 md:p-12"${backdropUrl ? ` style="background-image: url('${backdropUrl}')"` : ''}>
-                <div class="absolute inset-0 bg-gradient-to-t from-primary-container via-primary-container/80 to-transparent"></div>
-                <div class="absolute inset-0 bg-gradient-to-r from-primary-container via-primary-container/90 to-transparent w-full md:w-2/3"></div>
+            <div class="relative w-full min-h-[440px] md:min-h-[540px] bg-cover bg-center overflow-hidden rounded-2xl flex items-end p-5 md:p-10"${backdropUrl ? ` style="background-image: url('${backdropUrl}')"` : ''}>
+                <div class="absolute inset-0 bg-gradient-to-t from-primary-container via-primary-container/85 to-transparent"></div>
+                <div class="absolute inset-0 bg-gradient-to-r from-primary-container via-primary-container/90 to-transparent w-full md:w-3/4"></div>
                 
-                <div class="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 w-full">
-                    <div class="md:col-span-8 lg:col-span-7 flex flex-col gap-4">
+                <div class="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-4 w-full">
+                    <div class="md:col-span-9 lg:col-span-8 flex flex-col gap-3">
                         <div>
-                            <h1 class="font-display-hero-mobile md:font-display-hero text-2xl md:text-5xl font-extrabold text-on-surface leading-tight drop-shadow-lg">${item.title}</h1>
-                            ${originalTitleHTML ? `<h2 class="text-base md:text-lg text-on-surface-variant font-medium opacity-80 mt-1">${item.original_title}</h2>` : ''}
+                            <h1 class="font-display-hero-mobile md:font-display-hero text-2xl md:text-4xl font-extrabold text-on-surface leading-tight drop-shadow-lg">${item.title}</h1>
+                            ${originalTitleHTML}
                         </div>
                         
-                        <div class="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm font-semibold text-on-surface-variant">
+                        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-on-surface-variant">
                             <span class="bg-surface-container px-3 py-1 rounded-full border border-outline-variant">${year}</span>
                             <span class="bg-surface-container px-3 py-1 rounded-full border border-outline-variant">${typeStr}</span>
                             <span class="bg-surface-container px-3 py-1 rounded-full border border-outline-variant flex items-center gap-1 text-yellow-400 font-bold">
@@ -1319,32 +1319,32 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${runtimeStr ? `<span class="bg-surface-container px-3 py-1 rounded-full border border-outline-variant">${runtimeStr}</span>` : ''}
                         </div>
 
-                        ${genresHTML ? `<div class="flex flex-wrap gap-2 text-xs text-on-surface-variant uppercase tracking-wider font-semibold">${genresHTML}</div>` : ''}
+                        ${genresHTML ? `<div class="flex flex-wrap gap-2 text-xs uppercase tracking-wider font-semibold">${genresHTML}</div>` : ''}
                         ${directorHTML}
-                        ${item.reason ? `<div class="bg-tertiary-container/40 border border-tertiary/30 text-tertiary px-4 py-2 rounded-lg text-sm font-medium">${item.reason}</div>` : ''}
+                        ${item.reason ? `<div class="bg-tertiary-container/40 border border-tertiary/30 text-tertiary px-4 py-1.5 rounded-lg text-xs md:text-sm font-medium">${item.reason}</div>` : ''}
                         
-                        <p class="text-sm md:text-base text-on-surface-variant leading-relaxed max-w-prose line-clamp-4 md:line-clamp-none">${item.overview || 'Bu yapım için detaylı açıklama bulunmuyor.'}</p>
+                        <p class="text-xs md:text-sm text-on-surface-variant leading-relaxed max-w-prose line-clamp-3 md:line-clamp-4">${item.overview || 'Bu yapım için detaylı açıklama bulunmuyor.'}</p>
                         
-                        <div class="flex flex-wrap items-center gap-3 mt-2 netflix-actions-bar">
+                        <div class="flex flex-wrap items-center gap-3 mt-1 netflix-actions-bar">
                             ${playTrailerBtnHTML}
-                            <button type="button" class="btn-similar-recommend bg-transparent border border-tertiary text-tertiary hover:bg-tertiary/10 font-bold px-6 py-3 rounded-full flex items-center gap-2 text-sm transition-all cursor-pointer" tabindex="0">
-                                <span class="material-symbols-outlined text-sm">auto_awesome</span>
+                            <button type="button" class="btn-similar-recommend bg-transparent border border-tertiary text-tertiary hover:bg-tertiary/10 font-bold px-5 py-3 rounded-full flex items-center gap-2 text-xs md:text-sm transition-all cursor-pointer" tabindex="0">
+                                <span class="material-symbols-outlined text-base">auto_awesome</span>
                                 <span>Benzerlerini Bul</span>
                             </button>
-                            <button type="button" class="btn-reaction btn-fav ${isFav ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-6 py-3 rounded-full border border-outline-variant flex items-center gap-2 text-sm transition-colors cursor-pointer" data-type="fav" tabindex="0">
-                                <span class="material-symbols-outlined text-sm">${isFav ? 'favorite' : 'favorite_border'}</span>
+                            <button type="button" class="btn-reaction btn-fav ${isFav ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-5 py-3 rounded-full border border-outline-variant flex items-center gap-2 text-xs md:text-sm transition-colors cursor-pointer" data-type="fav" tabindex="0">
+                                <span class="material-symbols-outlined text-base">${isFav ? 'favorite' : 'favorite_border'}</span>
                                 <span class="btn-label">${isFav ? 'Favorilerimde' : 'Listeme Ekle'}</span>
                             </button>
-                            <button type="button" class="btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-4 py-3 rounded-full border border-outline-variant text-sm transition-colors cursor-pointer" data-type="super" title="Çok Beğendim" tabindex="0">
+                            <button type="button" class="btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant text-xs md:text-sm transition-colors cursor-pointer" data-type="super" title="Çok Beğendim" tabindex="0">
                                 <span>💖</span>
                             </button>
-                            <button type="button" class="btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-4 py-3 rounded-full border border-outline-variant text-sm transition-colors cursor-pointer" data-type="dislike" title="Beğenmedim" tabindex="0">
+                            <button type="button" class="btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant text-xs md:text-sm transition-colors cursor-pointer" data-type="dislike" title="Beğenmedim" tabindex="0">
                                 <span>👎</span>
                             </button>
                         </div>
 
-                        <div class="mt-4 pt-4 border-t border-outline-variant/40">
-                            <p class="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider mb-2 font-bold opacity-70">ŞİMDİ İZLE</p>
+                        <div class="mt-2 pt-3 border-t border-outline-variant/40">
+                            <p class="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider mb-2 font-bold opacity-70">ŞİMDİ İZLE</p>
                             <div>${badgesHTML}</div>
                         </div>
                     </div>
