@@ -88,6 +88,12 @@ body.tv-nav-ready .btn-nav-profile {
     -webkit-backdrop-filter: none !important;
 }
 
+/* The TV shell always owns navigation, even on low-resolution WebViews. */
+body.tv-nav-ready #mobileTopBar,
+body.tv-nav-ready #mobileBottomNav {
+    display: none !important;
+}
+
 /* Dialogs must always sit above the fixed TV navigation. */
 body.tv-nav-ready #detailModal,
 body.tv-nav-ready #trailerModal,
@@ -1088,13 +1094,14 @@ body.tv-nav-ready #detailModal .modal-info .meta {
 body.tv-nav-ready #detailModal .modal-info .overview {
     display: -webkit-box;
     max-width: 680px;
+    max-height: calc(1.48em * 3);
     margin: 0 0 18px;
     overflow: hidden;
     color: var(--tv-text-secondary);
     font-size: clamp(14px, 0.98vw, 19px);
     line-height: 1.48;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
+    -webkit-line-clamp: 3;
 }
 
 /* HORIZONTAL ACTION BAR IN DETAIL MODAL */

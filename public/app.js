@@ -53,6 +53,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const userProfileBtn       = document.getElementById('userProfileBtn');
     const navUsername          = document.getElementById('navUsername');
     const navFavBadge          = document.getElementById('navFavBadge');
+    const mobileBrandBtn       = document.getElementById('mobileBrandBtn');
+    const mobileSearchBtn      = document.getElementById('mobileSearchBtn');
+    const mobileAccountBtn     = document.getElementById('mobileAccountBtn');
+    const mobileAccountIcon    = document.getElementById('mobileAccountIcon');
 
     const tabLogin             = document.getElementById('tabLogin');
     const tabRegister          = document.getElementById('tabRegister');
@@ -76,9 +80,101 @@ document.addEventListener('DOMContentLoaded', () => {
     const IS_TV = navigator.userAgent.includes('SineAITV/')
         || new URLSearchParams(window.location.search).get('tv') === '1';
 
+    const modalFocusOrigins = new WeakMap();
+
+    function closeAccessibleModal(modal) {
+        if (!modal || modal.classList.contains('hidden')) return;
+        modal.classList.add('hidden');
+        if (modal === trailerModal) trailerIframe.src = '';
+    }
+
+    function syncOpenModalState(modal) {
+        const isOpen = !modal.classList.contains('hidden');
+        modal.setAttribute('aria-hidden', String(!isOpen));
+
+        if (isOpen) {
+            const active = document.activeElement;
+            if (active && !modal.contains(active)) modalFocusOrigins.set(modal, active);
+            document.body.classList.add('modal-open');
+            if (!IS_TV) {
+                window.setTimeout(() => {
+                    const preferred = modal.querySelector('.close-btn, [aria-label="Kapat"], button, input, select');
+                    preferred?.focus({ preventScroll: true });
+                }, 30);
+            }
+            return;
+        }
+
+        if (!document.querySelector('.modal:not(.hidden)')) {
+            document.body.classList.remove('modal-open');
+        }
+
+        if (!IS_TV) {
+            const origin = modalFocusOrigins.get(modal);
+            if (origin?.isConnected) window.setTimeout(() => origin.focus({ preventScroll: true }), 20);
+        }
+    }
+
+    document.querySelectorAll('.modal').forEach(modal => {
+        syncOpenModalState(modal);
+        new MutationObserver(() => syncOpenModalState(modal)).observe(modal, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+        modal.addEventListener('click', event => {
+            if (event.target === modal) closeAccessibleModal(modal);
+        });
+    });
+
+    if (!IS_TV) {
+        document.addEventListener('keydown', event => {
+            if (event.key !== 'Escape') return;
+            const openModals = [...document.querySelectorAll('.modal:not(.hidden)')];
+            const active = openModals.at(-1);
+            if (!active) return;
+            event.preventDefault();
+            closeAccessibleModal(active);
+        });
+    }
+
+    new MutationObserver(() => {
+        submitBtn.setAttribute('aria-busy', String(submitBtn.disabled));
+    }).observe(submitBtn, { attributes: true, attributeFilter: ['disabled'] });
+    submitBtn.setAttribute('aria-busy', 'false');
+
     function scrollPageTo(top) {
         window.scrollTo({ top, behavior: IS_TV ? 'auto' : 'smooth' });
     }
+
+    function escapeHTML(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, character => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        })[character]);
+    }
+
+    function tmdbImageURL(path, size) {
+        const safePath = String(path ?? '');
+        if (!/^\/[A-Za-z0-9._/-]+$/.test(safePath)) return '';
+        return `https://image.tmdb.org/t/p/${size}${safePath}`;
+    }
+
+    document.addEventListener('error', event => {
+        const image = event.target;
+        if (!(image instanceof HTMLImageElement)) return;
+        if (image.closest('.provider-badges')) {
+            image.remove();
+            return;
+        }
+        if (!image.closest('.poster-container')) return;
+        const fallback = document.createElement('div');
+        fallback.className = 'no-poster';
+        fallback.textContent = 'Afiş yüklenemedi';
+        image.replaceWith(fallback);
+    }, true);
 
     // Genre Constants
     const MOVIE_GENRES = [
@@ -189,9 +285,13 @@ document.addEventListener('DOMContentLoaded', () => {
             userAuthBtn.classList.add('hidden');
             userProfileBtn.classList.remove('hidden');
             navUsername.textContent = currentUser;
+            if (mobileAccountIcon) mobileAccountIcon.textContent = 'account_circle';
+            mobileAccountBtn?.setAttribute('aria-label', `${currentUser} profilini aç`);
         } else {
             userAuthBtn.classList.remove('hidden');
             userProfileBtn.classList.add('hidden');
+            if (mobileAccountIcon) mobileAccountIcon.textContent = 'person';
+            mobileAccountBtn?.setAttribute('aria-label', 'Giriş yap veya hesap oluştur');
         }
         navFavBadge.textContent = `${userFavorites.length}/10`;
         updateProfilePageUI();
@@ -299,6 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cardFavBtn) {
             if (isFavorited(item)) cardFavBtn.classList.add('active');
             else cardFavBtn.classList.remove('active');
+            cardFavBtn.setAttribute('aria-pressed', String(isFavorited(item)));
         }
     }
 
@@ -379,6 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (profileBackBtn) profileBackBtn.addEventListener('click', showDiscoverPage);
     if (goToDiscoverBtn) goToDiscoverBtn.addEventListener('click', showDiscoverPage);
     if (brandLogoBtn) brandLogoBtn.addEventListener('click', showDiscoverPage);
+    if (mobileBrandBtn) mobileBrandBtn.addEventListener('click', showDiscoverPage);
 
     // ── Navigation Bar Link Handlers ──────────────────────
     const navHomeLink = document.getElementById('navHomeLink');
@@ -402,6 +504,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.classList.add('text-on-surface-variant', 'font-medium');
             }
         });
+
+        const mobileTargetByDesktopId = {
+            navHomeLink: 'mobileNavHome',
+            navMoviesLink: 'mobileNavMovies',
+            navTvLink: 'mobileNavTv',
+            navAiLink: 'mobileNavAi'
+        };
+        document.querySelectorAll('#mobileBottomNav button').forEach(btn => {
+            if (btn.id === mobileTargetByDesktopId[activeId]) btn.setAttribute('aria-current', 'page');
+            else btn.removeAttribute('aria-current');
+        });
     }
 
     if (navHomeLink) navHomeLink.addEventListener('click', () => { highlightNavLink('navHomeLink'); showDiscoverPage(); });
@@ -423,7 +536,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navSearchTriggerBtn) navSearchTriggerBtn.addEventListener('click', () => {
         highlightNavLink('');
         showSearchPage('direct');
+        if (!IS_TV) window.setTimeout(() => queryInput.focus({ preventScroll: true }), 80);
     });
+    if (mobileSearchBtn) mobileSearchBtn.addEventListener('click', () => {
+        highlightNavLink('');
+        showSearchPage('direct');
+        window.setTimeout(() => queryInput.focus({ preventScroll: true }), 80);
+    });
+    if (mobileAccountBtn) mobileAccountBtn.addEventListener('click', () => {
+        highlightNavLink('');
+        if (currentUser) showProfilePage();
+        else openAuthModal();
+    });
+
+    highlightNavLink('navHomeLink');
 
     // ── Toast Notification ─────────────────────────────
     function showToast(message) {
@@ -569,15 +695,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
                 const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
                 const typeStr = type === 'tv' ? 'Dizi' : 'Film';
-                const posterUrl = item.poster ? `https://image.tmdb.org/t/p/w342${item.poster}` : null;
+                const safeTitle = escapeHTML(item.title || 'İsimsiz yapım');
+                const posterUrl = tmdbImageURL(item.poster, 'w342');
                 const posterHTML = posterUrl
-                    ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="${IS_TV && index < 7 ? 'eager' : 'lazy'}" decoding="async">`
+                    ? `<img src="${posterUrl}" alt="${safeTitle} afişi" loading="${IS_TV && index < 7 ? 'eager' : 'lazy'}" decoding="async">`
                     : `<div class="no-poster">Afiş Yok</div>`;
 
                 let badgesHTML = '';
                 if (item.providers && item.providers.length > 0) {
                     const ps = item.providers.slice(0, 2);
-                    badgesHTML = `<div class="provider-badges">${ps.map(p => `<div class="badge"><img src="https://image.tmdb.org/t/p/original${p.logo_path}" alt="${p.provider_name}">${p.provider_name}</div>`).join('')}</div>`;
+                    badgesHTML = `<div class="provider-badges">${ps.map(p => {
+                        const providerName = escapeHTML(p.provider_name || 'Platform');
+                        const logoUrl = tmdbImageURL(p.logo_path, 'original');
+                        return `<div class="badge">${logoUrl ? `<img src="${logoUrl}" alt="">` : ''}${providerName}</div>`;
+                    }).join('')}</div>`;
                 }
 
                 const favActive = isFavorited(item) ? 'active' : '';
@@ -590,14 +721,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.innerHTML = `
                     <div class="poster-container">
                         ${posterHTML}
-                        <button class="fav-btn ${favActive}" title="Favorilere Ekle/Çıkar" tabindex="0">❤️</button>
+                        <button type="button" class="fav-btn ${favActive}" title="Favorilere Ekle/Çıkar" aria-label="${safeTitle} favorisini değiştir" aria-pressed="${Boolean(favActive)}" tabindex="0">❤️</button>
                         <div class="card-badges-row">
                             <div class="card-type-badge">${typeStr}</div>
                             <div class="card-score-badge">⭐ ${rating}</div>
                         </div>
                     </div>
                     <div class="card-content">
-                        <h3 class="card-title">${item.title}</h3>
+                        <h3 class="card-title">${safeTitle}</h3>
                         <div class="card-meta"><span>${year}</span></div>
                         ${IS_TV ? '' : badgesHTML}
                     </div>
@@ -947,16 +1078,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const year    = item.release_date ? new Date(item.release_date).getFullYear() : 'Bilinmiyor';
             const typeStr = item.type === 'tv' ? 'Dizi' : 'Film';
             const rating  = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
-            const posterUrl  = item.poster ? `https://image.tmdb.org/t/p/w342${item.poster}` : null;
+            const safeTitle = escapeHTML(item.title || 'İsimsiz yapım');
+            const posterUrl  = tmdbImageURL(item.poster, 'w342');
             const posterHTML = posterUrl
-                ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="${IS_TV && index < 7 ? 'eager' : 'lazy'}" decoding="async">`
+                ? `<img src="${posterUrl}" alt="${safeTitle} afişi" loading="${IS_TV && index < 7 ? 'eager' : 'lazy'}" decoding="async">`
                 : `<div class="no-poster">Afiş Bulunamadı</div>`;
 
             let badgesHTML = '';
             if (item.providers && item.providers.length > 0) {
                 const ps = item.providers.slice(0, 3);
                 badgesHTML = `<div class="provider-badges">
-                    ${ps.map(p => `<div class="badge"><img src="https://image.tmdb.org/t/p/original${p.logo_path}" alt="${p.provider_name}">${p.provider_name}</div>`).join('')}
+                    ${ps.map(p => {
+                        const providerName = escapeHTML(p.provider_name || 'Platform');
+                        const logoUrl = tmdbImageURL(p.logo_path, 'original');
+                        return `<div class="badge">${logoUrl ? `<img src="${logoUrl}" alt="">` : ''}${providerName}</div>`;
+                    }).join('')}
                     ${item.providers.length > 3 ? `<span class="badge">+${item.providers.length - 3}</span>` : ''}
                 </div>`;
             } else {
@@ -973,17 +1109,17 @@ document.addEventListener('DOMContentLoaded', () => {
             card.innerHTML = `
                 <div class="poster-container">
                     ${posterHTML}
-                    <button class="fav-btn ${favActive}" title="Favorilere Ekle/Çıkar" tabindex="0">❤️</button>
+                    <button type="button" class="fav-btn ${favActive}" title="Favorilere Ekle/Çıkar" aria-label="${safeTitle} favorisini değiştir" aria-pressed="${Boolean(favActive)}" tabindex="0">❤️</button>
                     <div class="card-badges-row">
                         <div class="card-type-badge">${typeStr}</div>
                         <div class="card-score-badge">⭐ ${rating}</div>
                     </div>
                 </div>
                 <div class="card-content">
-                    <h3 class="card-title">${item.title}</h3>
+                    <h3 class="card-title">${safeTitle}</h3>
                     <div class="card-meta"><span>${year}</span></div>
-                    ${!IS_TV && item.reason ? `<div class="card-reason">${item.reason}</div>` : ''}
-                    ${IS_TV ? '' : `<p class="card-desc">${item.overview || 'Açıklama bulunmuyor.'}</p>`}
+                    ${!IS_TV && item.reason ? `<div class="card-reason">${escapeHTML(item.reason)}</div>` : ''}
+                    ${IS_TV ? '' : `<p class="card-desc">${escapeHTML(item.overview || 'Açıklama bulunmuyor.')}</p>`}
                     ${IS_TV ? '' : badgesHTML}
                 </div>
             `;
@@ -1015,8 +1151,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (quickFilterBar) {
         quickFilterBar.querySelectorAll('.filter-pill').forEach(btn => {
             btn.addEventListener('click', () => {
-                quickFilterBar.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+                quickFilterBar.querySelectorAll('.filter-pill').forEach(b => {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-pressed', 'false');
+                });
                 btn.classList.add('active');
+                btn.setAttribute('aria-pressed', 'true');
                 activeFilter = btn.dataset.filter;
                 applyQuickFilter();
             });
@@ -1051,7 +1191,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function selectSearchMode(mode) {
         currentSearchMode = mode === 'direct' ? 'direct' : 'ai';
-        searchModeTabs.forEach(tab => tab.classList.toggle('active', tab.dataset.mode === currentSearchMode));
+        searchModeTabs.forEach(tab => {
+            const selected = tab.dataset.mode === currentSearchMode;
+            tab.classList.toggle('active', selected);
+            if (tab.dataset.mode) tab.setAttribute('aria-pressed', String(selected));
+        });
 
         if (currentSearchMode === 'direct') {
             queryInput.placeholder = "Film veya dizi adı girin (Örn: Interstellar, Kurtlar Vadisi, Breaking Bad...)";
@@ -1156,15 +1300,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (closeAdvSearchModalBtn) {
-        closeAdvSearchModalBtn.addEventListener('click', () => {
-            advSearchModal.classList.add('hidden');
-        });
+        closeAdvSearchModalBtn.addEventListener('click', () => closeAccessibleModal(advSearchModal));
     }
 
     document.querySelectorAll('.adv-type-pill').forEach(pill => {
+        pill.setAttribute('aria-pressed', String(pill.classList.contains('active')));
         pill.addEventListener('click', () => {
-            document.querySelectorAll('.adv-type-pill').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.adv-type-pill').forEach(p => {
+                p.classList.remove('active');
+                p.setAttribute('aria-pressed', 'false');
+            });
             pill.classList.add('active');
+            pill.setAttribute('aria-pressed', 'true');
             advSelectedType = pill.dataset.type;
         });
     });
@@ -1368,11 +1515,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Netflix-Style Detail Modal & Explicit Favorites Bar ─────────
     function showModal(item, year, typeStr, rating, badgesHTML) {
         const backdropPath = item.backdrop || item.poster;
-        const backdropUrl = backdropPath
-            ? `https://image.tmdb.org/t/p/${item.backdrop ? 'w1280' : 'w780'}${backdropPath}`
-            : '';
+        const backdropUrl = tmdbImageURL(backdropPath, item.backdrop ? 'w1280' : 'w780');
+        const safeTitle = escapeHTML(item.title || 'İsimsiz yapım');
+        const safeOverview = escapeHTML(item.overview || 'Bu yapım için detaylı açıklama bulunmuyor.');
         const genresHTML = item.genres?.length > 0
-            ? item.genres.map(g => `<span class="bg-surface-container/90 px-3 py-1 rounded-full border border-outline-variant text-xs font-semibold text-on-surface-variant">${g}</span>`).join(' ')
+            ? item.genres.map(g => `<span class="bg-surface-container/90 px-3 py-1 rounded-full border border-outline-variant text-xs font-semibold text-on-surface-variant">${escapeHTML(g)}</span>`).join(' ')
             : '';
 
         let runtimeStr = '';
@@ -1380,9 +1527,9 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (item.runtime) runtimeStr = `${item.runtime} dk`;
 
         const originalTitleHTML = (item.original_title && item.original_title !== item.title)
-            ? `<div class="text-sm md:text-base text-on-surface-variant font-medium opacity-80 mt-0.5">${item.original_title}</div>` : '';
+            ? `<div class="text-sm md:text-base text-on-surface-variant font-medium opacity-80 mt-0.5">${escapeHTML(item.original_title)}</div>` : '';
         const directorHTML = item.director
-            ? `<div class="text-xs md:text-sm text-on-surface-variant font-medium"><strong>${item.type === 'movie' ? 'Yönetmen' : 'Yaratıcı'}:</strong> ${item.director}</div>` : '';
+            ? `<div class="text-xs md:text-sm text-on-surface-variant font-medium"><strong>${item.type === 'movie' ? 'Yönetmen' : 'Yaratıcı'}:</strong> ${escapeHTML(item.director)}</div>` : '';
 
         const currentRec = getReaction(item);
         const isFav = isFavorited(item);
@@ -1400,7 +1547,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="modal-detail-grid relative z-10 grid grid-cols-1 md:grid-cols-12 gap-4 w-full">
                     <div class="modal-info md:col-span-9 lg:col-span-8 flex flex-col gap-3">
                         <div>
-                            <h2 class="font-display-hero-mobile md:font-display-hero text-2xl md:text-4xl font-extrabold text-on-surface leading-tight drop-shadow-lg">${item.title}</h2>
+                            <h2 id="detailTitle" class="font-display-hero-mobile md:font-display-hero text-2xl md:text-4xl font-extrabold text-on-surface leading-tight drop-shadow-lg">${safeTitle}</h2>
                             ${originalTitleHTML}
                         </div>
                         
@@ -1415,9 +1562,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         ${genresHTML ? `<div class="flex flex-wrap gap-2 text-xs uppercase tracking-wider font-semibold">${genresHTML}</div>` : ''}
                         ${directorHTML}
-                        ${item.reason ? `<div class="bg-tertiary-container/40 border border-tertiary/30 text-tertiary px-4 py-1.5 rounded-lg text-xs md:text-sm font-medium">${item.reason}</div>` : ''}
+                        ${item.reason ? `<div class="bg-tertiary-container/40 border border-tertiary/30 text-tertiary px-4 py-1.5 rounded-lg text-xs md:text-sm font-medium">${escapeHTML(item.reason)}</div>` : ''}
                         
-                        <p class="overview text-xs md:text-sm text-on-surface-variant leading-relaxed max-w-prose line-clamp-3 md:line-clamp-4">${item.overview || 'Bu yapım için detaylı açıklama bulunmuyor.'}</p>
+                        <p class="overview text-xs md:text-sm text-on-surface-variant leading-relaxed max-w-prose line-clamp-3 md:line-clamp-4">${safeOverview}</p>
                         
                         <div class="flex flex-wrap items-center gap-3 mt-1 netflix-actions-bar">
                             ${playTrailerBtnHTML}
@@ -1425,14 +1572,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span class="material-symbols-outlined text-base">auto_awesome</span>
                                 <span>Benzerlerini Bul</span>
                             </button>
-                            <button type="button" class="netflix-btn btn-reaction btn-fav ${isFav ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-5 py-3 rounded-full border border-outline-variant flex items-center gap-2 text-xs md:text-sm transition-colors cursor-pointer" data-type="fav" tabindex="0">
+                            <button type="button" class="netflix-btn btn-reaction btn-fav ${isFav ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-5 py-3 rounded-full border border-outline-variant flex items-center gap-2 text-xs md:text-sm transition-colors cursor-pointer" data-type="fav" aria-label="${safeTitle} favorisini değiştir" aria-pressed="${isFav}" tabindex="0">
                                 <span class="material-symbols-outlined text-base">${isFav ? 'favorite' : 'favorite_border'}</span>
                                 <span class="btn-label">${isFav ? 'Favorilerimde' : 'Listeme Ekle'}</span>
                             </button>
-                            <button type="button" class="netflix-btn btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant text-xs md:text-sm transition-colors cursor-pointer" data-type="super" title="Çok Beğendim" tabindex="0">
+                            <button type="button" class="netflix-btn btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant text-xs md:text-sm transition-colors cursor-pointer" data-type="super" title="Çok Beğendim" aria-label="Çok beğendim" aria-pressed="${currentRec === 'super'}" tabindex="0">
                                 <span>💖</span>
                             </button>
-                            <button type="button" class="netflix-btn btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant text-xs md:text-sm transition-colors cursor-pointer" data-type="dislike" title="Beğenmedim" tabindex="0">
+                            <button type="button" class="netflix-btn btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant text-xs md:text-sm transition-colors cursor-pointer" data-type="dislike" title="Beğenmedim" aria-label="Beğenmedim" aria-pressed="${currentRec === 'dislike'}" tabindex="0">
                                 <span>👎</span>
                             </button>
                         </div>
@@ -1505,26 +1652,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    closeTrailerModalBtn.addEventListener('click', () => {
-        trailerModal.classList.add('hidden');
-        trailerIframe.src = '';
-    });
+    closeTrailerModalBtn.addEventListener('click', () => closeAccessibleModal(trailerModal));
 
-    closeModalBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
+    closeModalBtn.addEventListener('click', () => closeAccessibleModal(detailModal));
 
     // ── Auth Modal Logic ────────────────────────────────
-    userAuthBtn.addEventListener('click', () => {
+    function openAuthModal() {
         loginError.classList.add('hidden');
         regError.classList.add('hidden');
         authModal.classList.remove('hidden');
         window.SineAITV?.refresh('#tabLogin');
-    });
+    }
 
-    closeAuthModalBtn.addEventListener('click', () => authModal.classList.add('hidden'));
+    userAuthBtn.addEventListener('click', openAuthModal);
+
+    closeAuthModalBtn.addEventListener('click', () => closeAccessibleModal(authModal));
 
     tabLogin.addEventListener('click', () => {
         tabLogin.classList.add('active');
         tabRegister.classList.remove('active');
+        tabLogin.setAttribute('aria-selected', 'true');
+        tabRegister.setAttribute('aria-selected', 'false');
         loginForm.classList.remove('hidden');
         registerForm.classList.add('hidden');
         window.SineAITV?.refresh('#loginUsername');
@@ -1533,10 +1681,26 @@ document.addEventListener('DOMContentLoaded', () => {
     tabRegister.addEventListener('click', () => {
         tabRegister.classList.add('active');
         tabLogin.classList.remove('active');
+        tabRegister.setAttribute('aria-selected', 'true');
+        tabLogin.setAttribute('aria-selected', 'false');
         registerForm.classList.remove('hidden');
         loginForm.classList.add('hidden');
         window.SineAITV?.refresh('#regUsername');
     });
+
+    const focusNextOnEnter = (sourceId, targetId) => {
+        const source = document.getElementById(sourceId);
+        const target = document.getElementById(targetId);
+        source?.addEventListener('keydown', event => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            target?.focus({ preventScroll: true });
+        });
+    };
+
+    focusNextOnEnter('loginUsername', 'loginPassword');
+    focusNextOnEnter('regUsername', 'regEmail');
+    focusNextOnEnter('regEmail', 'regPassword');
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();

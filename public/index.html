@@ -117,7 +117,7 @@
     <div class="fixed inset-0 pointer-events-none z-0" style="background: radial-gradient(circle at 50% -20%, rgba(135, 93, 233, 0.15), transparent 70%);"></div>
 
     <!-- STITCH DESKTOP TOP NAVIGATION -->
-    <nav class="top-nav-bar fixed top-0 w-full z-50 flex justify-between items-center px-6 md:px-grid-margin-desktop h-20 bg-gradient-to-b from-primary-container via-primary-container/80 to-transparent backdrop-blur-sm" id="topNav">
+    <nav class="top-nav-bar fixed top-0 w-full z-50 flex justify-between items-center px-6 md:px-grid-margin-desktop h-20 bg-gradient-to-b from-primary-container via-primary-container/80 to-transparent backdrop-blur-sm" id="topNav" aria-label="Ana gezinme">
         <div class="flex items-center gap-6 md:gap-12">
             <a class="flex items-center gap-2 cursor-pointer" id="brandLogoBtn">
                 <img alt="SineAI Logo" class="h-8 w-8 object-contain" src="/sineai-logo-v2.png"/>
@@ -150,8 +150,24 @@
         </div>
     </nav>
 
+    <!-- COMPACT MOBILE / PORTRAIT TABLET TOP BAR -->
+    <header id="mobileTopBar" class="mobile-top-bar" aria-label="Mobil üst menü">
+        <button type="button" id="mobileBrandBtn" class="mobile-brand-btn" aria-label="SineAI ana sayfa">
+            <img alt="" aria-hidden="true" src="/sineai-logo-v2.png"/>
+            <span>SineAI</span>
+        </button>
+        <div class="mobile-top-actions">
+            <button type="button" id="mobileSearchBtn" class="mobile-icon-btn" aria-label="İsimle ara">
+                <span class="material-symbols-outlined" aria-hidden="true">search</span>
+            </button>
+            <button type="button" id="mobileAccountBtn" class="mobile-icon-btn" aria-label="Giriş yap">
+                <span id="mobileAccountIcon" class="material-symbols-outlined" aria-hidden="true">person</span>
+            </button>
+        </div>
+    </header>
+
     <!-- STITCH MOBILE BOTTOM NAVIGATION -->
-    <nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-between items-center px-grid-margin-mobile h-16 bg-surface-container-lowest border-t border-surface-container">
+    <nav id="mobileBottomNav" aria-label="Mobil ana gezinme" class="md:hidden fixed bottom-0 w-full z-50 flex justify-between items-center px-grid-margin-mobile h-16 bg-surface-container-lowest border-t border-surface-container">
         <button type="button" class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors w-1/4" id="mobileNavHome">
             <span class="material-symbols-outlined text-2xl mb-1">home</span>
             <span class="font-label-caps text-label-caps">Ana Sayfa</span>
@@ -233,9 +249,9 @@
                     </div>
 
                     <!-- Search Mode Tabs -->
-                    <div class="search-mode-tabs flex flex-wrap justify-center gap-2 mb-6">
-                        <button type="button" class="mode-tab active px-5 py-2.5 rounded-full border border-outline-variant bg-surface-container text-on-surface font-metadata-sm text-sm transition-all" data-mode="ai" tabindex="0">✨ AI Akıllı Öneri</button>
-                        <button type="button" class="mode-tab px-5 py-2.5 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant font-metadata-sm text-sm transition-all" data-mode="direct" tabindex="0">🔍 İsimle Direk Ara</button>
+                    <div class="search-mode-tabs flex flex-wrap justify-center gap-2 mb-6" aria-label="Arama türü">
+                        <button type="button" class="mode-tab active px-5 py-2.5 rounded-full border border-outline-variant bg-surface-container text-on-surface font-metadata-sm text-sm transition-all" data-mode="ai" aria-pressed="true" tabindex="0">✨ AI Akıllı Öneri</button>
+                        <button type="button" class="mode-tab px-5 py-2.5 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant font-metadata-sm text-sm transition-all" data-mode="direct" aria-pressed="false" tabindex="0">🔍 İsimle Direk Ara</button>
                         <button type="button" id="openAdvSearchBtn" class="mode-tab px-5 py-2.5 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant font-metadata-sm text-sm transition-all" tabindex="0">⚙️ Detaylı Filtreleme</button>
                     </div>
 
@@ -254,7 +270,7 @@
                                     <span class="tv-trigger-badge">OK ile klavyeyi aç</span>
                                 </span>
                             </button>
-                            <input id="query" name="query" type="text" class="tv-hidden-input w-full bg-transparent border-none text-on-surface font-body-lg text-base md:text-lg placeholder-on-surface-variant/50 focus:ring-0 focus:outline-none px-4 py-3 md:py-4 rounded-full" placeholder="Örn: Inception tarzı kafa yoran bir bilim kurgu..." required />
+                            <input id="query" name="query" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" aria-label="Film veya dizi arama metni" class="tv-hidden-input w-full bg-transparent border-none text-on-surface font-body-lg text-base md:text-lg placeholder-on-surface-variant/50 focus:ring-0 focus:outline-none px-4 py-3 md:py-4 rounded-full" placeholder="Örn: Inception tarzı kafa yoran bir bilim kurgu..." required />
                             <button type="submit" id="submitBtn" class="saas-submit-btn bg-on-surface text-primary-container font-bold text-xs md:text-sm uppercase px-6 py-3.5 md:py-4 rounded-full hover:bg-surface-tint transition-colors ml-2 whitespace-nowrap flex items-center gap-2 cursor-pointer" tabindex="0">
                                 <span id="submitBtnText">Önerileri Bul</span>
                                 <span id="submitBtnIcon" class="material-symbols-outlined text-sm">send</span>
@@ -267,7 +283,7 @@
                                 <button type="button" id="randomPickBtn" class="saas-pill-btn btn-random px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant font-metadata-sm text-xs md:text-sm transition-colors cursor-pointer" tabindex="0">🎲 Şanslı Hissediyorum</button>
                             </div>
                         </div>
-                        <div id="errorBox" class="error-box hidden text-error font-bold text-sm mt-2"></div>
+                        <div id="errorBox" class="error-box hidden text-error font-bold text-sm mt-2" role="alert" aria-live="assertive"></div>
                     </form>
 
                     <!-- Mood / Vibe Chips -->
@@ -364,12 +380,12 @@
             <!-- Quick Filter Bar -->
             <div class="saas-results-toolbar tv-results-controls-section flex flex-wrap justify-between items-center gap-4 mb-8">
                 <div id="quickFilterBar" class="quick-filter-bar mood-pills flex flex-wrap gap-2">
-                    <button class="filter-pill pill active px-4 py-2 rounded-full border border-outline-variant bg-surface-container text-on-surface text-xs md:text-sm font-semibold cursor-pointer" data-filter="all">Tümü</button>
-                    <button class="filter-pill pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant text-xs md:text-sm font-semibold cursor-pointer" data-filter="movie">🎬 Filmler</button>
-                    <button class="filter-pill pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant text-xs md:text-sm font-semibold cursor-pointer" data-filter="tv">📺 Diziler</button>
-                    <button class="filter-pill pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant text-xs md:text-sm font-semibold cursor-pointer" data-filter="netflix">🔴 Netflix</button>
-                    <button class="filter-pill pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant text-xs md:text-sm font-semibold cursor-pointer" data-filter="prime">📦 Prime Video</button>
-                    <button class="filter-pill pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant text-xs md:text-sm font-semibold cursor-pointer" data-filter="high_rating">⭐ 8.0+ IMDb</button>
+                    <button type="button" class="filter-pill pill active px-4 py-2 rounded-full border border-outline-variant bg-surface-container text-on-surface text-xs md:text-sm font-semibold cursor-pointer" data-filter="all" aria-pressed="true">Tümü</button>
+                    <button type="button" class="filter-pill pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant text-xs md:text-sm font-semibold cursor-pointer" data-filter="movie" aria-pressed="false">🎬 Filmler</button>
+                    <button type="button" class="filter-pill pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant text-xs md:text-sm font-semibold cursor-pointer" data-filter="tv" aria-pressed="false">📺 Diziler</button>
+                    <button type="button" class="filter-pill pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant text-xs md:text-sm font-semibold cursor-pointer" data-filter="netflix" aria-pressed="false">🔴 Netflix</button>
+                    <button type="button" class="filter-pill pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant text-xs md:text-sm font-semibold cursor-pointer" data-filter="prime" aria-pressed="false">📦 Prime Video</button>
+                    <button type="button" class="filter-pill pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant text-xs md:text-sm font-semibold cursor-pointer" data-filter="high_rating" aria-pressed="false">⭐ 8.0+ IMDb</button>
                 </div>
 
                 <div class="flex items-center gap-2">
@@ -387,7 +403,7 @@
             </div>
 
             <!-- Loading -->
-            <div id="loading" class="hidden py-16 text-center">
+            <div id="loading" class="hidden py-16 text-center" role="status" aria-live="polite" aria-busy="true">
                 <div class="skeleton-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                     <div class="skeleton-card h-[240px] md:h-[300px] rounded-xl bg-surface-container"></div>
                     <div class="skeleton-card h-[240px] md:h-[300px] rounded-xl bg-surface-container"></div>
@@ -478,7 +494,7 @@
     </main>
 
     <!-- MOVIE DETAIL MODAL (STITCH RESPONSIVE MATCH) -->
-    <div id="detailModal" class="modal hidden fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-8 overflow-y-auto" role="dialog" aria-modal="true" tabindex="-1">
+    <div id="detailModal" class="modal hidden fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-8 overflow-y-auto" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="detailTitle" tabindex="-1">
         <div class="modal-content relative w-full max-w-5xl bg-surface-lowest rounded-2xl border border-outline-variant overflow-hidden shadow-2xl my-auto">
             <button id="closeModalBtn" class="close-btn absolute top-4 right-4 z-50 bg-surface-container hover:bg-surface-high text-on-surface font-bold px-4 py-2 rounded-full border border-outline-variant text-sm transition-colors cursor-pointer" aria-label="Kapat" tabindex="0">✕ Kapat</button>
             <div class="modal-body" id="modalBody"></div>
@@ -486,55 +502,55 @@
     </div>
 
     <!-- YOUTUBE TRAILER MODAL -->
-    <div id="trailerModal" class="modal hidden fixed inset-0 z-[210] bg-black/95 flex items-center justify-center p-4" role="dialog" aria-modal="true" tabindex="-1">
+    <div id="trailerModal" class="modal hidden fixed inset-0 z-[210] bg-black/95 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="trailerTitle" tabindex="-1">
         <div class="modal-content relative w-full max-w-4xl bg-surface-lowest p-6 rounded-2xl border border-outline-variant">
             <button id="closeTrailerModalBtn" class="absolute top-4 right-4 z-50 bg-surface-container text-on-surface font-bold px-4 py-2 rounded-full text-sm cursor-pointer" aria-label="Kapat" tabindex="0">✕ Kapat</button>
             <h3 id="trailerTitle" class="font-headline-md text-xl font-bold mb-4">Fragman</h3>
             <div class="relative w-full pb-[56.25%] h-0 overflow-hidden rounded-xl bg-black">
-                <iframe id="trailerIframe" src="" class="absolute top-0 left-0 w-full h-full border-0" allowfullscreen></iframe>
+                <iframe id="trailerIframe" src="" title="Film veya dizi fragmanı" class="absolute top-0 left-0 w-full h-full border-0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
             </div>
         </div>
     </div>
 
     <!-- AUTH MODAL -->
-    <div id="authModal" class="modal hidden fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div id="authModal" class="modal hidden fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Hesap işlemleri">
         <div class="modal-content auth-modal-content relative w-full max-w-md bg-surface-lowest p-8 rounded-2xl border border-outline-variant">
             <button id="closeAuthModalBtn" class="close-btn absolute top-4 right-4 z-50 bg-surface-container text-on-surface font-bold px-4 py-2 rounded-full text-sm cursor-pointer" aria-label="Kapat" tabindex="0">✕ Kapat</button>
             
-            <div class="auth-tabs flex border-b border-outline-variant mb-6">
-                <button type="button" id="tabLogin" class="auth-tab active flex-1 pb-3 font-bold text-center border-b-2 border-tertiary text-on-surface cursor-pointer" tabindex="0">Giriş Yap</button>
-                <button type="button" id="tabRegister" class="auth-tab flex-1 pb-3 font-medium text-center text-on-surface-variant cursor-pointer" tabindex="0">Kayıt Ol</button>
+            <div class="auth-tabs flex border-b border-outline-variant mb-6" role="tablist" aria-label="Hesap işlemi">
+                <button type="button" id="tabLogin" role="tab" aria-selected="true" aria-controls="loginForm" class="auth-tab active flex-1 pb-3 font-bold text-center border-b-2 border-tertiary text-on-surface cursor-pointer" tabindex="0">Giriş Yap</button>
+                <button type="button" id="tabRegister" role="tab" aria-selected="false" aria-controls="registerForm" class="auth-tab flex-1 pb-3 font-medium text-center text-on-surface-variant cursor-pointer" tabindex="0">Kayıt Ol</button>
             </div>
 
             <!-- Login Form -->
-            <form id="loginForm" class="auth-form flex flex-col gap-4">
+            <form id="loginForm" role="tabpanel" aria-labelledby="tabLogin" class="auth-form flex flex-col gap-4">
                 <h2 class="font-headline-md text-xl font-bold">Oturum Aç</h2>
                 <div class="form-group flex flex-col gap-1">
                     <label for="loginUsername" class="text-xs font-semibold text-on-surface-variant">Kullanıcı Adı</label>
-                    <input type="text" id="loginUsername" required placeholder="kullaniciadi" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
+                    <input type="text" id="loginUsername" required autocomplete="username" enterkeyhint="next" placeholder="kullaniciadi" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
                 </div>
                 <div class="form-group flex flex-col gap-1">
                     <label for="loginPassword" class="text-xs font-semibold text-on-surface-variant">Şifre</label>
-                    <input type="password" id="loginPassword" required placeholder="••••••••" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
+                    <input type="password" id="loginPassword" required autocomplete="current-password" enterkeyhint="done" placeholder="••••••••" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
                 </div>
                 <div id="loginError" class="auth-error hidden text-error font-bold text-sm"></div>
                 <button type="submit" class="auth-submit-btn bg-tertiary text-on-tertiary font-bold py-3 rounded-lg mt-2 hover:bg-tertiary/90 transition-colors cursor-pointer" tabindex="0">Giriş Yap 🚀</button>
             </form>
 
             <!-- Register Form -->
-            <form id="registerForm" class="auth-form hidden flex flex-col gap-4">
+            <form id="registerForm" role="tabpanel" aria-labelledby="tabRegister" class="auth-form hidden flex flex-col gap-4">
                 <h2 class="font-headline-md text-xl font-bold">Hesap Oluştur</h2>
                 <div class="form-group flex flex-col gap-1">
                     <label for="regUsername" class="text-xs font-semibold text-on-surface-variant">Kullanıcı Adı</label>
-                    <input type="text" id="regUsername" required placeholder="kullaniciadi" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
+                    <input type="text" id="regUsername" required autocomplete="username" enterkeyhint="next" placeholder="kullaniciadi" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
                 </div>
                 <div class="form-group flex flex-col gap-1">
                     <label for="regEmail" class="text-xs font-semibold text-on-surface-variant">E-posta (Opsiyonel)</label>
-                    <input type="email" id="regEmail" placeholder="ornek@domain.com" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
+                    <input type="email" id="regEmail" autocomplete="email" inputmode="email" enterkeyhint="next" placeholder="ornek@domain.com" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
                 </div>
                 <div class="form-group flex flex-col gap-1">
                     <label for="regPassword" class="text-xs font-semibold text-on-surface-variant">Şifre</label>
-                    <input type="password" id="regPassword" required placeholder="••••••••" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
+                    <input type="password" id="regPassword" required autocomplete="new-password" enterkeyhint="done" placeholder="••••••••" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
                 </div>
                 <div id="regError" class="auth-error hidden text-error font-bold text-sm"></div>
                 <button type="submit" class="auth-submit-btn bg-tertiary text-on-tertiary font-bold py-3 rounded-lg mt-2 hover:bg-tertiary/90 transition-colors cursor-pointer" tabindex="0">Kayıt Ol ✨</button>
@@ -543,10 +559,10 @@
     </div>
 
     <!-- ADVANCED SEARCH MODAL -->
-    <div id="advSearchModal" class="modal hidden fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div id="advSearchModal" class="modal hidden fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="advSearchTitle">
         <div class="modal-content adv-modal-content relative w-full max-w-lg bg-surface-lowest p-8 rounded-2xl border border-outline-variant max-h-[90vh] overflow-y-auto">
             <button id="closeAdvSearchModalBtn" class="close-btn absolute top-4 right-4 z-50 bg-surface-container text-on-surface font-bold px-4 py-2 rounded-full text-sm cursor-pointer" aria-label="Kapat" tabindex="0">✕ Kapat</button>
-            <h2 class="font-headline-md text-xl font-bold mb-1">⚙️ Detaylı Film & Dizi Filtreleme</h2>
+            <h2 id="advSearchTitle" class="font-headline-md text-xl font-bold mb-1">⚙️ Detaylı Film & Dizi Filtreleme</h2>
             <p class="text-sm text-on-surface-variant mb-6">Tür, yıl ve IMDb puanı kriterleri ile filtrelenmiş sonuçlar çekin.</p>
 
             <form id="advSearchForm" class="flex flex-col gap-4">
@@ -602,7 +618,7 @@
         </div>
     </div>
 
-    <div id="toast" class="toast hidden"></div>
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
     <script src="app.js"></script>
     <script src="tv-navigation.js"></script>
