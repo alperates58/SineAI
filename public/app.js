@@ -354,6 +354,53 @@ document.addEventListener('DOMContentLoaded', () => {
     if (goToDiscoverBtn) goToDiscoverBtn.addEventListener('click', showDiscoverPage);
     if (brandLogoBtn) brandLogoBtn.addEventListener('click', showDiscoverPage);
 
+    // ── Navigation Bar Link Handlers ──────────────────────
+    const navHomeLink = document.getElementById('navHomeLink');
+    const navMoviesLink = document.getElementById('navMoviesLink');
+    const navTvLink = document.getElementById('navTvLink');
+    const navAiLink = document.getElementById('navAiLink');
+    const navSearchTriggerBtn = document.getElementById('navSearchTriggerBtn');
+
+    const mobileNavHome = document.getElementById('mobileNavHome');
+    const mobileNavMovies = document.getElementById('mobileNavMovies');
+    const mobileNavTv = document.getElementById('mobileNavTv');
+    const mobileNavAi = document.getElementById('mobileNavAi');
+
+    function highlightNavLink(activeId) {
+        document.querySelectorAll('#topNav button').forEach(btn => {
+            if (btn.id === activeId) {
+                btn.classList.add('text-on-surface', 'font-bold', 'border-b-2', 'border-on-tertiary-container');
+                btn.classList.remove('text-on-surface-variant', 'font-medium');
+            } else if (btn.classList.contains('nav-link')) {
+                btn.classList.remove('text-on-surface', 'font-bold', 'border-b-2', 'border-on-tertiary-container');
+                btn.classList.add('text-on-surface-variant', 'font-medium');
+            }
+        });
+    }
+
+    if (navHomeLink) navHomeLink.addEventListener('click', () => { highlightNavLink('navHomeLink'); showDiscoverPage(); });
+    if (mobileNavHome) mobileNavHome.addEventListener('click', () => { highlightNavLink('navHomeLink'); showDiscoverPage(); });
+
+    if (navMoviesLink) navMoviesLink.addEventListener('click', () => { highlightNavLink('navMoviesLink'); submitGenre('movie', 28, 'Popular Filmler', 1); });
+    if (mobileNavMovies) mobileNavMovies.addEventListener('click', () => { highlightNavLink('navMoviesLink'); submitGenre('movie', 28, 'Popular Filmler', 1); });
+
+    if (navTvLink) navTvLink.addEventListener('click', () => { highlightNavLink('navTvLink'); submitGenre('navTvLink'); submitGenre('tv', 10759, 'Popular Diziler', 1); });
+    if (mobileNavTv) mobileNavTv.addEventListener('click', () => { highlightNavLink('navTvLink'); submitGenre('tv', 10759, 'Popular Diziler', 1); });
+
+    const scrollToAiSearch = () => {
+        highlightNavLink('navAiLink');
+        showDiscoverPage();
+        const searchArea = document.getElementById('heroSearchArea');
+        if (searchArea) {
+            searchArea.scrollIntoView({ behavior: 'smooth' });
+            setTimeout(() => queryInput?.focus(), 400);
+        }
+    };
+
+    if (navAiLink) navAiLink.addEventListener('click', scrollToAiSearch);
+    if (mobileNavAi) mobileNavAi.addEventListener('click', scrollToAiSearch);
+    if (navSearchTriggerBtn) navSearchTriggerBtn.addEventListener('click', scrollToAiSearch);
+
     // ── Toast Notification ─────────────────────────────
     function showToast(message) {
         if (toastTimer) clearTimeout(toastTimer);
@@ -1246,52 +1293,61 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentRec = getReaction(item);
         const isFav = isFavorited(item);
 
-        const trailerHTML = item.trailer_url
-            ? `<button type="button" class="netflix-btn btn-play-trailer" tabindex="0">▶️ Fragmanı Oynat</button>` : '';
+        const trailerBtnHTML = item.trailer_url
+            ? `<button type="button" class="btn-play-trailer bg-on-surface text-primary-container font-bold px-8 py-3.5 rounded-full flex items-center gap-2 hover:scale-105 transition-transform text-sm md:text-base" tabindex="0">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                <span>Fragmanı Oynat</span>
+               </button>` : '';
 
         modalBody.innerHTML = `
-            <div class="detail-modal-wrapper">
-                <div class="detail-backdrop"${backdropUrl ? ` style="background-image:url('${backdropUrl}')"` : ''}></div>
-                <div class="detail-gradient"></div>
-                <div class="detail-body">
-                    <div class="detail-title-group">
-                        <h1 class="detail-title">${item.title}</h1>
-                        ${originalTitleHTML}
-                    </div>
-                    <div class="detail-meta-row">
-                        <span class="detail-meta-pill">${year}</span>
-                        <span class="detail-meta-pill">${typeStr}</span>
-                        <span class="detail-meta-pill">⭐ ${rating}</span>
-                        ${runtimeStr ? `<span class="detail-meta-pill">${runtimeStr}</span>` : ''}
-                    </div>
-                    ${genresHTML}
-                    ${directorHTML}
-                    ${item.reason ? `<div class="card-reason modal-reason">${item.reason}</div>` : ''}
-                    <p class="detail-synopsis">${item.overview || 'Bu yapım için detaylı bir açıklama bulunmuyor.'}</p>
-                    
-                    <div class="providers" style="margin-top: 12px;">
-                        <div style="font-size: 11px; font-weight: 800; color: var(--on-surface-variant); text-transform: uppercase; margin-bottom: 8px;">ŞİMDİ İZLE</div>
-                        <div>${badgesHTML}</div>
-                    </div>
+            <div class="relative w-full min-h-[500px] md:min-h-[600px] bg-cover bg-center overflow-hidden rounded-2xl flex items-end p-6 md:p-12"${backdropUrl ? ` style="background-image: url('${backdropUrl}')"` : ''}>
+                <div class="absolute inset-0 bg-gradient-to-t from-primary-container via-primary-container/80 to-transparent"></div>
+                <div class="absolute inset-0 bg-gradient-to-r from-primary-container via-primary-container/90 to-transparent w-full md:w-2/3"></div>
+                
+                <div class="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 w-full">
+                    <div class="md:col-span-8 lg:col-span-7 flex flex-col gap-4">
+                        <div>
+                            <h1 class="font-display-hero-mobile md:font-display-hero text-2xl md:text-5xl font-extrabold text-on-surface leading-tight drop-shadow-lg">${item.title}</h1>
+                            ${originalTitleHTML ? `<h2 class="text-base md:text-lg text-on-surface-variant font-medium opacity-80 mt-1">${item.original_title}</h2>` : ''}
+                        </div>
+                        
+                        <div class="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm font-semibold text-on-surface-variant">
+                            <span class="bg-surface-container px-3 py-1 rounded-full border border-outline-variant">${year}</span>
+                            <span class="bg-surface-container px-3 py-1 rounded-full border border-outline-variant">${typeStr}</span>
+                            <span class="bg-surface-container px-3 py-1 rounded-full border border-outline-variant flex items-center gap-1 text-yellow-400 font-bold">
+                                <span>IMDb</span> ${rating}
+                            </span>
+                            ${runtimeStr ? `<span class="bg-surface-container px-3 py-1 rounded-full border border-outline-variant">${runtimeStr}</span>` : ''}
+                        </div>
 
-                    <div class="detail-actions netflix-actions-bar" style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 12px;">
-                        ${trailerHTML}
-                        <button type="button" class="btn-primary-pill btn-similar-recommend" tabindex="0">
-                            <span class="material-symbols-outlined">auto_awesome</span>
-                            <span>Benzerlerini Bul</span>
-                        </button>
-                        <button type="button" class="btn-secondary-pill btn-reaction btn-fav ${isFav ? 'active' : ''}" data-type="fav" tabindex="0">
-                            <span class="material-symbols-outlined">${isFav ? 'favorite' : 'favorite_border'}</span>
-                            <span class="btn-label">${isFav ? 'Favorilerimde' : 'Listeme Ekle'}</span>
-                        </button>
-                        <button type="button" class="btn-secondary-pill btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''}" data-type="super" tabindex="0">
-                            <span>💖</span>
-                            <span class="btn-label">Çok Beğendim</span>
-                        </button>
-                        <button type="button" class="btn-secondary-pill btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''}" data-type="dislike" tabindex="0">
-                            <span>👎</span>
-                            <span class="btn-label">Beğenmedim</span>
-                        </button>
+                        ${genresHTML ? `<div class="flex flex-wrap gap-2 text-xs text-on-surface-variant uppercase tracking-wider font-semibold">${genresHTML}</div>` : ''}
+                        ${directorHTML}
+                        ${item.reason ? `<div class="bg-tertiary-container/40 border border-tertiary/30 text-tertiary px-4 py-2 rounded-lg text-sm font-medium">${item.reason}</div>` : ''}
+                        
+                        <p class="text-sm md:text-base text-on-surface-variant leading-relaxed max-w-prose line-clamp-4 md:line-clamp-none">${item.overview || 'Bu yapım için detaylı açıklama bulunmuyor.'}</p>
+                        
+                        <div class="flex flex-wrap items-center gap-3 mt-2 netflix-actions-bar">
+                            ${trailerBtnHTML}
+                            <button type="button" class="btn-similar-recommend bg-transparent border border-tertiary text-tertiary hover:bg-tertiary/10 font-bold px-6 py-3 rounded-full flex items-center gap-2 text-sm transition-all" tabindex="0">
+                                <span class="material-symbols-outlined text-sm">auto_awesome</span>
+                                <span>Benzerlerini Bul</span>
+                            </button>
+                            <button type="button" class="btn-reaction btn-fav ${isFav ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-6 py-3 rounded-full border border-outline-variant flex items-center gap-2 text-sm transition-colors" data-type="fav" tabindex="0">
+                                <span class="material-symbols-outlined text-sm">${isFav ? 'favorite' : 'favorite_border'}</span>
+                                <span class="btn-label">${isFav ? 'Favorilerimde' : 'Listeme Ekle'}</span>
+                            </button>
+                            <button type="button" class="btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-4 py-3 rounded-full border border-outline-variant text-sm transition-colors" data-type="super" tabindex="0">
+                                <span>💖</span>
+                            </button>
+                            <button type="button" class="btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-4 py-3 rounded-full border border-outline-variant text-sm transition-colors" data-type="dislike" tabindex="0">
+                                <span>👎</span>
+                            </button>
+                        </div>
+
+                        <div class="mt-4 pt-4 border-t border-outline-variant/40">
+                            <p class="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider mb-2 font-bold opacity-70">ŞİMDİ İZLE</p>
+                            <div>${badgesHTML}</div>
+                        </div>
                     </div>
                 </div>
             </div>
