@@ -1562,7 +1562,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         ${genresHTML ? `<div class="flex flex-wrap gap-2 text-xs uppercase tracking-wider font-semibold">${genresHTML}</div>` : ''}
                         ${directorHTML}
-                        ${item.reason ? `<div class="bg-tertiary-container/40 border border-tertiary/30 text-tertiary px-4 py-1.5 rounded-lg text-xs md:text-sm font-medium">${escapeHTML(item.reason)}</div>` : ''}
+                        ${item.reason ? `<div class="recommendation-reason bg-tertiary-container/40 border border-tertiary/30 text-tertiary px-4 py-1.5 rounded-lg text-xs md:text-sm font-medium">${escapeHTML(item.reason)}</div>` : ''}
                         
                         <p class="overview text-xs md:text-sm text-on-surface-variant leading-relaxed max-w-prose line-clamp-3 md:line-clamp-4">${safeOverview}</p>
                         

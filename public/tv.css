@@ -1104,6 +1104,12 @@ body.tv-nav-ready #detailModal .modal-info .overview {
     -webkit-line-clamp: 3;
 }
 
+/* The AI rationale is the useful synopsis on TV. Avoid squeezing a second,
+   repetitive overview into a clipped partial line on content-rich details. */
+body.tv-nav-ready #detailModal .recommendation-reason + .overview {
+    display: none;
+}
+
 /* HORIZONTAL ACTION BAR IN DETAIL MODAL */
 body.tv-nav-ready #detailModal .netflix-actions-bar {
     display: flex;
@@ -1215,9 +1221,7 @@ body.tv-focus-active *:focus-within {
 body.tv-focus-active .movie-card:focus,
 body.tv-focus-active .genre-chip:focus,
 body.tv-focus-active button:focus,
-body.tv-focus-active textarea:focus,
 body.tv-focus-active select:focus,
-body.tv-focus-active input:focus,
 body.tv-focus-active a:focus,
 body.tv-focus-active .tv-focused {
     outline: none !important;

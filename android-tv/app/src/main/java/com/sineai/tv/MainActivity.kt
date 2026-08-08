@@ -39,6 +39,7 @@ class MainActivity : Activity() {
     private var pendingAudioPermissionRequest: PermissionRequest? = null
     private var pendingNativeVoiceSearch = false
     private var lastDpadDispatchAt = 0L
+    @Volatile private var textEntryRequested = false
     private val PREFS       = "sineai_prefs"
     private val KEY_URL     = "server_url"
     private val DEFAULT_URL = "https://sineai.alperates.com.tr"
@@ -112,7 +113,7 @@ class MainActivity : Activity() {
             textZoom                       = 100
             setSupportMultipleWindows(false)
             javaScriptCanOpenWindowsAutomatically = false
-            userAgentString = "${userAgentString} SineAITV/1.8"
+            userAgentString = "${userAgentString} SineAITV/1.10"
             // TV'de büyük ekran önceliği
             @Suppress("DEPRECATION")
             setRenderPriority(WebSettings.RenderPriority.HIGH)
@@ -353,18 +354,21 @@ class MainActivity : Activity() {
     inner class AndroidBridge {
         @JavascriptInterface
         fun showKeyboard() {
+            textEntryRequested = true
             runOnUiThread {
                 val target = webView ?: return@runOnUiThread
-                target.requestFocus()
                 target.postDelayed({
+                    if (!target.hasFocus()) target.requestFocus()
                     val keyboard = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    keyboard.restartInput(target)
                     keyboard.showSoftInput(target, InputMethodManager.SHOW_IMPLICIT)
-                }, 100)
+                }, 150)
             }
         }
 
         @JavascriptInterface
         fun hideKeyboard() {
+            textEntryRequested = false
             runOnUiThread {
                 val target = webView ?: return@runOnUiThread
                 val keyboard = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -546,6 +550,18 @@ class MainActivity : Activity() {
         return true
     }
 
+    private fun isTextEntryNavigationKey(keyCode: Int): Boolean = when (keyCode) {
+        KeyEvent.KEYCODE_DPAD_UP,
+        KeyEvent.KEYCODE_DPAD_DOWN,
+        KeyEvent.KEYCODE_DPAD_LEFT,
+        KeyEvent.KEYCODE_DPAD_RIGHT,
+        KeyEvent.KEYCODE_DPAD_CENTER,
+        KeyEvent.KEYCODE_ENTER,
+        KeyEvent.KEYCODE_NUMPAD_ENTER,
+        KeyEvent.KEYCODE_BUTTON_A -> true
+        else -> false
+    }
+
     private fun handleBackPress() {
         val wv = webView ?: run {
             finish()
@@ -562,6 +578,10 @@ class MainActivity : Activity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (textEntryRequested && isTextEntryNavigationKey(keyCode)) {
+            return super.onKeyDown(keyCode, event)
+        }
+
         when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP    -> return sendTvDirection("up", event)
             KeyEvent.KEYCODE_DPAD_DOWN  -> return sendTvDirection("down", event)

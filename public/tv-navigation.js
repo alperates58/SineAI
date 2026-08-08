@@ -155,6 +155,7 @@
         if (!inputElement) return;
         tvTextEntryMode = true;
         currentInputTarget = inputElement;
+        if (inputElement.dataset.tvReadOnlyManaged === 'true') inputElement.readOnly = false;
         if (inputElement.id === 'query') inputElement.classList.remove('tv-hidden-input');
         inputElement.focus({ preventScroll: true });
         try {
@@ -169,6 +170,7 @@
         if (!tvTextEntryMode) return false;
         const previousInput = currentInputTarget;
         if (previousInput) {
+            if (previousInput.dataset.tvReadOnlyManaged === 'true') previousInput.readOnly = true;
             previousInput.blur();
             if (previousInput.id === 'query') previousInput.classList.add('tv-hidden-input');
         }
@@ -248,10 +250,18 @@
         // movement; OK explicitly enters text edit mode.
         scope.querySelectorAll('input:not([data-tv-input-bound]), textarea:not([data-tv-input-bound])').forEach(input => {
             input.dataset.tvInputBound = 'true';
+            input.dataset.tvReadOnlyManaged = 'true';
+            input.readOnly = true;
             input.addEventListener('blur', () => {
                 if (currentInputTarget === input) {
+                    input.readOnly = true;
                     tvTextEntryMode = false;
                     currentInputTarget = null;
+                    try {
+                        window.SineAIAndroid?.hideKeyboard?.();
+                    } catch (_error) {
+                        // Browser preview has no Android bridge; native TV does.
+                    }
                 }
             });
             input.addEventListener('click', () => {
@@ -653,6 +663,14 @@
             scheduleRefresh();
             return true;
         }
+
+        // AI and direct-search views are SPA sub-pages. Back should return to
+        // the cinematic home screen before the native activity is allowed to exit.
+        if (['ai', 'search'].includes(document.body.dataset.view)) {
+            document.getElementById('navHomeLink')?.click();
+            scheduleRefresh('#tvFeaturedOpen');
+            return true;
+        }
         return false;
     }
 
@@ -876,6 +894,13 @@
     }
 
     window.addEventListener('keydown', handleKeyboard, true);
+    window.addEventListener('focusin', event => {
+        if (!enabled || tvTextEntryMode) return;
+        const element = event.target;
+        if (!(element instanceof HTMLElement) || !isAvailable(element)) return;
+        document.querySelectorAll('.tv-focused').forEach(item => item.classList.remove('tv-focused'));
+        element.classList.add('tv-focused');
+    }, true);
     window.addEventListener('resize', () => { cacheDirty = true; }, { passive: true });
     window.addEventListener('sineai:viewchange', () => scheduleRefresh());
     window.SineAITV = {
