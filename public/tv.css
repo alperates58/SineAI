@@ -88,9 +88,18 @@ body.tv-nav-ready .btn-nav-profile {
     -webkit-backdrop-filter: none !important;
 }
 
+/* Dialogs must always sit above the fixed TV navigation. */
+body.tv-nav-ready #detailModal,
+body.tv-nav-ready #trailerModal,
+body.tv-nav-ready #authModal,
+body.tv-nav-ready #advSearchModal {
+    z-index: 2000 !important;
+}
+
 /* 2. MINIMAL TOP NAV BAR */
 body.tv-nav-ready .tv-fixed-header,
-body.tv-nav-ready .top-nav-bar {
+body.tv-nav-ready .top-nav-bar,
+body.tv-nav-ready #topNav {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -101,7 +110,9 @@ body.tv-nav-ready .top-nav-bar {
     justify-content: space-between !important;
     height: clamp(72px, 8vh, 88px) !important;
     padding: 0 var(--tv-safe-x) !important;
-    background: linear-gradient(180deg, rgba(7, 8, 11, 0.98) 0%, rgba(7, 8, 11, 0.6) 65%, transparent 100%) !important;
+    background: linear-gradient(180deg, rgba(7, 8, 11, 0.99) 0%, rgba(7, 8, 11, 0.96) 72%, rgba(7, 8, 11, 0.9) 100%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35) !important;
     pointer-events: auto;
 }
 
@@ -318,10 +329,11 @@ body.tv-nav-ready[data-view="search"] #appMain {
 body.tv-nav-ready[data-view="ai"] #heroSearchArea,
 body.tv-nav-ready[data-view="search"] #heroSearchArea {
     display: flex !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
     min-height: 100vh !important;
     padding: calc(var(--tv-safe-y) + 70px) var(--tv-safe-x) var(--tv-safe-y) !important;
     box-sizing: border-box !important;
+    overflow: visible !important;
 }
 
 body.tv-nav-ready #heroSearchArea.hidden {
@@ -331,6 +343,22 @@ body.tv-nav-ready #heroSearchArea.hidden {
 body.tv-nav-ready #heroSearchArea > div {
     width: min(1180px, 100%) !important;
     max-width: 1180px !important;
+}
+
+body.tv-nav-ready #heroSearchArea h2 {
+    margin: 0 !important;
+    font-size: clamp(36px, 4vw, 54px) !important;
+    line-height: 1.02 !important;
+}
+
+body.tv-nav-ready #heroSearchArea h2 + p {
+    margin-top: 8px !important;
+    font-size: clamp(14px, 1.15vw, 18px) !important;
+    line-height: 1.4 !important;
+}
+
+body.tv-nav-ready #heroSearchArea .mb-6 {
+    margin-bottom: 14px !important;
 }
 
 body.tv-nav-ready .search-view-eyebrow {
@@ -458,7 +486,7 @@ body.tv-nav-ready .page-num-btn.active {
 body.tv-nav-ready .saas-search-box {
     width: 100% !important;
     margin: 0 !important;
-    padding: 14px !important;
+    padding: 10px !important;
     border: 1px solid rgba(255, 255, 255, 0.14) !important;
     border-radius: 20px !important;
     background: linear-gradient(135deg, rgba(23, 25, 34, 0.95), rgba(14, 16, 22, 0.98)) !important;
@@ -473,8 +501,8 @@ body.tv-nav-ready .tv-input-trigger {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    min-height: 72px !important;
-    padding: 16px 24px !important;
+    min-height: 64px !important;
+    padding: 12px 20px !important;
     border: 1px solid rgba(255, 255, 255, 0.14) !important;
     border-radius: 14px !important;
     background: rgba(255, 255, 255, 0.05) !important;
@@ -562,9 +590,9 @@ body.tv-nav-ready .search-bottom-bar {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    min-height: 60px !important;
-    padding: 14px 6px 4px !important;
-    margin-top: 8px !important;
+    min-height: 50px !important;
+    padding: 10px 6px 2px !important;
+    margin-top: 6px !important;
     border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -606,6 +634,8 @@ body.tv-nav-ready .saas-submit-btn {
     font-weight: 850 !important;
     cursor: pointer !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+    align-self: center !important;
+    margin-top: 8px !important;
 }
 
 body.tv-nav-ready .mood-pills {
@@ -613,7 +643,7 @@ body.tv-nav-ready .mood-pills {
     flex-wrap: nowrap !important;
     gap: 12px !important;
     width: 100% !important;
-    margin-top: 14px !important;
+    margin-top: 8px !important;
     padding: 4px 2px 8px !important;
     overflow-x: auto !important;
     scrollbar-width: none !important;
@@ -1245,6 +1275,13 @@ body.tv-focus-active .pill.tv-focused {
     box-shadow: 0 8px 28px rgba(255, 255, 255, 0.35) !important;
 }
 
+body.tv-focus-active .saas-submit-btn:focus,
+body.tv-focus-active .saas-submit-btn.tv-focused {
+    outline: 3px solid var(--tv-purple-light) !important;
+    outline-offset: 3px !important;
+    box-shadow: 0 8px 30px rgba(124, 58, 237, 0.55) !important;
+}
+
 body.tv-focus-active button:focus *,
 body.tv-focus-active button.tv-focused *,
 body.tv-focus-active a:focus *,
@@ -1293,6 +1330,33 @@ body.tv-nav-ready a {
 
     body.tv-nav-ready #detailModal .modal-info h2 {
         font-size: clamp(30px, 3.2vw, 44px);
+    }
+
+    body.tv-nav-ready[data-view="ai"] #heroSearchArea,
+    body.tv-nav-ready[data-view="search"] #heroSearchArea {
+        min-height: auto !important;
+        padding-top: calc(var(--tv-safe-y) + 66px) !important;
+        padding-bottom: 24px !important;
+    }
+
+    body.tv-nav-ready #heroSearchArea > div {
+        width: min(1060px, 100%) !important;
+    }
+
+    body.tv-nav-ready #heroSearchArea h2 {
+        font-size: clamp(34px, 3.7vw, 46px) !important;
+    }
+
+    body.tv-nav-ready .search-view-eyebrow {
+        margin-bottom: 6px !important;
+    }
+
+    body.tv-nav-ready .search-mode-tabs {
+        margin-bottom: 8px !important;
+    }
+
+    body.tv-nav-ready .mood-pills {
+        margin-top: 4px !important;
     }
 }
 

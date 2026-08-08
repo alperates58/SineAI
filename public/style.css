@@ -904,7 +904,7 @@ body[data-view="search"] #heroSearchArea {
     justify-content: center;
     padding-top: 132px !important;
     padding-bottom: 72px !important;
-    overflow: hidden;
+    overflow: visible;
 }
 
 body[data-view="ai"] #heroSearchArea::before,

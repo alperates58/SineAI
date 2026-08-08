@@ -41,6 +41,7 @@
         '.adv-type-switcher',
         '.adv-genres-grid',
         '.search-bottom-bar',
+        '.tv-hero-actions',
         '.top-nav-bar',
         '.profile-ai-actions',
         '.tv-discovery-cards',
@@ -309,6 +310,10 @@
     function ensureTvElementVisible(element, alignSection = false) {
         if (!element) return;
 
+        const fixedHeader = document.getElementById('topNav');
+        const headerBottom = fixedHeader?.getBoundingClientRect().bottom || 80;
+        const topSafeBoundary = Math.ceil(headerBottom + 16);
+
         // 1. Horizontal container scrolling (Action bar, Movie rows, Filter chips)
         const horizontal = element.closest(HORIZONTAL_SCROLLER);
         if (horizontal && horizontal.scrollWidth > horizontal.clientWidth) {
@@ -347,7 +352,7 @@
         const section = sectionFor(element);
         if (section && alignSection) {
             const sectionTop = section.getBoundingClientRect().top + window.scrollY;
-            const topHeaderOffset = 80;
+            const topHeaderOffset = topSafeBoundary;
             const targetY = Math.max(0, sectionTop - topHeaderOffset);
 
             if (Math.abs(window.scrollY - targetY) > 8) {
@@ -358,8 +363,8 @@
 
         // 4. Fallback element vertical safe bounds check
         const rect = element.getBoundingClientRect();
-        const topSafe = 80;
-        const bottomSafe = window.innerHeight - 90;
+        const topSafe = topSafeBoundary;
+        const bottomSafe = window.innerHeight - 56;
         let deltaY = 0;
 
         if (rect.top < topSafe) {

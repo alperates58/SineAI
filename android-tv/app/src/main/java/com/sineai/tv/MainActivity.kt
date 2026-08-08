@@ -105,17 +105,21 @@ class MainActivity : Activity() {
             mediaPlaybackRequiresUserGesture = false
             useWideViewPort                = true
             loadWithOverviewMode           = true
-            cacheMode                      = WebSettings.LOAD_DEFAULT
+            // The UI is deployed independently from the APK. Always request the
+            // current HTML/CSS/JS so a freshly installed shell cannot show a
+            // stale hybrid of old markup and new bundled TV navigation assets.
+            cacheMode                      = WebSettings.LOAD_NO_CACHE
             textZoom                       = 100
             setSupportMultipleWindows(false)
             javaScriptCanOpenWindowsAutomatically = false
-            userAgentString = "${userAgentString} SineAITV/1.6"
+            userAgentString = "${userAgentString} SineAITV/1.7"
             // TV'de büyük ekran önceliği
             @Suppress("DEPRECATION")
             setRenderPriority(WebSettings.RenderPriority.HIGH)
         }
 
         wv.addJavascriptInterface(AndroidBridge(), "SineAIAndroid")
+        wv.clearCache(true)
         wv.setBackgroundColor(Color.parseColor("#050507"))
         wv.overScrollMode = View.OVER_SCROLL_NEVER
         wv.isScrollbarFadingEnabled = true
