@@ -304,7 +304,22 @@
             }
         }
 
-        // 2. Section vertical alignment
+        // 2. Modal / Scrollable container vertical bounds check
+        const modalContainer = element.closest('.modal-content, .modal');
+        if (modalContainer && modalContainer.scrollHeight > modalContainer.clientHeight) {
+            const elRect = element.getBoundingClientRect();
+            const containerRect = modalContainer.getBoundingClientRect();
+            const safePadding = 40;
+
+            if (elRect.bottom > containerRect.bottom - safePadding) {
+                modalContainer.scrollTop += (elRect.bottom - containerRect.bottom + safePadding);
+            } else if (elRect.top < containerRect.top + safePadding) {
+                modalContainer.scrollTop -= (containerRect.top + safePadding - elRect.top);
+            }
+            return;
+        }
+
+        // 3. Section vertical alignment
         const section = sectionFor(element);
         if (section) {
             const sectionTop = section.getBoundingClientRect().top + window.scrollY;
@@ -317,7 +332,7 @@
             return;
         }
 
-        // 3. Fallback element vertical safe bounds check
+        // 4. Fallback element vertical safe bounds check
         const rect = element.getBoundingClientRect();
         const topSafe = 80;
         const bottomSafe = window.innerHeight - 90;
