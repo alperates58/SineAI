@@ -135,7 +135,7 @@
             </ul>
         </div>
         <div class="flex items-center gap-4 md:gap-6">
-            <button type="button" id="navSearchTriggerBtn" aria-label="Search" class="text-on-surface-variant hover:text-on-surface transition-colors" tabindex="0">
+            <button type="button" id="navSearchTriggerBtn" aria-label="İsimle ara" class="text-on-surface-variant hover:text-on-surface transition-colors" tabindex="0">
                 <span class="material-symbols-outlined">search</span>
             </button>
             <button type="button" id="userAuthBtn" class="text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-2" tabindex="0">
@@ -210,14 +210,16 @@
     </section>
 
     <!-- MAIN DISCOVER & AI SEARCH CONTAINER -->
-    <main class="relative z-10 w-full max-w-[1920px] mx-auto pb-32 flex flex-col gap-12 -mt-12">
+    <main id="appMain" class="relative z-10 w-full max-w-[1920px] mx-auto pb-32 flex flex-col gap-12 -mt-12">
 
         <!-- DISCOVER SECTION -->
         <div id="discoverSection" class="flex flex-col gap-12">
 
             <!-- STITCH EXACT AI DISCOVERY MODULE -->
-            <section id="heroSearchArea" class="px-6 md:px-grid-margin-desktop py-6 flex flex-col items-center">
+            <section id="heroSearchArea" class="hero-search-area hidden px-6 md:px-grid-margin-desktop py-6 flex flex-col items-center">
                 <div class="w-full max-w-4xl flex flex-col items-center text-center">
+
+                    <p class="search-view-eyebrow"><span class="material-symbols-outlined">auto_awesome</span> SINEAI KEŞİF STÜDYOSU</p>
                     
                     <!-- Headline & Subtitle -->
                     <div class="mb-6 space-y-2">
@@ -238,20 +240,32 @@
                     </div>
 
                     <!-- Primary AI Input Pill (Exact Stitch Glowing Input Pill) -->
-                    <form id="recommendForm" class="w-full max-w-3xl mb-6 relative group">
+                    <form id="recommendForm" class="saas-search-box w-full max-w-3xl mb-6 relative group">
                         <div class="absolute -inset-0.5 bg-gradient-to-r from-tertiary to-on-tertiary-container rounded-full blur opacity-30 group-hover:opacity-60 transition duration-1000 group-hover:duration-200"></div>
-                        <div class="relative flex items-center bg-surface-container-low rounded-full p-2 border border-outline-variant focus-within:border-on-tertiary-container focus-within:ring-1 focus-within:ring-on-tertiary-container transition-all">
-                            <span id="searchIcon" class="material-symbols-outlined text-on-tertiary-container pl-4 pr-2 text-2xl" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
-                            <input id="query" name="query" type="text" class="w-full bg-transparent border-none text-on-surface font-body-lg text-base md:text-lg placeholder-on-surface-variant/50 focus:ring-0 focus:outline-none px-4 py-3 md:py-4 rounded-full" placeholder="Örn: Inception tarzı kafa yoran bir bilim kurgu..." required />
-                            <button type="submit" id="submitBtn" class="bg-on-surface text-primary-container font-bold text-xs md:text-sm uppercase px-6 py-3.5 md:py-4 rounded-full hover:bg-surface-tint transition-colors ml-2 whitespace-nowrap flex items-center gap-2 cursor-pointer" tabindex="0">
-                                <span id="submitBtnText">SineAI'ye Yaz</span>
+                        <div class="search-input-area relative flex items-center bg-surface-container-low rounded-full p-2 border border-outline-variant focus-within:border-on-tertiary-container focus-within:ring-1 focus-within:ring-on-tertiary-container transition-all">
+                            <span id="searchIcon" class="search-sparkle-icon material-symbols-outlined text-on-tertiary-container pl-4 pr-2 text-2xl" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                            <button type="button" id="tvQueryTrigger" class="tv-input-trigger" data-tv-focusable="true" tabindex="0" aria-label="Arama metni yaz">
+                                <span class="tv-trigger-content">
+                                    <span class="tv-trigger-sparkle material-symbols-outlined">auto_awesome</span>
+                                    <span class="tv-trigger-labels">
+                                        <span class="tv-trigger-title" id="tvQueryTriggerText">SineAI'ye yaz</span>
+                                        <span class="tv-trigger-sub">Film veya dizi adı, ruh hali ya da benzer yapım yaz</span>
+                                    </span>
+                                    <span class="tv-trigger-badge">OK ile klavyeyi aç</span>
+                                </span>
+                            </button>
+                            <input id="query" name="query" type="text" class="tv-hidden-input w-full bg-transparent border-none text-on-surface font-body-lg text-base md:text-lg placeholder-on-surface-variant/50 focus:ring-0 focus:outline-none px-4 py-3 md:py-4 rounded-full" placeholder="Örn: Inception tarzı kafa yoran bir bilim kurgu..." required />
+                            <button type="submit" id="submitBtn" class="saas-submit-btn bg-on-surface text-primary-container font-bold text-xs md:text-sm uppercase px-6 py-3.5 md:py-4 rounded-full hover:bg-surface-tint transition-colors ml-2 whitespace-nowrap flex items-center gap-2 cursor-pointer" tabindex="0">
+                                <span id="submitBtnText">Önerileri Bul</span>
                                 <span id="submitBtnIcon" class="material-symbols-outlined text-sm">send</span>
                             </button>
                         </div>
 
-                        <div class="flex items-center justify-center gap-3 mt-4">
-                            <button type="button" id="voiceBtn" class="px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant font-metadata-sm text-xs md:text-sm transition-colors cursor-pointer" tabindex="0">🎤 Sesli Arama</button>
-                            <button type="button" id="randomPickBtn" class="px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant font-metadata-sm text-xs md:text-sm transition-colors cursor-pointer" tabindex="0">🎲 Şanslı Hissediyorum</button>
+                        <div class="search-bottom-bar flex items-center justify-center gap-3 mt-4">
+                            <div class="search-quick-actions flex items-center justify-center gap-3">
+                                <button type="button" id="voiceBtn" class="saas-pill-btn btn-voice px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant font-metadata-sm text-xs md:text-sm transition-colors cursor-pointer" tabindex="0">🎤 Sesli Arama</button>
+                                <button type="button" id="randomPickBtn" class="saas-pill-btn btn-random px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant font-metadata-sm text-xs md:text-sm transition-colors cursor-pointer" tabindex="0">🎲 Şanslı Hissediyorum</button>
+                            </div>
                         </div>
                         <div id="errorBox" class="error-box hidden text-error font-bold text-sm mt-2"></div>
                     </form>
@@ -272,7 +286,7 @@
             </section>
 
             <!-- POPÜLER FİLMLER RAIL -->
-            <section class="pl-6 md:pl-grid-margin-desktop">
+            <section class="row-section pl-6 md:pl-grid-margin-desktop">
                 <h2 class="font-headline-md text-xl md:text-2xl font-bold text-on-surface mb-4 flex items-center justify-between pr-6 md:pr-grid-margin-desktop">
                     <span class="flex items-center gap-2">
                         Popüler Filmler
@@ -290,7 +304,7 @@
             </section>
 
             <!-- POPÜLER DİZİLER RAIL -->
-            <section class="pl-6 md:pl-grid-margin-desktop">
+            <section class="row-section pl-6 md:pl-grid-margin-desktop">
                 <h2 class="font-headline-md text-xl md:text-2xl font-bold text-on-surface mb-4 flex items-center justify-between pr-6 md:pr-grid-margin-desktop">
                     <span class="flex items-center gap-2">
                         Popüler Diziler
@@ -308,39 +322,39 @@
             </section>
 
             <!-- FİLM TÜRLERİ -->
-            <section class="px-6 md:px-grid-margin-desktop">
+            <section class="row-section px-6 md:px-grid-margin-desktop">
                 <h2 class="font-headline-md text-xl md:text-2xl font-bold text-on-surface mb-4">Film Türleri</h2>
                 <div class="genre-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="movieGenreGrid"></div>
             </section>
 
             <!-- DİZİ TÜRLERİ -->
-            <section class="px-6 md:px-grid-margin-desktop">
+            <section class="row-section px-6 md:px-grid-margin-desktop">
                 <h2 class="font-headline-md text-xl md:text-2xl font-bold text-on-surface mb-4">Dizi Türleri</h2>
                 <div class="genre-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="tvGenreGrid"></div>
             </section>
         </div>
 
         <!-- RESULTS SECTION -->
-        <div id="resultsSection" class="hidden px-6 md:px-grid-margin-desktop pt-24">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                <button type="button" id="backToDiscoverBtn" class="bg-surface-container text-on-surface font-semibold px-6 py-3 rounded-full flex items-center gap-2 hover:bg-surface-high transition-colors cursor-pointer" tabindex="0">
+        <div id="resultsSection" class="results-container hidden px-6 md:px-grid-margin-desktop pt-24">
+            <div class="results-hero-header flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <button type="button" id="backToDiscoverBtn" class="saas-back-btn bg-surface-container text-on-surface font-semibold px-6 py-3 rounded-full flex items-center gap-2 hover:bg-surface-high transition-colors cursor-pointer" tabindex="0">
                     <span class="material-symbols-outlined">arrow_back</span>
                     <span>Keşfete Dön</span>
                 </button>
                 
                 <div class="text-left md:text-center">
                     <p class="font-label-caps text-xs text-secondary uppercase font-bold tracking-wider">✨ SİNEAI ANALİZİ</p>
-                    <h2 id="resultsHeading" class="font-headline-lg text-2xl md:text-3xl font-extrabold text-on-surface">Yapay Zeka Önerileri</h2>
+                    <h2 id="resultsHeading" class="results-main-heading font-headline-lg text-2xl md:text-3xl font-extrabold text-on-surface">Yapay Zeka Önerileri</h2>
                 </div>
 
                 <div id="resultsCountBadge" class="bg-tertiary-container text-tertiary font-bold px-4 py-2 rounded-full text-xs md:text-sm">✨ Öneriler</div>
             </div>
 
             <!-- AI Summary Card -->
-            <section id="aiAnalysisSummary" class="hidden mb-8 p-[1px] rounded-2xl bg-gradient-to-r from-tertiary to-transparent">
+            <section id="aiAnalysisSummary" class="ai-analysis-summary hidden mb-8 p-[1px] rounded-2xl bg-gradient-to-r from-tertiary to-transparent">
                 <div class="bg-surface-container-lowest p-6 rounded-2xl flex items-center gap-4">
                     <span class="material-symbols-outlined text-tertiary text-4xl" style="font-variation-settings: 'FILL' 1;">psychology</span>
-                    <div>
+                    <div class="analysis-summary-copy">
                         <p class="font-label-caps text-xs text-on-surface-variant uppercase font-bold tracking-wider">İsteğini şöyle anladım</p>
                         <p id="aiAnalysisText" class="font-body-lg text-base md:text-lg text-on-surface font-semibold mt-1"></p>
                     </div>
@@ -348,8 +362,8 @@
             </section>
 
             <!-- Quick Filter Bar -->
-            <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
-                <div id="quickFilterBar" class="mood-pills flex flex-wrap gap-2">
+            <div class="saas-results-toolbar tv-results-controls-section flex flex-wrap justify-between items-center gap-4 mb-8">
+                <div id="quickFilterBar" class="quick-filter-bar mood-pills flex flex-wrap gap-2">
                     <button class="filter-pill pill active px-4 py-2 rounded-full border border-outline-variant bg-surface-container text-on-surface text-xs md:text-sm font-semibold cursor-pointer" data-filter="all">Tümü</button>
                     <button class="filter-pill pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant text-xs md:text-sm font-semibold cursor-pointer" data-filter="movie">🎬 Filmler</button>
                     <button class="filter-pill pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container hover:bg-surface-variant text-on-surface-variant text-xs md:text-sm font-semibold cursor-pointer" data-filter="tv">📺 Diziler</button>
@@ -360,7 +374,7 @@
 
                 <div class="flex items-center gap-2">
                     <label for="sortSelect" class="text-xs md:text-sm font-semibold text-on-surface-variant">Sırala:</label>
-                    <select id="sortSelect" class="bg-surface-container text-on-surface px-4 py-2 rounded-full border border-outline-variant text-xs md:text-sm font-semibold outline-none" tabindex="0">
+                    <select id="sortSelect" class="saas-select bg-surface-container text-on-surface px-4 py-2 rounded-full border border-outline-variant text-xs md:text-sm font-semibold outline-none" tabindex="0">
                         <option value="popularity_desc">🔥 Popülerlik (Varsayılan)</option>
                         <option value="vote_desc">⭐ IMDb Puanı (Yüksek → Düşük)</option>
                         <option value="vote_asc">📉 IMDb Puanı (Düşük → Yüksek)</option>
@@ -374,7 +388,7 @@
 
             <!-- Loading -->
             <div id="loading" class="hidden py-16 text-center">
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div class="skeleton-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                     <div class="skeleton-card h-[240px] md:h-[300px] rounded-xl bg-surface-container"></div>
                     <div class="skeleton-card h-[240px] md:h-[300px] rounded-xl bg-surface-container"></div>
                     <div class="skeleton-card h-[240px] md:h-[300px] rounded-xl bg-surface-container"></div>
@@ -382,17 +396,17 @@
                     <div class="skeleton-card h-[240px] md:h-[300px] rounded-xl bg-surface-container"></div>
                     <div class="skeleton-card h-[240px] md:h-[300px] rounded-xl bg-surface-container"></div>
                 </div>
-                <p id="loadingText" class="mt-8 font-headline-md text-lg text-secondary font-semibold">SineAI isteğinizi analiz ediyor...</p>
+                <p id="loadingText" class="loading-text mt-8 font-headline-md text-lg text-secondary font-semibold">SineAI isteğinizi analiz ediyor...</p>
             </div>
 
             <!-- Results Grid -->
-            <div id="resultsGrid" class="results-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6 py-6"></div>
+            <div id="resultsGrid" class="results-grid tv-results-content-section grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6 py-6"></div>
 
             <!-- Pagination -->
-            <div id="paginationBar" class="hidden flex justify-center items-center gap-4 mt-8">
-                <button type="button" id="prevPageBtn" class="bg-surface-container text-on-surface px-6 py-3 rounded-full font-semibold border border-outline-variant hover:bg-surface-high transition-colors" tabindex="0">← Önceki Sayfa</button>
-                <div id="pageNumbersContainer" class="flex gap-2"></div>
-                <button type="button" id="nextPageBtn" class="bg-surface-container text-on-surface px-6 py-3 rounded-full font-semibold border border-outline-variant hover:bg-surface-high transition-colors" tabindex="0">Sonraki Sayfa →</button>
+            <div id="paginationBar" class="pagination-bar hidden flex justify-center items-center gap-4 mt-8">
+                <button type="button" id="prevPageBtn" class="pagination-btn bg-surface-container text-on-surface px-6 py-3 rounded-full font-semibold border border-outline-variant hover:bg-surface-high transition-colors" tabindex="0">← Önceki Sayfa</button>
+                <div id="pageNumbersContainer" class="page-numbers-container flex gap-2"></div>
+                <button type="button" id="nextPageBtn" class="pagination-btn bg-surface-container text-on-surface px-6 py-3 rounded-full font-semibold border border-outline-variant hover:bg-surface-high transition-colors" tabindex="0">Sonraki Sayfa →</button>
             </div>
 
             <div id="scrollSentinel" class="hidden"></div>
@@ -466,7 +480,7 @@
     <!-- MOVIE DETAIL MODAL (STITCH RESPONSIVE MATCH) -->
     <div id="detailModal" class="modal hidden fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-8 overflow-y-auto" role="dialog" aria-modal="true" tabindex="-1">
         <div class="modal-content relative w-full max-w-5xl bg-surface-lowest rounded-2xl border border-outline-variant overflow-hidden shadow-2xl my-auto">
-            <button id="closeModalBtn" class="absolute top-4 right-4 z-50 bg-surface-container hover:bg-surface-high text-on-surface font-bold px-4 py-2 rounded-full border border-outline-variant text-sm transition-colors cursor-pointer" aria-label="Kapat" tabindex="0">✕ Kapat</button>
+            <button id="closeModalBtn" class="close-btn absolute top-4 right-4 z-50 bg-surface-container hover:bg-surface-high text-on-surface font-bold px-4 py-2 rounded-full border border-outline-variant text-sm transition-colors cursor-pointer" aria-label="Kapat" tabindex="0">✕ Kapat</button>
             <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
@@ -484,12 +498,12 @@
 
     <!-- AUTH MODAL -->
     <div id="authModal" class="modal hidden fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-        <div class="modal-content relative w-full max-w-md bg-surface-lowest p-8 rounded-2xl border border-outline-variant">
-            <button id="closeAuthModalBtn" class="absolute top-4 right-4 z-50 bg-surface-container text-on-surface font-bold px-4 py-2 rounded-full text-sm cursor-pointer" aria-label="Kapat" tabindex="0">✕ Kapat</button>
+        <div class="modal-content auth-modal-content relative w-full max-w-md bg-surface-lowest p-8 rounded-2xl border border-outline-variant">
+            <button id="closeAuthModalBtn" class="close-btn absolute top-4 right-4 z-50 bg-surface-container text-on-surface font-bold px-4 py-2 rounded-full text-sm cursor-pointer" aria-label="Kapat" tabindex="0">✕ Kapat</button>
             
             <div class="auth-tabs flex border-b border-outline-variant mb-6">
-                <button type="button" id="tabLogin" class="auth-tab flex-1 pb-3 font-bold text-center border-b-2 border-tertiary text-on-surface cursor-pointer">Giriş Yap</button>
-                <button type="button" id="tabRegister" class="auth-tab flex-1 pb-3 font-medium text-center text-on-surface-variant cursor-pointer">Kayıt Ol</button>
+                <button type="button" id="tabLogin" class="auth-tab active flex-1 pb-3 font-bold text-center border-b-2 border-tertiary text-on-surface cursor-pointer" tabindex="0">Giriş Yap</button>
+                <button type="button" id="tabRegister" class="auth-tab flex-1 pb-3 font-medium text-center text-on-surface-variant cursor-pointer" tabindex="0">Kayıt Ol</button>
             </div>
 
             <!-- Login Form -->
@@ -497,14 +511,14 @@
                 <h2 class="font-headline-md text-xl font-bold">Oturum Aç</h2>
                 <div class="form-group flex flex-col gap-1">
                     <label for="loginUsername" class="text-xs font-semibold text-on-surface-variant">Kullanıcı Adı</label>
-                    <input type="text" id="loginUsername" required placeholder="kullaniciadi" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary">
+                    <input type="text" id="loginUsername" required placeholder="kullaniciadi" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
                 </div>
                 <div class="form-group flex flex-col gap-1">
                     <label for="loginPassword" class="text-xs font-semibold text-on-surface-variant">Şifre</label>
-                    <input type="password" id="loginPassword" required placeholder="••••••••" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary">
+                    <input type="password" id="loginPassword" required placeholder="••••••••" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
                 </div>
                 <div id="loginError" class="auth-error hidden text-error font-bold text-sm"></div>
-                <button type="submit" class="bg-tertiary text-on-tertiary font-bold py-3 rounded-lg mt-2 hover:bg-tertiary/90 transition-colors cursor-pointer">Giriş Yap 🚀</button>
+                <button type="submit" class="auth-submit-btn bg-tertiary text-on-tertiary font-bold py-3 rounded-lg mt-2 hover:bg-tertiary/90 transition-colors cursor-pointer" tabindex="0">Giriş Yap 🚀</button>
             </form>
 
             <!-- Register Form -->
@@ -512,33 +526,33 @@
                 <h2 class="font-headline-md text-xl font-bold">Hesap Oluştur</h2>
                 <div class="form-group flex flex-col gap-1">
                     <label for="regUsername" class="text-xs font-semibold text-on-surface-variant">Kullanıcı Adı</label>
-                    <input type="text" id="regUsername" required placeholder="kullaniciadi" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary">
+                    <input type="text" id="regUsername" required placeholder="kullaniciadi" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
                 </div>
                 <div class="form-group flex flex-col gap-1">
                     <label for="regEmail" class="text-xs font-semibold text-on-surface-variant">E-posta (Opsiyonel)</label>
-                    <input type="email" id="regEmail" placeholder="ornek@domain.com" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary">
+                    <input type="email" id="regEmail" placeholder="ornek@domain.com" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
                 </div>
                 <div class="form-group flex flex-col gap-1">
                     <label for="regPassword" class="text-xs font-semibold text-on-surface-variant">Şifre</label>
-                    <input type="password" id="regPassword" required placeholder="••••••••" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary">
+                    <input type="password" id="regPassword" required placeholder="••••••••" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none focus:border-tertiary" tabindex="0">
                 </div>
                 <div id="regError" class="auth-error hidden text-error font-bold text-sm"></div>
-                <button type="submit" class="bg-tertiary text-on-tertiary font-bold py-3 rounded-lg mt-2 hover:bg-tertiary/90 transition-colors cursor-pointer">Kayıt Ol ✨</button>
+                <button type="submit" class="auth-submit-btn bg-tertiary text-on-tertiary font-bold py-3 rounded-lg mt-2 hover:bg-tertiary/90 transition-colors cursor-pointer" tabindex="0">Kayıt Ol ✨</button>
             </form>
         </div>
     </div>
 
     <!-- ADVANCED SEARCH MODAL -->
     <div id="advSearchModal" class="modal hidden fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-        <div class="modal-content relative w-full max-w-lg bg-surface-lowest p-8 rounded-2xl border border-outline-variant max-h-[90vh] overflow-y-auto">
-            <button id="closeAdvSearchModalBtn" class="absolute top-4 right-4 z-50 bg-surface-container text-on-surface font-bold px-4 py-2 rounded-full text-sm cursor-pointer" aria-label="Kapat" tabindex="0">✕ Kapat</button>
+        <div class="modal-content adv-modal-content relative w-full max-w-lg bg-surface-lowest p-8 rounded-2xl border border-outline-variant max-h-[90vh] overflow-y-auto">
+            <button id="closeAdvSearchModalBtn" class="close-btn absolute top-4 right-4 z-50 bg-surface-container text-on-surface font-bold px-4 py-2 rounded-full text-sm cursor-pointer" aria-label="Kapat" tabindex="0">✕ Kapat</button>
             <h2 class="font-headline-md text-xl font-bold mb-1">⚙️ Detaylı Film & Dizi Filtreleme</h2>
             <p class="text-sm text-on-surface-variant mb-6">Tür, yıl ve IMDb puanı kriterleri ile filtrelenmiş sonuçlar çekin.</p>
 
             <form id="advSearchForm" class="flex flex-col gap-4">
                 <div class="form-group">
                     <label class="text-xs font-semibold text-on-surface-variant mb-2 block">İçerik Türü</label>
-                    <div class="flex gap-3">
+                    <div class="adv-type-switcher flex gap-3">
                         <button type="button" class="pill active adv-type-pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container text-on-surface cursor-pointer" data-type="movie" tabindex="0">🎬 Filmler</button>
                         <button type="button" class="pill adv-type-pill px-4 py-2 rounded-full border border-outline-variant bg-surface-container text-on-surface cursor-pointer" data-type="tv" tabindex="0">📺 Diziler</button>
                     </div>
@@ -547,17 +561,17 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="form-group flex flex-col gap-1">
                         <label for="advYearMin" class="text-xs font-semibold text-on-surface-variant">Başlangıç Yılı</label>
-                        <input type="number" id="advYearMin" min="1920" max="2026" placeholder="1990" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none">
+                        <input type="number" id="advYearMin" min="1920" max="2026" placeholder="1990" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none" tabindex="0">
                     </div>
                     <div class="form-group flex flex-col gap-1">
                         <label for="advYearMax" class="text-xs font-semibold text-on-surface-variant">Bitiş Yılı</label>
-                        <input type="number" id="advYearMax" min="1920" max="2026" placeholder="2026" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none">
+                        <input type="number" id="advYearMax" min="1920" max="2026" placeholder="2026" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none" tabindex="0">
                     </div>
                 </div>
 
                 <div class="form-group flex flex-col gap-1">
                     <label for="advMinScore" class="text-xs font-semibold text-on-surface-variant">En Az IMDb Puanı</label>
-                    <select id="advMinScore" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none">
+                    <select id="advMinScore" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none" tabindex="0">
                         <option value="">Tüm Puanlar</option>
                         <option value="5">⭐ 5.0 ve Üzeri</option>
                         <option value="6">⭐ 6.0 ve Üzeri</option>
@@ -568,21 +582,21 @@
 
                 <div class="form-group">
                     <label class="text-xs font-semibold text-on-surface-variant mb-2 block">Türler</label>
-                    <div id="advGenrePills" class="flex flex-wrap gap-2"></div>
+                    <div id="advGenrePills" class="adv-genres-grid flex flex-wrap gap-2"></div>
                 </div>
 
                 <div class="form-group flex flex-col gap-1">
                     <label for="advSortBy" class="text-xs font-semibold text-on-surface-variant">Sıralama Kriteri</label>
-                    <select id="advSortBy" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none">
+                    <select id="advSortBy" class="bg-surface-container border border-outline-variant rounded-lg p-3 text-on-surface outline-none" tabindex="0">
                         <option value="popularity.desc">🔥 Popülerlik</option>
                         <option value="vote_average.desc">⭐ IMDb Puanı</option>
                         <option value="primary_release_date.desc">📅 Yapım Yılı (Yeni → Eski)</option>
                     </select>
                 </div>
 
-                <div class="flex gap-3 mt-4">
-                    <button type="button" id="advResetBtn" class="flex-1 bg-surface-container text-on-surface py-3 rounded-lg font-semibold border border-outline-variant cursor-pointer">Temizle</button>
-                    <button type="submit" class="flex-[2] bg-tertiary text-on-tertiary py-3 rounded-lg font-semibold cursor-pointer">Filtrele ✨</button>
+                <div class="adv-actions flex gap-3 mt-4">
+                    <button type="button" id="advResetBtn" class="flex-1 bg-surface-container text-on-surface py-3 rounded-lg font-semibold border border-outline-variant cursor-pointer" tabindex="0">Temizle</button>
+                    <button type="submit" class="flex-[2] bg-tertiary text-on-tertiary py-3 rounded-lg font-semibold cursor-pointer" tabindex="0">Filtrele ✨</button>
                 </div>
             </form>
         </div>

@@ -16,6 +16,7 @@ import android.os.SystemClock
 import android.speech.RecognizerIntent
 import android.view.KeyEvent
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
@@ -43,7 +44,7 @@ class MainActivity : Activity() {
     private val DEFAULT_URL = "https://sineai.alperates.com.tr"
     private val MIC_PERMISSION_REQUEST = 4101
     private val VOICE_SEARCH_REQUEST = 4102
-    private val TV_CONTRACT_VERSION = 1
+    private val TV_CONTRACT_VERSION = 4
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -346,6 +347,27 @@ class MainActivity : Activity() {
     }
 
     inner class AndroidBridge {
+        @JavascriptInterface
+        fun showKeyboard() {
+            runOnUiThread {
+                val target = webView ?: return@runOnUiThread
+                target.requestFocus()
+                target.postDelayed({
+                    val keyboard = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    keyboard.showSoftInput(target, InputMethodManager.SHOW_IMPLICIT)
+                }, 100)
+            }
+        }
+
+        @JavascriptInterface
+        fun hideKeyboard() {
+            runOnUiThread {
+                val target = webView ?: return@runOnUiThread
+                val keyboard = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                keyboard.hideSoftInputFromWindow(target.windowToken, 0)
+            }
+        }
+
         @JavascriptInterface
         fun startVoiceSearch() {
             runOnUiThread { beginNativeVoiceSearch() }

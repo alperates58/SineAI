@@ -108,6 +108,11 @@ body {
     display: none !important;
 }
 
+/* The remote-only text gateway is enabled by tv.css. */
+.tv-input-trigger {
+    display: none;
+}
+
 *:focus-visible {
     outline: none;
     box-shadow: var(--focus-ring);
@@ -603,15 +608,126 @@ body {
 
 .movie-card {
     flex: 0 0 200px;
-    height: 300px;
+    height: auto;
+    min-height: 300px;
     border-radius: var(--radius-md);
     overflow: hidden;
     position: relative;
+    display: flex;
+    flex-direction: column;
     scroll-snap-align: start;
     cursor: pointer;
     transition: transform 0.25s ease, box-shadow 0.25s ease;
     background-color: var(--surface-container);
     border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.poster-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    flex: 0 0 auto;
+    overflow: hidden;
+    background: var(--surface-high);
+}
+
+.poster-container img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.card-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 12px 14px 14px;
+}
+
+.card-desc,
+.card-reason {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: var(--on-surface-variant);
+    font-size: 12px;
+    line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+.card-reason {
+    color: var(--on-tertiary-container);
+    -webkit-line-clamp: 2;
+}
+
+.no-poster {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+    color: var(--on-surface-variant);
+    background: linear-gradient(145deg, var(--surface-high), var(--surface-container));
+}
+
+.fav-btn {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    z-index: 12;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 50%;
+    background: rgba(7, 8, 11, 0.82);
+    filter: grayscale(1);
+}
+
+.fav-btn.active {
+    filter: none;
+}
+
+.card-badges-row {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.provider-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 4px;
+}
+
+.provider-badges .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 7px;
+    border: 1px solid var(--outline-variant);
+    border-radius: 999px;
+    color: var(--on-surface-variant);
+    background: var(--surface-high);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.provider-badges .badge img {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    object-fit: cover;
 }
 
 .movie-card:hover {
@@ -723,11 +839,104 @@ body {
     transform: translateY(-2px);
 }
 
+.adv-genres-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+    gap: 10px;
+}
+
+.adv-genre-chip {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 14px;
+    border: 1px solid var(--outline-variant);
+    border-radius: 999px;
+    background: var(--surface-container);
+    color: var(--on-surface-variant);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--trans-fast);
+}
+
+.adv-genre-chip:hover,
+.adv-genre-chip:focus-visible {
+    border-color: var(--ai-purple);
+    color: var(--on-surface);
+    outline: none;
+}
+
+.adv-genre-chip.selected {
+    border-color: var(--ai-purple);
+    background: rgba(124, 58, 237, 0.22);
+    color: #e9ddff;
+    box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.28);
+}
+
 .results-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 24px;
     padding: 24px 0;
+}
+
+#resultsSection {
+    min-height: 100vh;
+    margin-top: 48px;
+    padding-bottom: 80px;
+}
+
+/* Standalone premium search studio: the browse homepage stays cinematic and
+   uncluttered, while AI/direct search gets its own focused destination. */
+body[data-view="ai"] #appMain,
+body[data-view="search"] #appMain {
+    margin-top: 0 !important;
+    min-height: 100vh;
+}
+
+body[data-view="ai"] #heroSearchArea,
+body[data-view="search"] #heroSearchArea {
+    position: relative;
+    min-height: 100vh;
+    justify-content: center;
+    padding-top: 132px !important;
+    padding-bottom: 72px !important;
+    overflow: hidden;
+}
+
+body[data-view="ai"] #heroSearchArea::before,
+body[data-view="search"] #heroSearchArea::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+        radial-gradient(circle at 50% 22%, rgba(124, 58, 237, 0.24), transparent 36%),
+        radial-gradient(circle at 82% 65%, rgba(20, 184, 166, 0.08), transparent 30%),
+        linear-gradient(180deg, #07080b 0%, #0b0c11 65%, #07080b 100%);
+}
+
+.search-view-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 20px;
+    color: #c4a7ff;
+    font-size: 11px;
+    font-weight: 850;
+    letter-spacing: 0.16em;
+}
+
+.search-view-eyebrow .material-symbols-outlined {
+    font-size: 17px;
+}
+
+.results-grid .movie-card {
+    width: 100%;
+    min-width: 0;
 }
 
 /* =============================================
@@ -754,6 +963,49 @@ body {
     border: 1px solid var(--outline-variant);
     overflow: hidden;
     box-shadow: 0 24px 80px rgba(0,0,0,0.9);
+}
+
+.modal-detail-shell {
+    position: relative;
+    min-height: min(680px, calc(100vh - 80px));
+    background-color: var(--bg-void);
+    background-position: center 22%;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.modal-detail-shell.has-poster-backdrop {
+    background-position: right center;
+    background-size: contain;
+}
+
+.modal-detail-shell.has-poster-backdrop::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(90deg, var(--bg-void) 0%, rgba(7, 8, 11, 0.96) 46%, rgba(7, 8, 11, 0.45) 78%, rgba(7, 8, 11, 0.12) 100%);
+}
+
+.modal-detail-grid,
+.modal-info {
+    position: relative;
+    z-index: 5;
+}
+
+.modal-info .overview {
+    max-width: 68ch;
+}
+
+.netflix-actions-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.netflix-btn {
+    min-height: 46px;
 }
 
 .detail-modal-wrapper {
@@ -965,4 +1217,7 @@ body {
 @keyframes skeleton-loading {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
+}
+.hidden {
+    display: none !important;
 }

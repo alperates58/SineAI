@@ -1,8 +1,8 @@
 (function () {
     'use strict';
 
-    const TV_CONTRACT_VERSION = 3;
-    const TV_ASSET_VERSION = '3.0.0';
+    const TV_CONTRACT_VERSION = 4;
+    const TV_ASSET_VERSION = '4.0.0';
 
     // Candidate selector for D-pad focus graph.
     // NOTE: Input, textarea, select are intentionally EXCLUDED from default directional navigation
@@ -18,6 +18,9 @@
         '.pill',
         '.mode-tab',
         '.filter-pill',
+        '.modal input:not([disabled])',
+        '.modal textarea:not([disabled])',
+        'select:not([disabled])',
         'button:not([disabled]):not(.tv-skip-focus)',
         'a[href]:not(.tv-skip-focus)',
         '[tabindex="0"]:not(.tv-skip-focus)'
@@ -138,27 +141,47 @@
         if (profile) {
             markTvSection(profile, 'tv-profile', '#profileRecommendBtn, #profileBackBtn, .movie-card');
         }
+
+        const queryTrigger = document.getElementById('tvQueryTrigger');
+        const queryInput = document.getElementById('query');
+        if (queryTrigger && queryInput && !queryTrigger.dataset.tvInputTriggerBound) {
+            queryTrigger.dataset.tvInputTriggerBound = 'true';
+            queryTrigger.addEventListener('click', () => enterTextEditMode(queryInput));
+        }
     }
 
     function enterTextEditMode(inputElement) {
         if (!inputElement) return;
         tvTextEntryMode = true;
         currentInputTarget = inputElement;
-        inputElement.classList.remove('tv-hidden-input');
-        inputElement.focus();
+        if (inputElement.id === 'query') inputElement.classList.remove('tv-hidden-input');
+        inputElement.focus({ preventScroll: true });
+        try {
+            window.SineAIAndroid?.showKeyboard?.();
+        } catch (_error) {
+            // Browser preview has no Android bridge; native TV does.
+        }
         debugLog('Entered Text Entry Mode for:', inputElement.id);
     }
 
     function exitTextEditMode() {
         if (!tvTextEntryMode) return false;
-        if (currentInputTarget) {
-            currentInputTarget.blur();
-            currentInputTarget.classList.add('tv-hidden-input');
+        const previousInput = currentInputTarget;
+        if (previousInput) {
+            previousInput.blur();
+            if (previousInput.id === 'query') previousInput.classList.add('tv-hidden-input');
         }
         tvTextEntryMode = false;
         currentInputTarget = null;
+        try {
+            window.SineAIAndroid?.hideKeyboard?.();
+        } catch (_error) {
+            // Browser preview has no Android bridge; native TV does.
+        }
         debugLog('Exited Text Entry Mode');
-        const trigger = document.getElementById('tvQueryTrigger') || lastContentFocus;
+        const trigger = previousInput?.closest('.modal:not(.hidden)')
+            ? previousInput
+            : document.getElementById('tvQueryTrigger') || lastContentFocus;
         if (trigger) focusElement(trigger);
         return true;
     }
@@ -181,8 +204,9 @@
         if (!element.isConnected || element.classList.contains('tv-skip-focus')) return false;
         if (element.matches('.movie-card .fav-btn')) return false;
 
-        // CRITICAL: Input, textarea, select ARE ABSOLUTELY EXCLUDED FROM D-PAD CANDIDATES UNLESS IN TEXT ENTRY MODE
-        if (element.matches('textarea, input, select') && !tvTextEntryMode) return false;
+        // Main search uses an explicit TV trigger. Modal form fields remain
+        // directional candidates and enter keyboard mode only after OK.
+        if (element.matches('textarea, input') && !tvTextEntryMode && !element.closest('.modal:not(.hidden)')) return false;
 
         if (element.closest('.hidden, [aria-hidden="true"]')) return false;
         if (element.hasAttribute('disabled')) return false;
@@ -219,19 +243,19 @@
             });
         });
 
-        // Ensure modal inputs have bound focus/blur listeners
+        // Modal fields are navigable. Focusing them must not lock D-pad
+        // movement; OK explicitly enters text edit mode.
         scope.querySelectorAll('input:not([data-tv-input-bound]), textarea:not([data-tv-input-bound])').forEach(input => {
             input.dataset.tvInputBound = 'true';
-            input.addEventListener('focus', () => {
-                if (!tvTextEntryMode) {
-                    tvTextEntryMode = true;
-                    currentInputTarget = input;
-                }
-            });
             input.addEventListener('blur', () => {
                 if (currentInputTarget === input) {
                     tvTextEntryMode = false;
                     currentInputTarget = null;
+                }
+            });
+            input.addEventListener('click', () => {
+                if (enabled && input.closest('.modal:not(.hidden)') && !tvTextEntryMode) {
+                    enterTextEditMode(input);
                 }
             });
         });
@@ -282,7 +306,7 @@
     }
 
     // Unified Element Visibility (ensureTvElementVisible)
-    function ensureTvElementVisible(element) {
+    function ensureTvElementVisible(element, alignSection = false) {
         if (!element) return;
 
         // 1. Horizontal container scrolling (Action bar, Movie rows, Filter chips)
@@ -305,7 +329,7 @@
         }
 
         // 2. Modal / Scrollable container vertical bounds check
-        const modalContainer = element.closest('.modal-content, .modal');
+        const modalContainer = element.closest('.modal-info, .modal-content, .modal');
         if (modalContainer && modalContainer.scrollHeight > modalContainer.clientHeight) {
             const elRect = element.getBoundingClientRect();
             const containerRect = modalContainer.getBoundingClientRect();
@@ -321,7 +345,7 @@
 
         // 3. Section vertical alignment
         const section = sectionFor(element);
-        if (section) {
+        if (section && alignSection) {
             const sectionTop = section.getBoundingClientRect().top + window.scrollY;
             const topHeaderOffset = 80;
             const targetY = Math.max(0, sectionTop - topHeaderOffset);
@@ -360,7 +384,8 @@
         }
 
         const nextSection = sectionFor(element);
-        if (activeSection !== nextSection) {
+        const sectionChanged = activeSection !== nextSection;
+        if (sectionChanged) {
             activeSection?.classList.remove('tv-section-active');
             nextSection?.classList.add('tv-section-active');
             activeSection = nextSection;
@@ -381,7 +406,10 @@
         }
 
         debugLog('Focus ->', element.tagName, element.id || element.className);
-        ensureTvElementVisible(element);
+        ensureTvElementVisible(element, sectionChanged);
+        requestAnimationFrame(() => {
+            if (document.activeElement === element) ensureTvElementVisible(element, false);
+        });
         return document.activeElement === element;
     }
 
@@ -408,6 +436,8 @@
             ? ['#resultsGrid .movie-card', '.filter-pill.active', '#tvQueryTrigger', '.saas-back-btn']
             : view === 'profile'
                 ? ['#profileFavGrid .movie-card', '#profileRecommendBtn', '#profileBackBtn']
+                : view === 'ai' || view === 'search'
+                    ? ['#tvQueryTrigger', '.mode-tab.active', '#voiceBtn', '#randomPickBtn']
                 : ['#tvFeaturedOpen', '#btnAiDiscover', '.mode-tab.active', '#tvQueryTrigger', '#popularMoviesRow .movie-card'];
 
         for (const selector of selectors) {
@@ -486,7 +516,8 @@
 
         for (const candidate of list) {
             if (candidate === current) continue;
-            if (currentRow && rowFor(candidate) === currentRow) continue;
+            const currentIsGrid = Boolean(current.closest('.results-grid, .genre-grid, .adv-genres-grid'));
+            if (currentRow && rowFor(candidate) === currentRow && !currentIsGrid) continue;
             if (direction === 'down' && candidate.matches('.see-all')) {
                 const candidateSection = candidate.closest('.row-section');
                 if (candidateSection && !candidateSection.contains(current)) continue;
@@ -521,8 +552,10 @@
             const overlap = (direction === 'up' || direction === 'down')
                 ? Math.max(0, Math.min(currentRect.right, rect.right) - Math.max(currentRect.left, rect.left))
                 : Math.max(0, Math.min(currentRect.bottom, rect.bottom) - Math.max(currentRect.top, rect.top));
-            const crossAxisWeight = (direction === 'up' || direction === 'down') ? 2.5 : 1.0;
-            const score = (primary * 1.0) + (secondary * crossAxisWeight) - Math.min(160, overlap);
+            // Prefer the nearest row/column first. Excessive cross-axis weighting
+            // made D-pad Down skip adjacent form fields for a farther aligned chip.
+            const crossAxisWeight = (direction === 'up' || direction === 'down') ? 1.25 : 1.0;
+            const score = (primary * 3.0) + (secondary * crossAxisWeight) - Math.min(120, overlap);
 
             if (score < bestScore) {
                 bestScore = score;
@@ -540,12 +573,14 @@
         const current = list.includes(document.activeElement) ? document.activeElement : null;
         if (!current) return focusElement(preferredCandidate(list));
 
-        if (direction === 'left' || direction === 'right') {
+        const currentIsGrid = Boolean(current.closest('.results-grid, .genre-grid, .adv-genres-grid'));
+
+        if ((direction === 'left' || direction === 'right') && !currentIsGrid) {
             const rowTarget = sameRowTarget(current, direction);
             if (rowTarget) return rowTarget === current || focusElement(rowTarget);
         }
 
-        if ((direction === 'up' || direction === 'down') && !activeModal()) {
+        if ((direction === 'up' || direction === 'down') && !activeModal() && !currentIsGrid) {
             const laneTarget = verticalLaneTarget(current, direction, list);
             if (laneTarget) return focusElement(laneTarget);
         }
@@ -562,8 +597,14 @@
         if (!current) return false;
         if (document.activeElement !== current) focusElement(current);
 
+        if (current.matches('textarea, input')) {
+            enterTextEditMode(current);
+            current.click();
+            return true;
+        }
+
         current.click();
-        if (!current.matches('textarea, input, select')) scheduleRefresh();
+        if (!current.matches('select')) scheduleRefresh();
         return true;
     }
 
@@ -612,7 +653,16 @@
 
     function handleNativeKey(direction) {
         if (!enabled) return false;
-        if (direction === 'select' || direction === 'enter' || direction === 'ok') return activateCurrent();
+        if (direction === 'select' || direction === 'enter' || direction === 'ok') {
+            if (tvTextEntryMode && currentInputTarget?.id === 'query') {
+                const queryForm = currentInputTarget.form;
+                exitTextEditMode();
+                if (typeof queryForm?.requestSubmit === 'function') queryForm.requestSubmit();
+                else queryForm?.querySelector('[type="submit"]')?.click();
+                return true;
+            }
+            return activateCurrent();
+        }
         if (['up', 'down', 'left', 'right'].includes(direction)) return move(direction);
         return false;
     }
@@ -624,6 +674,13 @@
         const isBack = event.key === 'Escape' || event.key === 'BrowserBack';
 
         if (!direction && !isSelect && !isBack) return;
+
+        if (tvTextEntryMode && event.key === 'Enter' && currentInputTarget?.id === 'query') {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            handleNativeKey('select');
+            return;
+        }
 
         // Allow normal typing inside input/textarea when in text edit mode
         if (tvTextEntryMode && !isBack && (event.key !== 'Enter' || currentInputTarget?.tagName === 'TEXTAREA')) {
@@ -657,14 +714,16 @@
         if (!body || body.querySelector('.modal-cinematic-backdrop')) return;
 
         const poster = body.querySelector('.modal-poster img');
+        const shell = body.querySelector('.modal-detail-shell');
         const source = poster?.currentSrc || poster?.src || '';
         const backdrop = document.createElement('div');
         const shade = document.createElement('div');
-        backdrop.className = 'modal-cinematic-backdrop tv-poster-fallback';
+        backdrop.className = `modal-cinematic-backdrop ${shell?.classList.contains('has-poster-backdrop') ? 'tv-poster-fallback' : 'tv-wide-backdrop'}`;
         shade.className = 'modal-cinematic-shade';
         backdrop.setAttribute('aria-hidden', 'true');
         shade.setAttribute('aria-hidden', 'true');
-        if (source) backdrop.style.backgroundImage = `url("${source.replace('/w500/', '/w780/')}")`;
+        if (shell?.style.backgroundImage) backdrop.style.backgroundImage = shell.style.backgroundImage;
+        else if (source) backdrop.style.backgroundImage = `url("${source.replace('/w500/', '/w780/')}")`;
         body.prepend(shade);
         body.prepend(backdrop);
     }
@@ -725,6 +784,16 @@
             const root = activeRoot();
             const modalJustOpened = root !== document.body && root !== navigationRoot;
             navigationRoot = root;
+
+            // Class changes on the visible TV search input are observed as layout
+            // mutations. Keep the software-keyboard target focused while editing;
+            // otherwise a refresh can jump back to the featured hero button.
+            if (tvTextEntryMode && currentInputTarget?.isConnected) {
+                if (document.activeElement !== currentInputTarget) {
+                    currentInputTarget.focus({ preventScroll: true });
+                }
+                return;
+            }
 
             const preferred = pendingPreferredSelector;
             pendingPreferredSelector = null;

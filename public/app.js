@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitBtn       = document.getElementById('submitBtn');
     const voiceBtn        = document.getElementById('voiceBtn');
     const randomPickBtn   = document.getElementById('randomPickBtn');
+    const tvQueryTriggerText = document.getElementById('tvQueryTriggerText');
     const errorBox        = document.getElementById('errorBox');
     const loadingEl       = document.getElementById('loading');
     const loadingText     = document.getElementById('loadingText');
@@ -12,11 +13,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const discoverSection = document.getElementById('discoverSection');
     const resultsSection  = document.getElementById('resultsSection');
     const profileSection  = document.getElementById('profileSection');
+    const featuredSection = document.getElementById('tvFeatured');
     const backBtn         = document.getElementById('backToDiscoverBtn');
     const profileBackBtn  = document.getElementById('profileBackBtn');
     const goToDiscoverBtn = document.getElementById('goToDiscoverBtn');
     const scrollSentinel  = document.getElementById('scrollSentinel');
     const resultsHeading  = document.getElementById('resultsHeading');
+    const resultsCountBadge = document.getElementById('resultsCountBadge');
     const quickFilterBar  = document.getElementById('quickFilterBar');
     const aiAnalysisSummary = document.getElementById('aiAnalysisSummary');
     const aiAnalysisText  = document.getElementById('aiAnalysisText');
@@ -114,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let userReactions = {};
     let currentRawResults = [];
     let activeFilter = 'all';
+    let resultsReturnView = 'discover';
 
     function setViewState(view) {
         document.body.dataset.view = view;
@@ -121,8 +125,16 @@ document.addEventListener('DOMContentLoaded', () => {
         window.requestAnimationFrame(() => window.SineAITV?.refresh());
     }
 
+    function syncTvQueryTrigger() {
+        if (!tvQueryTriggerText) return;
+        tvQueryTriggerText.textContent = queryInput.value.trim() || "SineAI'ye yaz";
+    }
+
+    queryInput.addEventListener('input', syncTvQueryTrigger);
+    syncTvQueryTrigger();
+
     let pageState = {
-        mode: 'ai', // 'ai' | 'genre' | 'popular'
+        mode: 'ai', // 'ai' | 'genre' | 'popular' | 'direct' | 'advanced'
         page: 1,
         totalPages: 1,
         genreId: null,
@@ -320,9 +332,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const heroSearchArea = document.getElementById('heroSearchArea');
     const brandLogoBtn   = document.getElementById('brandLogoBtn');
+    const homeBrowseSections = [...document.querySelectorAll('#discoverSection > .row-section')];
+
+    function toggleHomeBrowse(show) {
+        homeBrowseSections.forEach(section => section.classList.toggle('hidden', !show));
+    }
 
     function showProfilePage() {
+        featuredSection?.classList.add('hidden');
         if (heroSearchArea) heroSearchArea.classList.add('hidden');
+        toggleHomeBrowse(false);
         discoverSection.classList.add('hidden');
         resultsSection.classList.add('hidden');
         profileSection.classList.remove('hidden');
@@ -332,7 +351,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showDiscoverPage() {
-        if (heroSearchArea) heroSearchArea.classList.remove('hidden');
+        featuredSection?.classList.remove('hidden');
+        if (heroSearchArea) heroSearchArea.classList.add('hidden');
+        toggleHomeBrowse(true);
         profileSection.classList.add('hidden');
         resultsSection.classList.add('hidden');
         discoverSection.classList.remove('hidden');
@@ -340,13 +361,18 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollPageTo(0);
     }
 
-    function showResultsSection() {
-        if (heroSearchArea) heroSearchArea.classList.remove('hidden');
-        discoverSection.classList.add('hidden');
+    function showSearchPage(mode = 'ai') {
+        const normalizedMode = mode === 'direct' ? 'direct' : 'ai';
+        featuredSection?.classList.add('hidden');
+        toggleHomeBrowse(false);
         profileSection.classList.add('hidden');
-        resultsSection.classList.remove('hidden');
-        setViewState('results');
+        resultsSection.classList.add('hidden');
+        discoverSection.classList.remove('hidden');
+        heroSearchArea?.classList.remove('hidden');
+        selectSearchMode(normalizedMode);
+        setViewState(normalizedMode === 'direct' ? 'search' : 'ai');
         scrollPageTo(0);
+        window.setTimeout(() => window.SineAITV?.refresh('#tvQueryTrigger'), 40);
     }
 
     userProfileBtn.addEventListener('click', showProfilePage);
@@ -381,25 +407,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navHomeLink) navHomeLink.addEventListener('click', () => { highlightNavLink('navHomeLink'); showDiscoverPage(); });
     if (mobileNavHome) mobileNavHome.addEventListener('click', () => { highlightNavLink('navHomeLink'); showDiscoverPage(); });
 
-    if (navMoviesLink) navMoviesLink.addEventListener('click', () => { highlightNavLink('navMoviesLink'); submitGenre('movie', 28, 'Popular Filmler', 1); });
-    if (mobileNavMovies) mobileNavMovies.addEventListener('click', () => { highlightNavLink('navMoviesLink'); submitGenre('movie', 28, 'Popular Filmler', 1); });
+    if (navMoviesLink) navMoviesLink.addEventListener('click', () => { highlightNavLink('navMoviesLink'); submitPopular('movie', 'Popüler Filmler', 1); });
+    if (mobileNavMovies) mobileNavMovies.addEventListener('click', () => { highlightNavLink('navMoviesLink'); submitPopular('movie', 'Popüler Filmler', 1); });
 
-    if (navTvLink) navTvLink.addEventListener('click', () => { highlightNavLink('navTvLink'); submitGenre('navTvLink'); submitGenre('tv', 10759, 'Popular Diziler', 1); });
-    if (mobileNavTv) mobileNavTv.addEventListener('click', () => { highlightNavLink('navTvLink'); submitGenre('tv', 10759, 'Popular Diziler', 1); });
+    if (navTvLink) navTvLink.addEventListener('click', () => { highlightNavLink('navTvLink'); submitPopular('tv', 'Popüler Diziler', 1); });
+    if (mobileNavTv) mobileNavTv.addEventListener('click', () => { highlightNavLink('navTvLink'); submitPopular('tv', 'Popüler Diziler', 1); });
 
-    const scrollToAiSearch = () => {
+    const openAiSearch = () => {
         highlightNavLink('navAiLink');
-        showDiscoverPage();
-        const searchArea = document.getElementById('heroSearchArea');
-        if (searchArea) {
-            searchArea.scrollIntoView({ behavior: 'smooth' });
-            setTimeout(() => queryInput?.focus(), 400);
-        }
+        showSearchPage('ai');
     };
 
-    if (navAiLink) navAiLink.addEventListener('click', scrollToAiSearch);
-    if (mobileNavAi) mobileNavAi.addEventListener('click', scrollToAiSearch);
-    if (navSearchTriggerBtn) navSearchTriggerBtn.addEventListener('click', scrollToAiSearch);
+    if (navAiLink) navAiLink.addEventListener('click', openAiSearch);
+    if (mobileNavAi) mobileNavAi.addEventListener('click', openAiSearch);
+    if (navSearchTriggerBtn) navSearchTriggerBtn.addEventListener('click', () => {
+        highlightNavLink('');
+        showSearchPage('direct');
+    });
 
     // ── Toast Notification ─────────────────────────────
     function showToast(message) {
@@ -651,7 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function submitGenre(mediaType, genreId, genreName, targetPage = 1) {
         errorBox.classList.add('hidden');
-        showResultsSection();
+        showResultsSection('discover');
         resultsHeading.textContent = `${genreName} ${mediaType === 'tv' ? 'Dizileri' : 'Filmleri'}`;
         loadingText.textContent = `${genreName} yapımları yükleniyor (Sayfa ${targetPage})...`;
         loadingEl.classList.remove('hidden');
@@ -682,10 +706,53 @@ document.addEventListener('DOMContentLoaded', () => {
             pageState.isLoading = false;
 
             applyClientSortingAndRender();
+            if (resultsCountBadge) resultsCountBadge.textContent = `${currentRawResults.length} Yapım`;
             renderPaginationUI();
             updateSentinel();
         } catch (err) {
             showError(`Bir hata oluştu: ${err.message}`);
+        } finally {
+            loadingEl.classList.add('hidden');
+            pageState.isLoading = false;
+        }
+    }
+
+    async function submitPopular(mediaType, label, targetPage = 1) {
+        errorBox.classList.add('hidden');
+        showResultsSection('discover');
+        resultsHeading.textContent = label;
+        loadingText.textContent = `${label} yükleniyor (Sayfa ${targetPage})...`;
+        loadingEl.classList.remove('hidden');
+
+        pageState = {
+            mode: 'popular',
+            page: targetPage,
+            totalPages: 1,
+            genreId: null,
+            mediaType,
+            label,
+            sortBy: sortSelect ? sortSelect.value : 'popularity_desc',
+            shownCount: 0,
+            hasMore: false,
+            isLoading: true
+        };
+
+        try {
+            const res = await fetch(`/api/popular?type=${mediaType}&page=${targetPage}`);
+            const data = await res.json();
+            if (!res.ok || !data.ok) throw new Error(data.error || 'Popüler yapımlar yüklenemedi.');
+
+            currentRawResults = data.results || [];
+            pageState.totalPages = data.totalPages || (data.hasNextPage ? Math.max(20, targetPage + 1) : targetPage);
+            pageState.hasMore = Boolean(data.hasNextPage);
+            pageState.isLoading = false;
+
+            applyClientSortingAndRender();
+            if (resultsCountBadge) resultsCountBadge.textContent = `${currentRawResults.length} Yapım`;
+            renderPaginationUI();
+            updateSentinel();
+        } catch (error) {
+            showError(`Bir hata oluştu: ${error.message}`);
         } finally {
             loadingEl.classList.add('hidden');
             pageState.isLoading = false;
@@ -743,7 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Pagination UI Handler ──────────────────────────
     function renderPaginationUI() {
-        const isPaginatable = ['genre', 'direct', 'advanced', 'ai'].includes(pageState.mode) && pageState.totalPages > 1;
+        const isPaginatable = ['genre', 'popular', 'direct', 'advanced', 'ai'].includes(pageState.mode) && pageState.totalPages > 1;
         if (!isPaginatable) {
             paginationBar.classList.add('hidden');
             pageInfoBadge.classList.add('hidden');
@@ -782,6 +849,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function handlePageSwitch(targetPage) {
         if (pageState.mode === 'genre') {
             submitGenre(pageState.mediaType, pageState.genreId, pageState.label, targetPage);
+        } else if (pageState.mode === 'popular') {
+            submitPopular(pageState.mediaType, pageState.label, targetPage);
         } else if (pageState.mode === 'direct') {
             submitDirectSearch(pageState.label, targetPage);
         } else if (pageState.mode === 'advanced') {
@@ -833,8 +902,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (scrollSentinel) scrollSentinel.classList.add('hidden');
     }
 
-    function showResultsSection() {
-        if (heroSearchArea) heroSearchArea.classList.remove('hidden');
+    function showResultsSection(returnView = null) {
+        resultsReturnView = returnView || (['ai', 'search', 'profile'].includes(document.body.dataset.view)
+            ? document.body.dataset.view
+            : 'discover');
+        featuredSection?.classList.add('hidden');
+        if (heroSearchArea) heroSearchArea.classList.add('hidden');
+        toggleHomeBrowse(false);
         discoverSection.classList.add('hidden');
         profileSection.classList.add('hidden');
         resultsSection.classList.remove('hidden');
@@ -842,6 +916,8 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsGrid.innerHTML = '';
         scrollSentinel.classList.add('hidden');
         if (aiAnalysisSummary) aiAnalysisSummary.classList.add('hidden');
+        const backLabel = backBtn?.querySelector('span:last-child');
+        if (backLabel) backLabel.textContent = resultsReturnView === 'profile' ? 'Profile Dön' : resultsReturnView === 'discover' ? 'Ana Sayfaya Dön' : 'Aramaya Dön';
         scrollPageTo(0);
     }
 
@@ -851,7 +927,12 @@ document.addEventListener('DOMContentLoaded', () => {
         aiAnalysisSummary.classList.remove('hidden');
     }
 
-    backBtn.addEventListener('click', showDiscoverPage);
+    backBtn.addEventListener('click', () => {
+        if (resultsReturnView === 'profile') showProfilePage();
+        else if (resultsReturnView === 'search') showSearchPage('direct');
+        else if (resultsReturnView === 'ai') showSearchPage('ai');
+        else showDiscoverPage();
+    });
 
     // ── Card Rendering Engine ───────────────────────────
     function renderCardsInContainer(items, containerEl, append = false) {
@@ -925,7 +1006,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderCards(items, append = false) {
         if (!append) resultsGrid.innerHTML = '';
-        renderCardsInContainer(items, resultsGrid);
+        renderCardsInContainer(items, resultsGrid, append);
         updateSentinel();
         window.SineAITV?.refresh('#resultsGrid .movie-card');
     }
@@ -968,6 +1049,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitBtnText = document.getElementById('submitBtnText');
     const submitBtnIcon = document.getElementById('submitBtnIcon');
 
+    function selectSearchMode(mode) {
+        currentSearchMode = mode === 'direct' ? 'direct' : 'ai';
+        searchModeTabs.forEach(tab => tab.classList.toggle('active', tab.dataset.mode === currentSearchMode));
+
+        if (currentSearchMode === 'direct') {
+            queryInput.placeholder = "Film veya dizi adı girin (Örn: Interstellar, Kurtlar Vadisi, Breaking Bad...)";
+            if (searchIcon) searchIcon.textContent = 'search';
+            if (submitBtnText) submitBtnText.textContent = 'Ara';
+            if (submitBtnIcon) submitBtnIcon.textContent = 'search';
+        } else {
+            queryInput.placeholder = "Ne izlemek istiyorsun? (Örn: Okyanusta geçen romantik film öner veya From benzeri dizi...)";
+            if (searchIcon) searchIcon.textContent = 'auto_awesome';
+            if (submitBtnText) submitBtnText.textContent = 'Önerileri Bul';
+            if (submitBtnIcon) submitBtnIcon.textContent = 'auto_awesome';
+        }
+        syncTvQueryTrigger();
+    }
+
     if (searchModeTabs.length > 0) {
         searchModeTabs.forEach(tab => {
             tab.addEventListener('click', () => {
@@ -975,20 +1074,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     openAdvSearchModal();
                     return;
                 }
-                searchModeTabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                currentSearchMode = tab.dataset.mode;
-
-                if (currentSearchMode === 'direct') {
-                    queryInput.placeholder = "Film veya dizi adı girin (Örn: Interstellar, Kurtlar Vadisi, Breaking Bad...)";
-                    if (searchIcon) searchIcon.textContent = '🔍';
-                    if (submitBtnText) submitBtnText.textContent = 'Aramayı Başlat';
-                    if (submitBtnIcon) submitBtnIcon.textContent = '🔍';
-                } else {
-                    queryInput.placeholder = "Ne izlemek istiyorsun? (Örn: Okyanusta geçen romantik film öner veya From benzeri dizi...)";
-                    if (searchIcon) searchIcon.textContent = '✨';
-                    if (submitBtnText) submitBtnText.textContent = 'Öneri Getir';
-                    if (submitBtnIcon) submitBtnIcon.textContent = '✨';
+                selectSearchMode(tab.dataset.mode);
+                if (document.body.dataset.view === 'ai' || document.body.dataset.view === 'search') {
+                    setViewState(currentSearchMode === 'direct' ? 'search' : 'ai');
                 }
             });
         });
@@ -1008,13 +1096,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function submitDirectSearch(query, targetPage = 1) {
         errorBox.classList.add('hidden');
-        showResultsSection();
+        showResultsSection('search');
         resultsHeading.textContent = `"${query}" Arama Sonuçları (TMDB API)`;
         loadingText.textContent = 'TMDB veritabanında arama yapılıyor...';
         loadingEl.classList.remove('hidden');
         submitBtn.disabled = true;
 
-        pageState = { mode: 'direct', page: targetPage, totalPages: 1, genreId: null, mediaType: null, label: query, sortBy: 'popularity_desc', shownCount: 0, hasMore: false, isLoading: false };
+        pageState = { mode: 'direct', page: targetPage, totalPages: 1, genreId: null, mediaType: null, label: query, sortBy: 'popularity_desc', shownCount: 0, hasMore: false, isLoading: true };
 
         try {
             const response = await fetch(`/api/search/direct?query=${encodeURIComponent(query)}&page=${targetPage}`);
@@ -1026,7 +1114,6 @@ document.addEventListener('DOMContentLoaded', () => {
             pageState.shownCount = currentRawResults.length;
             pageState.hasMore = false;
 
-            const resultsCountBadge = document.getElementById('resultsCountBadge');
             if (resultsCountBadge) resultsCountBadge.textContent = `🔍 ${currentRawResults.length} Sonuç Bulundu`;
 
             renderCards(currentRawResults);
@@ -1038,6 +1125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             loadingEl.classList.add('hidden');
             submitBtn.disabled = false;
+            pageState.isLoading = false;
         }
     }
 
@@ -1064,6 +1152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!advSearchModal) return;
         renderAdvGenres();
         advSearchModal.classList.remove('hidden');
+        window.SineAITV?.refresh('.adv-type-pill.active');
     }
 
     if (closeAdvSearchModalBtn) {
@@ -1087,13 +1176,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const chip = document.createElement('div');
             chip.className = `adv-genre-chip ${advSelectedGenres.includes(g.id) ? 'selected' : ''}`;
             chip.textContent = g.name;
-            chip.addEventListener('click', () => {
+            chip.tabIndex = 0;
+            chip.setAttribute('role', 'checkbox');
+            chip.setAttribute('aria-checked', String(advSelectedGenres.includes(g.id)));
+            const toggleGenre = () => {
                 if (advSelectedGenres.includes(g.id)) {
                     advSelectedGenres = advSelectedGenres.filter(id => id !== g.id);
                     chip.classList.remove('selected');
+                    chip.setAttribute('aria-checked', 'false');
                 } else {
                     advSelectedGenres.push(g.id);
                     chip.classList.add('selected');
+                    chip.setAttribute('aria-checked', 'true');
+                }
+            };
+            chip.addEventListener('click', toggleGenre);
+            chip.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    toggleGenre();
                 }
             });
             advGenrePillsContainer.appendChild(chip);
@@ -1118,7 +1219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const sortBy = document.getElementById('advSortBy').value;
         const genresStr = advSelectedGenres.join(',');
 
-        showResultsSection();
+        showResultsSection('search');
         resultsHeading.textContent = `⚙️ Detaylı Filtreleme Sonuçları (${advSelectedType === 'movie' ? 'Filmler' : 'Diziler'})`;
         loadingText.textContent = 'Detaylı kriterlerinize uygun yapımlar filtreleniyor...';
         loadingEl.classList.remove('hidden');
@@ -1144,7 +1245,6 @@ document.addEventListener('DOMContentLoaded', () => {
             pageState.shownCount = currentRawResults.length;
             pageState.hasMore = false;
 
-            const resultsCountBadge = document.getElementById('resultsCountBadge');
             if (resultsCountBadge) resultsCountBadge.textContent = `⚙️ ${currentRawResults.length} Filtrelenmiş Yapım`;
 
             renderCards(currentRawResults);
@@ -1167,7 +1267,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function submitSearch(query, options = {}) {
         errorBox.classList.add('hidden');
-        showResultsSection();
+        showResultsSection('ai');
         resultsHeading.textContent = options.heading || 'Yapay Zeka Önerileri';
         loadingText.textContent = options.loadingText || 'SineAI isteğinizi analiz ediyor ve en uygun yapımları çıkarıyor...';
         loadingEl.classList.remove('hidden');
@@ -1187,7 +1287,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             currentRawResults = data.results || [];
             renderAIAnalysis(data.analysis);
-            const resultsCountBadge = document.getElementById('resultsCountBadge');
             if (resultsCountBadge) resultsCountBadge.textContent = `✨ ${currentRawResults.length} Yapım Hazır`;
 
             renderAIPage(1);
@@ -1220,7 +1319,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             profileSection.classList.add('hidden');
-            showResultsSection();
+            showResultsSection('profile');
             resultsHeading.textContent = '✨ Profilinize Özel Yapay Zeka Önerileri';
             loadingText.textContent = 'Favorilerinizdeki sinema zevkiniz analiz ediliyor...';
             loadingEl.classList.remove('hidden');
@@ -1268,15 +1367,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Netflix-Style Detail Modal & Explicit Favorites Bar ─────────
     function showModal(item, year, typeStr, rating, badgesHTML) {
-        const posterUrl  = item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : null;
         const backdropPath = item.backdrop || item.poster;
         const backdropUrl = backdropPath
             ? `https://image.tmdb.org/t/p/${item.backdrop ? 'w1280' : 'w780'}${backdropPath}`
             : '';
-        const posterHTML = posterUrl
-            ? `<img src="${posterUrl}" alt="${item.title} afişi" loading="lazy" decoding="async">`
-            : `<div class="no-poster">Afiş Bulunamadı</div>`;
-
         const genresHTML = item.genres?.length > 0
             ? item.genres.map(g => `<span class="bg-surface-container/90 px-3 py-1 rounded-full border border-outline-variant text-xs font-semibold text-on-surface-variant">${g}</span>`).join(' ')
             : '';
@@ -1293,24 +1387,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentRec = getReaction(item);
         const isFav = isFavorited(item);
 
-        const playTrailerBtnHTML = `<button type="button" class="btn-play-trailer bg-on-surface text-primary-container font-bold px-7 py-3 rounded-full flex items-center gap-2 hover:scale-105 transition-transform text-sm cursor-pointer" tabindex="0">
+        const playTrailerBtnHTML = `<button type="button" class="netflix-btn btn-play-trailer bg-on-surface text-primary-container font-bold px-7 py-3 rounded-full flex items-center gap-2 hover:scale-105 transition-transform text-sm cursor-pointer" tabindex="0">
             <span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
             <span>Fragmanı Oynat</span>
         </button>`;
 
         modalBody.innerHTML = `
-            <div class="relative w-full min-h-[440px] md:min-h-[540px] bg-cover bg-center overflow-hidden rounded-2xl flex items-end p-5 md:p-10"${backdropUrl ? ` style="background-image: url('${backdropUrl}')"` : ''}>
+            <div class="modal-detail-shell ${item.backdrop ? 'has-wide-backdrop' : 'has-poster-backdrop'} relative w-full min-h-[440px] md:min-h-[540px] bg-cover bg-center overflow-hidden rounded-2xl flex items-end p-5 md:p-10"${backdropUrl ? ` style="background-image: url('${backdropUrl}')"` : ''}>
                 <div class="absolute inset-0 bg-gradient-to-t from-primary-container via-primary-container/85 to-transparent"></div>
                 <div class="absolute inset-0 bg-gradient-to-r from-primary-container via-primary-container/90 to-transparent w-full md:w-3/4"></div>
                 
-                <div class="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-4 w-full">
-                    <div class="md:col-span-9 lg:col-span-8 flex flex-col gap-3">
+                <div class="modal-detail-grid relative z-10 grid grid-cols-1 md:grid-cols-12 gap-4 w-full">
+                    <div class="modal-info md:col-span-9 lg:col-span-8 flex flex-col gap-3">
                         <div>
-                            <h1 class="font-display-hero-mobile md:font-display-hero text-2xl md:text-4xl font-extrabold text-on-surface leading-tight drop-shadow-lg">${item.title}</h1>
+                            <h2 class="font-display-hero-mobile md:font-display-hero text-2xl md:text-4xl font-extrabold text-on-surface leading-tight drop-shadow-lg">${item.title}</h2>
                             ${originalTitleHTML}
                         </div>
                         
-                        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-on-surface-variant">
+                        <div class="meta flex flex-wrap items-center gap-2 text-xs font-semibold text-on-surface-variant">
                             <span class="bg-surface-container px-3 py-1 rounded-full border border-outline-variant">${year}</span>
                             <span class="bg-surface-container px-3 py-1 rounded-full border border-outline-variant">${typeStr}</span>
                             <span class="bg-surface-container px-3 py-1 rounded-full border border-outline-variant flex items-center gap-1 text-yellow-400 font-bold">
@@ -1323,22 +1417,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${directorHTML}
                         ${item.reason ? `<div class="bg-tertiary-container/40 border border-tertiary/30 text-tertiary px-4 py-1.5 rounded-lg text-xs md:text-sm font-medium">${item.reason}</div>` : ''}
                         
-                        <p class="text-xs md:text-sm text-on-surface-variant leading-relaxed max-w-prose line-clamp-3 md:line-clamp-4">${item.overview || 'Bu yapım için detaylı açıklama bulunmuyor.'}</p>
+                        <p class="overview text-xs md:text-sm text-on-surface-variant leading-relaxed max-w-prose line-clamp-3 md:line-clamp-4">${item.overview || 'Bu yapım için detaylı açıklama bulunmuyor.'}</p>
                         
                         <div class="flex flex-wrap items-center gap-3 mt-1 netflix-actions-bar">
                             ${playTrailerBtnHTML}
-                            <button type="button" class="btn-similar-recommend bg-transparent border border-tertiary text-tertiary hover:bg-tertiary/10 font-bold px-5 py-3 rounded-full flex items-center gap-2 text-xs md:text-sm transition-all cursor-pointer" tabindex="0">
+                            <button type="button" class="netflix-btn btn-similar-recommend bg-transparent border border-tertiary text-tertiary hover:bg-tertiary/10 font-bold px-5 py-3 rounded-full flex items-center gap-2 text-xs md:text-sm transition-all cursor-pointer" tabindex="0">
                                 <span class="material-symbols-outlined text-base">auto_awesome</span>
                                 <span>Benzerlerini Bul</span>
                             </button>
-                            <button type="button" class="btn-reaction btn-fav ${isFav ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-5 py-3 rounded-full border border-outline-variant flex items-center gap-2 text-xs md:text-sm transition-colors cursor-pointer" data-type="fav" tabindex="0">
+                            <button type="button" class="netflix-btn btn-reaction btn-fav ${isFav ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-5 py-3 rounded-full border border-outline-variant flex items-center gap-2 text-xs md:text-sm transition-colors cursor-pointer" data-type="fav" tabindex="0">
                                 <span class="material-symbols-outlined text-base">${isFav ? 'favorite' : 'favorite_border'}</span>
                                 <span class="btn-label">${isFav ? 'Favorilerimde' : 'Listeme Ekle'}</span>
                             </button>
-                            <button type="button" class="btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant text-xs md:text-sm transition-colors cursor-pointer" data-type="super" title="Çok Beğendim" tabindex="0">
+                            <button type="button" class="netflix-btn btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant text-xs md:text-sm transition-colors cursor-pointer" data-type="super" title="Çok Beğendim" tabindex="0">
                                 <span>💖</span>
                             </button>
-                            <button type="button" class="btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant text-xs md:text-sm transition-colors cursor-pointer" data-type="dislike" title="Beğenmedim" tabindex="0">
+                            <button type="button" class="netflix-btn btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-3.5 py-3 rounded-full border border-outline-variant text-xs md:text-sm transition-colors cursor-pointer" data-type="dislike" title="Beğenmedim" tabindex="0">
                                 <span>👎</span>
                             </button>
                         </div>
@@ -1423,6 +1517,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loginError.classList.add('hidden');
         regError.classList.add('hidden');
         authModal.classList.remove('hidden');
+        window.SineAITV?.refresh('#tabLogin');
     });
 
     closeAuthModalBtn.addEventListener('click', () => authModal.classList.add('hidden'));
@@ -1432,6 +1527,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tabRegister.classList.remove('active');
         loginForm.classList.remove('hidden');
         registerForm.classList.add('hidden');
+        window.SineAITV?.refresh('#loginUsername');
     });
 
     tabRegister.addEventListener('click', () => {
@@ -1439,6 +1535,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tabLogin.classList.remove('active');
         registerForm.classList.remove('hidden');
         loginForm.classList.add('hidden');
+        window.SineAITV?.refresh('#regUsername');
     });
 
     loginForm.addEventListener('submit', async (e) => {
@@ -1515,24 +1612,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Popular See All handler
     document.querySelectorAll('.see-all').forEach(btn => {
-        btn.addEventListener('click', async () => {
+        btn.addEventListener('click', () => {
             const type = btn.dataset.type;
             const label = type === 'tv' ? 'Popüler Diziler' : 'Popüler Filmler';
-            showResultsSection();
-            resultsHeading.textContent = label;
-            loadingEl.classList.remove('hidden');
-            try {
-                const res = await fetch(`/api/popular?type=${type}&page=1`);
-                const data = await res.json();
-                if (data.ok) {
-                    currentRawResults = data.results || [];
-                    renderCards(currentRawResults);
-                }
-            } catch (e) {
-                showError('Popüler yapımlar yüklenemedi.');
-            } finally {
-                loadingEl.classList.add('hidden');
-            }
+            submitPopular(type, label, 1);
         });
         btn.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
