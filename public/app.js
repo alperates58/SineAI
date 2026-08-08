@@ -1293,11 +1293,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentRec = getReaction(item);
         const isFav = isFavorited(item);
 
-        const trailerBtnHTML = item.trailer_url
-            ? `<button type="button" class="btn-play-trailer bg-on-surface text-primary-container font-bold px-8 py-3.5 rounded-full flex items-center gap-2 hover:scale-105 transition-transform text-sm md:text-base" tabindex="0">
-                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
-                <span>Fragmanı Oynat</span>
-               </button>` : '';
+        const playTrailerBtnHTML = `<button type="button" class="btn-play-trailer bg-on-surface text-primary-container font-bold px-8 py-3.5 rounded-full flex items-center gap-2 hover:scale-105 transition-transform text-sm md:text-base cursor-pointer" tabindex="0">
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+            <span>Fragmanı Oynat</span>
+        </button>`;
 
         modalBody.innerHTML = `
             <div class="relative w-full min-h-[500px] md:min-h-[600px] bg-cover bg-center overflow-hidden rounded-2xl flex items-end p-6 md:p-12"${backdropUrl ? ` style="background-image: url('${backdropUrl}')"` : ''}>
@@ -1327,19 +1326,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="text-sm md:text-base text-on-surface-variant leading-relaxed max-w-prose line-clamp-4 md:line-clamp-none">${item.overview || 'Bu yapım için detaylı açıklama bulunmuyor.'}</p>
                         
                         <div class="flex flex-wrap items-center gap-3 mt-2 netflix-actions-bar">
-                            ${trailerBtnHTML}
-                            <button type="button" class="btn-similar-recommend bg-transparent border border-tertiary text-tertiary hover:bg-tertiary/10 font-bold px-6 py-3 rounded-full flex items-center gap-2 text-sm transition-all" tabindex="0">
+                            ${playTrailerBtnHTML}
+                            <button type="button" class="btn-similar-recommend bg-transparent border border-tertiary text-tertiary hover:bg-tertiary/10 font-bold px-6 py-3 rounded-full flex items-center gap-2 text-sm transition-all cursor-pointer" tabindex="0">
                                 <span class="material-symbols-outlined text-sm">auto_awesome</span>
                                 <span>Benzerlerini Bul</span>
                             </button>
-                            <button type="button" class="btn-reaction btn-fav ${isFav ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-6 py-3 rounded-full border border-outline-variant flex items-center gap-2 text-sm transition-colors" data-type="fav" tabindex="0">
+                            <button type="button" class="btn-reaction btn-fav ${isFav ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-6 py-3 rounded-full border border-outline-variant flex items-center gap-2 text-sm transition-colors cursor-pointer" data-type="fav" tabindex="0">
                                 <span class="material-symbols-outlined text-sm">${isFav ? 'favorite' : 'favorite_border'}</span>
                                 <span class="btn-label">${isFav ? 'Favorilerimde' : 'Listeme Ekle'}</span>
                             </button>
-                            <button type="button" class="btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-4 py-3 rounded-full border border-outline-variant text-sm transition-colors" data-type="super" tabindex="0">
+                            <button type="button" class="btn-reaction btn-super ${currentRec === 'super' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-4 py-3 rounded-full border border-outline-variant text-sm transition-colors cursor-pointer" data-type="super" title="Çok Beğendim" tabindex="0">
                                 <span>💖</span>
                             </button>
-                            <button type="button" class="btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-4 py-3 rounded-full border border-outline-variant text-sm transition-colors" data-type="dislike" tabindex="0">
+                            <button type="button" class="btn-reaction btn-dislike ${currentRec === 'dislike' ? 'active' : ''} bg-surface-container text-on-surface hover:bg-surface-high font-bold px-4 py-3 rounded-full border border-outline-variant text-sm transition-colors cursor-pointer" data-type="dislike" title="Beğenmedim" tabindex="0">
                                 <span>👎</span>
                             </button>
                         </div>
@@ -1363,9 +1362,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const playTrailerBtn = modalBody.querySelector('.btn-play-trailer');
-        if (playTrailerBtn && item.trailer_url) {
+        if (playTrailerBtn) {
             playTrailerBtn.addEventListener('click', () => {
-                openYouTubeModal(item.title, item.trailer_url);
+                if (item.trailer_url) {
+                    openYouTubeModal(item.title, item.trailer_url);
+                } else {
+                    const fallbackUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(item.title + ' ' + (year || '') + ' Türkçe Fragman')}`;
+                    window.open(fallbackUrl, '_blank');
+                }
             });
         }
 

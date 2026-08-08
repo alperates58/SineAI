@@ -115,211 +115,29 @@
     }
 
     // Build TV Navigation Header & Discovery Card Structure
+    // Setup TV Section markings for D-pad navigation graph
     function prepareTvLayout() {
         const discover = document.getElementById('discoverSection');
         const featured = document.getElementById('tvFeatured');
-        const header = document.querySelector('.app-header');
-        const topNav = document.querySelector('.top-nav-bar');
         const searchArea = document.getElementById('heroSearchArea');
-        const queryTextarea = document.getElementById('query');
+        const results = document.getElementById('resultsSection');
+        const profile = document.getElementById('profileSection');
 
-        // Setup Minimal Top Navigation Bar
-        if (topNav) {
-            topNav.classList.add('tv-fixed-header');
-            if (topNav.parentElement !== document.body) {
-                document.body.prepend(topNav);
-            }
+        if (featured) markTvSection(featured, 'tv-hero', '#tvFeaturedOpen');
+        if (searchArea) markTvSection(searchArea, 'tv-ai-prompt', '#submitBtn, .mode-tab.active');
 
-            // Create TV Header navigation links if missing
-            if (!topNav.querySelector('.tv-nav-links')) {
-                const navLinks = document.createElement('div');
-                navLinks.className = 'tv-nav-links';
-                navLinks.innerHTML = `
-                    <button type="button" class="tv-nav-link active" data-tv-target="home" tabindex="0">Ana Sayfa</button>
-                    <button type="button" class="tv-nav-link" data-tv-target="ai" tabindex="0">✨ AI Keşfet</button>
-                    <button type="button" class="tv-nav-link" data-tv-target="movies" tabindex="0">Filmler</button>
-                    <button type="button" class="tv-nav-link" data-tv-target="tv" tabindex="0">Diziler</button>
-                `;
-                topNav.insertBefore(navLinks, topNav.querySelector('.auth-nav-area'));
-
-                // Handle nav link clicks
-                navLinks.addEventListener('click', (e) => {
-                    const btn = e.target.closest('.tv-nav-link');
-                    if (!btn) return;
-                    navLinks.querySelectorAll('.tv-nav-link').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-
-                    const target = btn.dataset.tvTarget;
-                    if (target === 'home') {
-                        const featuredOpen = document.getElementById('tvFeaturedOpen');
-                        if (featuredOpen) focusElement(featuredOpen);
-                    } else if (target === 'ai') {
-                        const queryTrigger = document.getElementById('tvQueryTrigger');
-                        if (queryTrigger) focusElement(queryTrigger);
-                    } else if (target === 'movies') {
-                        const moviesRow = document.getElementById('popularMoviesRow');
-                        if (moviesRow) {
-                            const firstCard = moviesRow.querySelector('.movie-card');
-                            if (firstCard) focusElement(firstCard);
-                        }
-                    } else if (target === 'tv') {
-                        const tvRow = document.getElementById('popularTvRow');
-                        if (tvRow) {
-                            const firstCard = tvRow.querySelector('.movie-card');
-                            if (firstCard) focusElement(firstCard);
-                        }
-                    }
-                });
-            }
-        }
-
-        // Add explicit text input trigger button (Text Entry Mode Gatekeeper)
-        if (searchArea && queryTextarea && !document.getElementById('tvQueryTrigger')) {
-            const triggerBtn = document.createElement('button');
-            triggerBtn.type = 'button';
-            triggerBtn.id = 'tvQueryTrigger';
-            triggerBtn.className = 'tv-input-trigger';
-            triggerBtn.setAttribute('tabindex', '0');
-            triggerBtn.innerHTML = `
-                <div class="tv-trigger-content">
-                    <span class="tv-trigger-sparkle">✨</span>
-                    <div class="tv-trigger-labels">
-                        <strong class="tv-trigger-title">Ne izlemek istediğini söyle veya yaz...</strong>
-                        <span class="tv-trigger-sub">Örn: "Okyanusta geçen romantik gerilim" veya "From benzeri dizi"</span>
-                    </div>
-                    <span class="tv-trigger-badge">🎙️ Kumanda ile Yaz</span>
-                </div>
-            `;
-            queryTextarea.parentElement.insertBefore(triggerBtn, queryTextarea);
-
-            // Hide raw input from D-pad candidate graph
-            queryTextarea.classList.add('tv-hidden-input');
-
-            triggerBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                enterTextEditMode(queryTextarea);
-            });
-        }
-
-
-        // Insert AI Discovery intro header
-        if (searchArea && !searchArea.querySelector('.tv-search-intro')) {
-            const intro = document.createElement('div');
-            intro.className = 'tv-search-intro';
-            intro.innerHTML = `
-                <div class="tv-eyebrow">SINEAI KEŞFET</div>
-                <h2>Bu gece ne izlemek istiyorsun?</h2>
-                <p>Ruh hâlini, bir türü veya sevdiğin bir yapımı söyle. Sana özel seçkiyi saniyeler içinde hazırlayalım.</p>
-            `;
-            searchArea.prepend(intro);
-        }
-
-        // Add TV Discovery Cards Section below Hero
-        if (discover && featured && !document.getElementById('tvDiscoverySection')) {
-            const discSec = document.createElement('section');
-            discSec.id = 'tvDiscoverySection';
-            discSec.className = 'row-section container tv-discovery-section';
-            discSec.innerHTML = `
-                <div class="section-head">
-                    <div class="section-title"><span class="section-dot"></span>SineAI ile Keşfet</div>
-                </div>
-                <div class="tv-discovery-cards" data-tv-row="discovery-row">
-                    <button type="button" class="tv-card-action" id="btnAiDiscover" tabindex="0">
-                        <span class="tv-card-icon">✨</span>
-                        <div class="tv-card-text">
-                            <strong>AI ile Bul</strong>
-                            <span>Ne istediğini söyle</span>
-                        </div>
-                    </button>
-                    <button type="button" class="tv-card-action" id="btnDirectSearch" tabindex="0">
-                        <span class="tv-card-icon">🔎</span>
-                        <div class="tv-card-text">
-                            <strong>İsme Göre Ara</strong>
-                            <span>TMDB veritabanında ara</span>
-                        </div>
-                    </button>
-                    <button type="button" class="tv-card-action" id="btnFilterSearch" tabindex="0">
-                        <span class="tv-card-icon">🎛️</span>
-                        <div class="tv-card-text">
-                            <strong>Filtrele</strong>
-                            <span>Tür, yıl ve puan seç</span>
-                        </div>
-                    </button>
-                </div>
-            `;
-            featured.insertAdjacentElement('afterend', discSec);
-
-            // Bind Discovery Card Clicks
-            discSec.querySelector('#btnAiDiscover')?.addEventListener('click', () => {
-                const searchIntro = document.querySelector('.tv-search-intro');
-                if (searchIntro) {
-                    window.scrollTo({ top: searchIntro.getBoundingClientRect().top + window.scrollY - 90, behavior: 'auto' });
-                    const trigger = document.getElementById('tvQueryTrigger');
-                    if (trigger) focusElement(trigger);
-                }
-            });
-
-            discSec.querySelector('#btnDirectSearch')?.addEventListener('click', () => {
-                const directTab = document.querySelector('.mode-tab[data-mode="direct"]');
-                if (directTab) {
-                    directTab.click();
-                    const searchIntro = document.querySelector('.tv-search-intro');
-                    if (searchIntro) window.scrollTo({ top: searchIntro.getBoundingClientRect().top + window.scrollY - 90, behavior: 'auto' });
-                    const trigger = document.getElementById('tvQueryTrigger');
-                    if (trigger) focusElement(trigger);
-                }
-            });
-
-            discSec.querySelector('#btnFilterSearch')?.addEventListener('click', () => {
-                document.getElementById('openAdvSearchBtn')?.click();
-            });
-        }
-
-        markTvSection(featured, 'tv-hero', '#tvFeaturedOpen');
-        markTvSection(document.getElementById('tvDiscoverySection'), 'tv-discovery', '#btnAiDiscover');
-        markTvSection(header, 'tv-ai-prompt', '#tvQueryTrigger, .mode-tab.active');
-        discover?.querySelectorAll('.row-section:not(.tv-discovery-section)').forEach((section, index) => {
+        discover?.querySelectorAll('.row-section').forEach((section, index) => {
             markTvSection(section, `tv-row-${index}`, '.movie-card, .genre-chip');
         });
 
-        const results = document.getElementById('resultsSection');
-        if (results && !results.querySelector('.tv-results-controls-section')) {
-            const controls = document.createElement('section');
-            controls.className = 'tv-results-controls-section';
-            const firstControl = results.querySelector('.results-hero-header');
-            if (firstControl) results.insertBefore(controls, firstControl);
-            [
-                results.querySelector('.results-hero-header'),
-                document.getElementById('aiAnalysisSummary'),
-                results.querySelector('.saas-results-toolbar')
-            ].filter(Boolean).forEach(element => controls.appendChild(element));
-
-            const content = document.createElement('section');
-            content.className = 'tv-results-content-section';
-            const firstContent = document.getElementById('loading') || document.getElementById('resultsGrid');
-            if (firstContent) results.insertBefore(content, firstContent);
-            [
-                document.getElementById('loading'),
-                document.getElementById('resultsGrid'),
-                document.getElementById('paginationBar'),
-                document.getElementById('scrollSentinel')
-            ].filter(Boolean).forEach(element => content.appendChild(element));
+        if (results) {
+            markTvSection(results.querySelector('.saas-results-toolbar') || results, 'tv-ai-results-controls', '.filter-pill.active, #backToDiscoverBtn');
+            markTvSection(document.getElementById('resultsGrid') || results, 'tv-ai-results-content', '.movie-card, #prevPageBtn');
         }
-        markTvSection(results?.querySelector('.tv-results-controls-section'), 'tv-ai-results-controls', '.filter-pill.active, .saas-back-btn');
-        markTvSection(results?.querySelector('.tv-results-content-section'), 'tv-ai-results-content', '.movie-card, .pagination-btn');
 
-        const profile = document.getElementById('profileSection');
-        if (profile && !profile.querySelector('.tv-profile-overview-section')) {
-            const overview = document.createElement('section');
-            overview.className = 'tv-profile-overview-section';
-            const profileHeader = profile.querySelector('.profile-page-header');
-            if (profileHeader) profile.insertBefore(overview, profileHeader);
-            [profileHeader, profile.querySelector('.profile-dashboard-grid')]
-                .filter(Boolean)
-                .forEach(element => overview.appendChild(element));
+        if (profile) {
+            markTvSection(profile, 'tv-profile', '#profileRecommendBtn, #profileBackBtn, .movie-card');
         }
-        markTvSection(profile?.querySelector('.tv-profile-overview-section'), 'tv-profile-overview', '#profileRecommendBtn, #profileBackBtn');
-        markTvSection(profile?.querySelector('.profile-gallery-section'), 'tv-profile-gallery', '.movie-card');
     }
 
     function enterTextEditMode(inputElement) {
