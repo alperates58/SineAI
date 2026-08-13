@@ -274,6 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Init discover page components
         buildGenreGrid('movieGenreGrid', MOVIE_GENRES, 'movie');
         buildGenreGrid('tvGenreGrid', TV_GENRES, 'tv');
+        loadFeaturedHeroSlider();
         loadPopular('movie', 'popularMoviesRow');
         loadPopular('tv', 'popularTvRow');
     }
@@ -773,6 +774,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let heroCurrentIndex = 0;
     let heroAutoTimer = null;
     const HERO_AUTO_INTERVAL = 6000;
+
+    async function loadFeaturedHeroSlider() {
+        try {
+            const res = await fetch('/api/featured');
+            const data = await res.json();
+            if (data.ok && Array.isArray(data.results) && data.results.length > 0) {
+                const shuffled = [...data.results].sort(() => Math.random() - 0.5);
+                initHeroSlider(shuffled);
+                return;
+            }
+        } catch (err) {
+            console.warn('Featured trending fetch fallback:', err);
+        }
+    }
 
     function initHeroSlider(items) {
         if (!Array.isArray(items) || items.length === 0) return;

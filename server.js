@@ -1856,11 +1856,73 @@ async function fetchTMDB(normalized, originalQuery) {
 
   return { reference, people, warnings, results: enriched.slice(0, AI_RESULT_LIMIT) };
 }
+
+// Featured / Daily Trending Endpoint
+fastify.get('/api/featured', async (request, reply) => {
+  const cacheKey = 'featured_trending_day';
+  const cached = getFromCache(cacheKey);
+  if (cached) return { ok: true, ...cached, cached: true };
+
+  try {
+    const trendUrl = `${TMDB_BASE_URL}/trending/all/day?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}`;
+    const trendRes = await fetch(trendUrl);
+    if (!trendRes.ok) throw new Error(`TMDB trending hatası: ${trendRes.status}`);
+    const trendData = await trendRes.json();
+    const rawItems = (trendData.results || []).filter(item => item.backdrop_path || item.poster_path).slice(0, 15);
+
+    const results = await Promise.all(rawItems.map(async (item) => {
+      const type = item.media_type === 'tv' ? 'tv' : 'movie';
+      const title = type === 'movie' ? (item.title || item.original_title) : (item.name || item.original_name);
+      const releaseDate = type === 'movie' ? item.release_date : item.first_air_date;
+
+      let providers = [], trailer_url = null, genres = [];
+      try {
+        const detailRes = await fetch(`${TMDB_BASE_URL}/${type}/${item.id}?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}&append_to_response=watch/providers,videos`);
+        if (detailRes.ok) {
+          const d = await detailRes.json();
+          genres = (d.genres || []).map(g => g.name);
+          const trData = d['watch/providers']?.results?.TR;
+          if (trData?.flatrate) {
+            providers = trData.flatrate.map(p => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path }));
+          }
+          const videos = d.videos?.results || [];
+          const trailer = videos.find(v => v.type === 'Trailer' && v.site === 'YouTube' && v.official)
+                       || videos.find(v => v.type === 'Trailer' && v.site === 'YouTube');
+          if (trailer) trailer_url = `https://www.youtube.com/watch?v=${trailer.key}`;
+        }
+      } catch {}
+
+      return {
+        id: item.id,
+        title: title || 'İsimsiz Yapım',
+        original_title: type === 'movie' ? item.original_title : item.original_name,
+        type: type,
+        media_type: type,
+        poster: item.poster_path,
+        backdrop: item.backdrop_path,
+        overview: item.overview || '',
+        vote_average: item.vote_average || 0,
+        release_date: releaseDate || null,
+        genres: genres,
+        providers: providers,
+        trailer_url: trailer_url,
+      };
+    }));
+
+    const payload = { results };
+    setCache(cacheKey, payload, 1800);
+    return { ok: true, ...payload };
+  } catch (err) {
+    reqLogger(request).error(err, 'Featured trending fetch error');
+    return reply.status(500).send({ ok: false, error: 'Öne çıkan trend verileri çekilemedi.' });
+  }
+});
+
 // Popular endpoint
 fastify.get('/api/popular', async (request, reply) => {
   const { type, page = 1 } = request.query;
   if (!type || !['movie', 'tv'].includes(type)) {
-    return reply.status(400).send({ ok: false, error: 'type parametresi "movie" veya "tv" olmal\u0131d\u0131r.' });
+    return reply.status(400).send({ ok: false, error: 'type parametresi "movie" veya "tv" olmalıdır.' });
   }
 
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
