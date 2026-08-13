@@ -186,9 +186,9 @@
         </button>
     </nav>
 
-    <!-- HERO SECTION (CINEMATIC BACKDROP) -->
-    <section id="tvFeatured" class="relative w-full h-[85vh] min-h-[580px] flex items-end overflow-hidden group">
-        <div id="tvFeaturedBackdrop" class="absolute inset-0 bg-cover bg-center w-full h-full transform transition-transform duration-1000 group-hover:scale-105"></div>
+    <!-- HERO SECTION (CINEMATIC BACKDROP SLIDER) -->
+    <section id="tvFeatured" class="relative w-full h-[85vh] min-h-[580px] flex items-end overflow-hidden group" aria-label="Öne çıkan içerikler">
+        <div id="tvFeaturedBackdrop" class="absolute inset-0 bg-cover bg-center w-full h-full transform transition-all duration-1000 group-hover:scale-105"></div>
         <div class="absolute inset-0 bg-gradient-to-t from-primary-container via-primary-container/40 to-transparent"></div>
         <div class="absolute inset-0 bg-gradient-to-r from-primary-container via-primary-container/80 to-transparent w-full md:w-2/3"></div>
         
@@ -198,7 +198,7 @@
                     <span class="material-symbols-outlined text-[16px] text-tertiary" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
                     SİNEAI SEÇİMİ
                 </p>
-                <h1 id="tvFeaturedTitle" class="font-display-hero-mobile md:font-display-hero text-3xl md:text-6xl font-extrabold text-on-surface leading-tight drop-shadow-2xl">
+                <h1 id="tvFeaturedTitle" class="font-display-hero-mobile md:font-display-hero text-3xl md:text-6xl font-extrabold text-on-surface leading-tight drop-shadow-2xl transition-all duration-300">
                     Öne Çıkan Yapım
                 </h1>
                 <div id="tvFeaturedMeta" class="flex items-center gap-4 text-on-surface-variant font-metadata-sm text-sm font-semibold">
@@ -208,7 +208,7 @@
                     <span class="w-1 h-1 rounded-full bg-surface-variant"></span>
                     <span class="flex items-center gap-1 text-yellow-400 font-bold">IMDb 8.5 <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span></span>
                 </div>
-                <p id="tvFeaturedOverview" class="font-body-lg text-sm md:text-base text-on-surface-variant max-w-lg line-clamp-3 leading-relaxed">
+                <p id="tvFeaturedOverview" class="font-body-lg text-sm md:text-base text-on-surface-variant max-w-lg line-clamp-3 leading-relaxed transition-all duration-300">
                     Popüler yapımlar yükleniyor...
                 </p>
                 <div class="tv-hero-actions flex items-center gap-4 mt-stack-sm">
@@ -218,10 +218,23 @@
                     </button>
                     <button type="button" id="heroFavBtn" class="bg-surface-container/80 backdrop-blur-md border border-outline-variant text-on-surface font-semibold px-8 py-3.5 rounded-full flex items-center gap-2 hover:bg-surface-variant transition-all duration-200 cursor-pointer" tabindex="0">
                         <span class="material-symbols-outlined">add</span>
-                        Listeme Ekle
+                        <span>Listeme Ekle</span>
                     </button>
                 </div>
             </div>
+        </div>
+
+        <!-- Slider Arrow Controls & Indicators -->
+        <div class="absolute bottom-6 right-6 md:bottom-12 md:right-12 z-20 flex items-center gap-3 bg-surface-container-lowest/60 backdrop-blur-md px-4 py-2.5 rounded-full border border-outline-variant/50 shadow-2xl">
+            <button type="button" id="heroPrevBtn" class="w-9 h-9 rounded-full bg-surface-container/80 border border-outline-variant text-on-surface flex items-center justify-center hover:bg-surface-variant hover:scale-105 transition-all cursor-pointer" aria-label="Önceki öne çıkan yapım" tabindex="0">
+                <span class="material-symbols-outlined text-xl">chevron_left</span>
+            </button>
+            <div id="heroDots" class="flex items-center gap-1.5 px-2">
+                <!-- Dots populated dynamically by JS -->
+            </div>
+            <button type="button" id="heroNextBtn" class="w-9 h-9 rounded-full bg-surface-container/80 border border-outline-variant text-on-surface flex items-center justify-center hover:bg-surface-variant hover:scale-105 transition-all cursor-pointer" aria-label="Sonraki öne çıkan yapım" tabindex="0">
+                <span class="material-symbols-outlined text-xl">chevron_right</span>
+            </button>
         </div>
     </section>
 

@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tvFeaturedMeta     = document.getElementById('tvFeaturedMeta');
     const tvFeaturedOverview = document.getElementById('tvFeaturedOverview');
     const tvFeaturedOpen     = document.getElementById('tvFeaturedOpen');
+    const heroFavBtn         = document.getElementById('heroFavBtn');
 
     // Sort & Pagination References
     const sortSelect           = document.getElementById('sortSelect');
@@ -706,7 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             container.innerHTML = '';
-            if (type === 'movie') renderTvFeatured(data.results[0]);
+            if (type === 'movie') initHeroSlider(data.results);
             data.results.forEach((item, index) => {
                 const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
                 const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
@@ -767,27 +768,155 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderTvFeatured(item) {
-        if (!item || !tvFeaturedOpen) return;
+    // ── Hero Section Slider & Carousel ─────────────────
+    let heroItems = [];
+    let heroCurrentIndex = 0;
+    let heroAutoTimer = null;
+    const HERO_AUTO_INTERVAL = 6000;
 
-        const year = item.release_date ? new Date(item.release_date).getFullYear() : 'Yıl bilinmiyor';
+    function initHeroSlider(items) {
+        if (!Array.isArray(items) || items.length === 0) return;
+        heroItems = items.filter(item => item && (item.backdrop || item.poster)).slice(0, 10);
+        if (heroItems.length === 0) return;
+        heroCurrentIndex = 0;
+        setupHeroControls();
+        renderHeroSlide(heroCurrentIndex);
+        startHeroAutoPlay();
+    }
+
+    function renderHeroSlide(index) {
+        if (!heroItems || heroItems.length === 0) return;
+        heroCurrentIndex = (index + heroItems.length) % heroItems.length;
+        const item = heroItems[heroCurrentIndex];
+        if (!item) return;
+
+        const year = item.release_date ? new Date(item.release_date).getFullYear() : (item.first_air_date ? new Date(item.first_air_date).getFullYear() : 'Yıl bilinmiyor');
         const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
         const backdrop = item.backdrop || item.poster;
+        const typeStr = item.first_air_date ? 'Dizi' : 'Film';
+        const titleText = item.title || item.name || 'Öne Çıkan Yapım';
+
         if (tvFeaturedBackdrop && backdrop) {
             const size = item.backdrop ? 'w1280' : 'w780';
-            tvFeaturedBackdrop.style.backgroundImage = `url("https://image.tmdb.org/t/p/${size}${backdrop}")`;
+            tvFeaturedBackdrop.style.backgroundImage = `url("${tmdbImageURL(backdrop, size)}")`;
         }
-        if (tvFeaturedTitle) tvFeaturedTitle.textContent = item.title;
-        if (tvFeaturedMeta) tvFeaturedMeta.textContent = `${year}   •   ⭐ ${rating}   •   Film`;
-        if (tvFeaturedOverview) tvFeaturedOverview.textContent = item.overview || 'Bu yapım için açıklama bulunmuyor.';
-        tvFeaturedOpen.setAttribute('aria-label', `${item.title} detaylarını gör`);
-        tvFeaturedOpen.onclick = () => {
-            const providers = item.providers || [];
-            const badgesHTML = providers.length
-                ? `<div class="provider-badges">${providers.slice(0, 3).map(provider => `<div class="badge"><img src="https://image.tmdb.org/t/p/original${provider.logo_path}" alt="${provider.provider_name}">${provider.provider_name}</div>`).join('')}</div>`
-                : '<div class="provider-badges"><div class="badge">Platform bilgisi yok</div></div>';
-            showModal(item, year, 'Film', rating, badgesHTML);
-        };
+
+        if (tvFeaturedTitle) {
+            tvFeaturedTitle.classList.add('tv-featured-fade-out');
+            setTimeout(() => {
+                tvFeaturedTitle.textContent = titleText;
+                tvFeaturedTitle.classList.remove('tv-featured-fade-out');
+            }, 120);
+        }
+
+        if (tvFeaturedMeta) {
+            tvFeaturedMeta.textContent = `${year}   •   ⭐ ${rating}   •   ${typeStr}`;
+        }
+
+        if (tvFeaturedOverview) {
+            tvFeaturedOverview.classList.add('tv-featured-fade-out');
+            setTimeout(() => {
+                tvFeaturedOverview.textContent = item.overview || 'Bu yapım için açıklama bulunmuyor.';
+                tvFeaturedOverview.classList.remove('tv-featured-fade-out');
+            }, 120);
+        }
+
+        if (tvFeaturedOpen) {
+            tvFeaturedOpen.setAttribute('aria-label', `${titleText} detaylarını gör`);
+            tvFeaturedOpen.onclick = () => {
+                const providers = item.providers || [];
+                const badgesHTML = providers.length
+                    ? `<div class="provider-badges">${providers.slice(0, 3).map(provider => `<div class="badge"><img src="${tmdbImageURL(provider.logo_path, 'original')}" alt="${escapeHTML(provider.provider_name)}">${escapeHTML(provider.provider_name)}</div>`).join('')}</div>`
+                    : '<div class="provider-badges"><div class="badge">Platform bilgisi yok</div></div>';
+                showModal(item, year, typeStr, rating, badgesHTML);
+            };
+        }
+
+        if (heroFavBtn) {
+            const favActive = isFavorited(item);
+            heroFavBtn.innerHTML = `
+                <span class="material-symbols-outlined">${favActive ? 'check' : 'add'}</span>
+                <span>${favActive ? 'Favorilerinde' : 'Listeme Ekle'}</span>
+            `;
+            heroFavBtn.onclick = (e) => {
+                e.stopPropagation();
+                toggleFavorite(item);
+                renderHeroSlide(heroCurrentIndex);
+            };
+        }
+
+        const dotsContainer = document.getElementById('heroDots');
+        if (dotsContainer) {
+            dotsContainer.querySelectorAll('.hero-dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i === heroCurrentIndex);
+            });
+        }
+    }
+
+    function setupHeroControls() {
+        const prevBtn = document.getElementById('heroPrevBtn');
+        const nextBtn = document.getElementById('heroNextBtn');
+        const dotsContainer = document.getElementById('heroDots');
+        const heroSection = document.getElementById('tvFeatured');
+
+        if (prevBtn && !prevBtn.dataset.bound) {
+            prevBtn.dataset.bound = 'true';
+            prevBtn.addEventListener('click', () => {
+                renderHeroSlide(heroCurrentIndex - 1);
+                restartHeroAutoPlay();
+            });
+        }
+
+        if (nextBtn && !nextBtn.dataset.bound) {
+            nextBtn.dataset.bound = 'true';
+            nextBtn.addEventListener('click', () => {
+                renderHeroSlide(heroCurrentIndex + 1);
+                restartHeroAutoPlay();
+            });
+        }
+
+        if (dotsContainer && (!dotsContainer.children.length || dotsContainer.dataset.count !== String(heroItems.length))) {
+            dotsContainer.dataset.count = String(heroItems.length);
+            dotsContainer.innerHTML = '';
+            heroItems.forEach((_, idx) => {
+                const dot = document.createElement('button');
+                dot.type = 'button';
+                dot.className = `hero-dot ${idx === heroCurrentIndex ? 'active' : ''}`;
+                dot.setAttribute('aria-label', `${idx + 1}. filme geç`);
+                dot.addEventListener('click', () => {
+                    renderHeroSlide(idx);
+                    restartHeroAutoPlay();
+                });
+                dotsContainer.appendChild(dot);
+            });
+        }
+
+        if (heroSection && !heroSection.dataset.hoverBound) {
+            heroSection.dataset.hoverBound = 'true';
+            heroSection.addEventListener('mouseenter', stopHeroAutoPlay);
+            heroSection.addEventListener('mouseleave', startHeroAutoPlay);
+        }
+    }
+
+    function startHeroAutoPlay() {
+        stopHeroAutoPlay();
+        if (heroItems.length > 1) {
+            heroAutoTimer = setInterval(() => {
+                renderHeroSlide(heroCurrentIndex + 1);
+            }, HERO_AUTO_INTERVAL);
+        }
+    }
+
+    function stopHeroAutoPlay() {
+        if (heroAutoTimer) {
+            clearInterval(heroAutoTimer);
+            heroAutoTimer = null;
+        }
+    }
+
+    function restartHeroAutoPlay() {
+        stopHeroAutoPlay();
+        startHeroAutoPlay();
     }
 
     function buildGenreGrid(containerId, genres, mediaType) {
