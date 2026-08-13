@@ -155,7 +155,7 @@
         if (!inputElement) return;
         tvTextEntryMode = true;
         currentInputTarget = inputElement;
-        if (inputElement.dataset.tvReadOnlyManaged === 'true') inputElement.readOnly = false;
+        inputElement.readOnly = false;
         if (inputElement.id === 'query') inputElement.classList.remove('tv-hidden-input');
         inputElement.focus({ preventScroll: true });
         try {
@@ -170,9 +170,8 @@
         if (!tvTextEntryMode) return false;
         const previousInput = currentInputTarget;
         if (previousInput) {
-            if (previousInput.dataset.tvReadOnlyManaged === 'true') previousInput.readOnly = true;
             previousInput.blur();
-            if (previousInput.id === 'query') previousInput.classList.add('tv-hidden-input');
+            if (previousInput.id === 'query' && enabled) previousInput.classList.add('tv-hidden-input');
         }
         tvTextEntryMode = false;
         currentInputTarget = null;
@@ -207,9 +206,7 @@
         if (!element.isConnected || element.classList.contains('tv-skip-focus')) return false;
         if (element.matches('.movie-card .fav-btn')) return false;
 
-        // Main search uses an explicit TV trigger. Modal form fields remain
-        // directional candidates and enter keyboard mode only after OK.
-        if (element.matches('textarea, input') && !tvTextEntryMode && !element.closest('.modal:not(.hidden)')) return false;
+        if (element.matches('textarea, input') && !tvTextEntryMode && !element.closest('.modal:not(.hidden)') && enabled && element.classList.contains('tv-hidden-input')) return false;
 
         if (element.closest('.hidden, [aria-hidden="true"]')) return false;
         if (element.hasAttribute('disabled')) return false;
@@ -246,15 +243,27 @@
             });
         });
 
-        // Modal fields are navigable. Focusing them must not lock D-pad
-        // movement; OK explicitly enters text edit mode.
+        // Modal fields and form inputs are navigable and editable.
         scope.querySelectorAll('input:not([data-tv-input-bound]), textarea:not([data-tv-input-bound])').forEach(input => {
             input.dataset.tvInputBound = 'true';
-            input.dataset.tvReadOnlyManaged = 'true';
-            input.readOnly = true;
+
+            const activateInput = () => {
+                if (input.readOnly && input.dataset.tvReadOnlyManaged === 'true') {
+                    input.readOnly = false;
+                }
+                tvTextEntryMode = true;
+                currentInputTarget = input;
+                if (input.id === 'query') {
+                    input.classList.remove('tv-hidden-input');
+                }
+            };
+
+            input.addEventListener('focus', activateInput);
+            input.addEventListener('click', activateInput);
+            input.addEventListener('touchstart', activateInput, { passive: true });
+
             input.addEventListener('blur', () => {
                 if (currentInputTarget === input) {
-                    input.readOnly = true;
                     tvTextEntryMode = false;
                     currentInputTarget = null;
                     try {
@@ -262,11 +271,6 @@
                     } catch (_error) {
                         // Browser preview has no Android bridge; native TV does.
                     }
-                }
-            });
-            input.addEventListener('click', () => {
-                if (enabled && input.closest('.modal:not(.hidden)') && !tvTextEntryMode) {
-                    enterTextEditMode(input);
                 }
             });
         });
@@ -697,23 +701,48 @@
 
     function handleKeyboard(event) {
         if (!enabled) return;
+
+        const isInputTarget = event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA');
+
+        // Allow normal typing inside input/textarea elements
+        if (isInputTarget || tvTextEntryMode) {
+            const activeInput = currentInputTarget || (isInputTarget ? event.target : null);
+
+            // Handle Escape / Back key inside text input
+            if (event.key === 'Escape' || event.key === 'BrowserBack') {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                if (tvTextEntryMode) exitTextEditMode();
+                else activeInput?.blur();
+                return;
+            }
+
+            // Handle Enter key on AI search query input
+            if (event.key === 'Enter' && activeInput?.id === 'query') {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                const queryForm = activeInput.form || document.getElementById('recommendForm');
+                exitTextEditMode();
+                if (typeof queryForm?.requestSubmit === 'function') queryForm.requestSubmit();
+                else queryForm?.querySelector('[type="submit"]')?.click();
+                return;
+            }
+
+            // If key is Enter on a single line input inside a form, allow normal form handling
+            if (event.key === 'Enter' && activeInput?.tagName === 'INPUT') {
+                return;
+            }
+
+            // For all other keys (character keys, Spacebar, Backspace, Arrow keys, etc.),
+            // allow native text editing!
+            return;
+        }
+
         const direction = DIRECTION_KEYS[event.key];
         const isSelect = event.key === 'Enter' || event.key === ' ';
         const isBack = event.key === 'Escape' || event.key === 'BrowserBack';
 
         if (!direction && !isSelect && !isBack) return;
-
-        if (tvTextEntryMode && event.key === 'Enter' && currentInputTarget?.id === 'query') {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            handleNativeKey('select');
-            return;
-        }
-
-        // Allow normal typing inside input/textarea when in text edit mode
-        if (tvTextEntryMode && !isBack && (event.key !== 'Enter' || currentInputTarget?.tagName === 'TEXTAREA')) {
-            return;
-        }
 
         if (isSelect && event.repeat) return;
 
